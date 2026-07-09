@@ -1,12 +1,12 @@
 <template>
   <div class="page">
-    <Navbar />
+    <Navbar/>
 
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-copy">
           <span class="eyebrow">A validation workbench for JCL</span>
-          <h1>Learn mainframe JCL<br />without a mainframe.</h1>
+          <h1>Learn mainframe JCL<br/>without a mainframe.</h1>
           <p class="lede">
             JCLcheck parses your Job Control Language the way z/OS would — statement
             order, DD rules, keyword syntax, PROC symbolics — and explains every
@@ -24,7 +24,7 @@
           </div>
         </div>
         <div class="hero-visual">
-          <CodePreview />
+          <CodePreview/>
         </div>
       </div>
     </section>
@@ -102,7 +102,7 @@
       </div>
     </section>
 
-    <Footer />
+    <Footer/>
   </div>
 </template>
 
@@ -114,7 +114,11 @@ import CodePreview from '../components/marketing/CodePreview.vue';
 </script>
 
 <style scoped>
-.page { display: flex; flex-direction: column; min-height: 100%; }
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
 
 .eyebrow {
   display: inline-block;
@@ -129,7 +133,10 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   margin-bottom: 16px;
 }
 
-.hero { padding: 72px 24px 40px; }
+.hero {
+  padding: 72px 24px 40px;
+}
+
 .hero-inner {
   max-width: 1120px;
   margin: 0 auto;
@@ -138,6 +145,7 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   gap: 56px;
   align-items: center;
 }
+
 .hero-copy h1 {
   font-family: var(--font-display);
   font-size: 46px;
@@ -147,6 +155,7 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   margin: 0 0 20px;
   letter-spacing: -0.01em;
 }
+
 .lede {
   font-size: 16.5px;
   line-height: 1.65;
@@ -154,7 +163,13 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   max-width: 46ch;
   margin: 0 0 28px;
 }
-.hero-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+
+.hero-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
 
 .btn {
   display: inline-flex;
@@ -168,19 +183,34 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   text-decoration: none;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
+
 .btn-primary {
   background: var(--accent);
   color: #fff;
   box-shadow: var(--shadow-sm);
 }
-.btn-primary:hover { background: var(--accent-dark); transform: translateY(-1px); box-shadow: var(--shadow-md); }
+
+.btn-primary:hover {
+  background: var(--accent-dark);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--text-bright);
   border: 1px solid var(--grid-line-strong);
 }
-.btn-ghost:hover { border-color: var(--brand); color: var(--brand-dark); }
-.btn-lg { padding: 15px 28px; font-size: 16px; }
+
+.btn-ghost:hover {
+  border-color: var(--brand);
+  color: var(--brand-dark);
+}
+
+.btn-lg {
+  padding: 15px 28px;
+  font-size: 16px;
+}
 
 .hero-trust {
   font-family: var(--font-cond);
@@ -188,12 +218,26 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   letter-spacing: 0.03em;
   color: var(--text-faint);
 }
-.hero-trust .sep { margin: 0 8px; }
 
-.hero-visual { position: relative; }
+.hero-trust .sep {
+  margin: 0 8px;
+}
 
-.section { max-width: 1120px; margin: 0 auto; padding: 64px 24px 8px; }
-.section-head { max-width: 640px; margin-bottom: 36px; }
+.hero-visual {
+  position: relative;
+}
+
+.section {
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 64px 24px 8px;
+}
+
+.section-head {
+  max-width: 640px;
+  margin-bottom: 36px;
+}
+
 .section-head h2 {
   font-family: var(--font-display);
   font-size: 30px;
@@ -208,6 +252,7 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   grid-template-columns: repeat(3, 1fr);
   gap: 18px;
 }
+
 .feature-grid code {
   font-family: var(--font-mono);
   background: var(--surface-inset);
@@ -216,28 +261,35 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   font-size: 0.92em;
 }
 
-.section-how { padding-top: 30px; }
+.section-how {
+  padding-top: 30px;
+}
+
 .steps {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
+
 .step {
   border-top: 2px solid var(--grid-line-strong);
   padding-top: 14px;
 }
+
 .step-num {
   font-family: var(--font-mono);
   font-size: 12px;
   color: var(--brand);
   font-weight: 700;
 }
+
 .step h3 {
   font-family: var(--font-display);
   font-size: 17px;
   margin: 8px 0 6px;
   color: var(--text-bright);
 }
+
 .step p {
   font-size: 13.5px;
   line-height: 1.55;
@@ -250,11 +302,13 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   padding: 60px 24px;
   background: var(--brand-light);
 }
+
 .cta-inner {
   max-width: 720px;
   margin: 0 auto;
   text-align: center;
 }
+
 .cta-inner h2 {
   font-family: var(--font-display);
   font-size: 28px;
@@ -263,13 +317,30 @@ import CodePreview from '../components/marketing/CodePreview.vue';
 }
 
 @media (max-width: 900px) {
-  .hero-inner { grid-template-columns: 1fr; }
-  .feature-grid { grid-template-columns: 1fr 1fr; }
-  .steps { grid-template-columns: 1fr 1fr; }
-  .hero-copy h1 { font-size: 34px; }
+  .hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .feature-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .steps {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .hero-copy h1 {
+    font-size: 34px;
+  }
 }
+
 @media (max-width: 560px) {
-  .feature-grid { grid-template-columns: 1fr; }
-  .steps { grid-template-columns: 1fr; }
+  .feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .steps {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

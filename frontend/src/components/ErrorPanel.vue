@@ -14,17 +14,19 @@
         <div class="panel-empty__glyph">✓</div>
         <div class="panel-empty__text">
           <strong>NO PROBLEMS FOUND</strong>
-          <span v-if="stats">{{ stats.statementCount }} statements · {{ stats.stepCount }} steps{{ stats.procCount ? ' · ' + stats.procCount + ' procs' : '' }} checked clean.</span>
+          <span v-if="stats">{{ stats.statementCount }} statements · {{
+              stats.stepCount
+            }} steps{{ stats.procCount ? ' · ' + stats.procCount + ' procs' : '' }} checked clean.</span>
         </div>
       </div>
 
       <ul v-else class="diag-list">
         <li
-          v-for="(d, idx) in diagnostics"
-          :key="idx"
-          class="diag"
-          :class="`is-${d.severity}`"
-          @click="$emit('select', d)"
+            v-for="(d, idx) in diagnostics"
+            :key="idx"
+            class="diag"
+            :class="`is-${d.severity}`"
+            @click="$emit('select', d)"
         >
           <div class="diag-head">
             <span class="diag-sev">{{ sevLabel(d.severity) }}</span>
@@ -64,6 +66,7 @@ function sevLabel(sev) {
   border-radius: var(--radius);
   overflow: hidden;
 }
+
 .panel-topline {
   display: flex;
   justify-content: space-between;
@@ -76,12 +79,29 @@ function sevLabel(sev) {
   letter-spacing: 0.12em;
   color: var(--text-dim);
 }
-.panel-topline__label { color: var(--field-turquoise); font-weight: 600; }
-.panel-topline__meta { display: flex; gap: 10px; }
-.stat.is-error { color: var(--error); }
-.stat.is-warning { color: var(--warning); }
 
-.panel-body { flex: 1; overflow-y: auto; }
+.panel-topline__label {
+  color: var(--field-turquoise);
+  font-weight: 600;
+}
+
+.panel-topline__meta {
+  display: flex;
+  gap: 10px;
+}
+
+.stat.is-error {
+  color: var(--error);
+}
+
+.stat.is-warning {
+  color: var(--warning);
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+}
 
 .panel-status {
   padding: 24px 16px;
@@ -97,12 +117,14 @@ function sevLabel(sev) {
   padding: 20px 16px;
   font-family: var(--font-mono);
 }
+
 .panel-empty__glyph {
   color: var(--text-bright);
   font-size: 20px;
   line-height: 1;
   text-shadow: 0 0 8px currentColor;
 }
+
 .panel-empty__text {
   display: flex;
   flex-direction: column;
@@ -110,6 +132,7 @@ function sevLabel(sev) {
   color: var(--text-dim);
   font-size: 12px;
 }
+
 .panel-empty__text strong {
   color: var(--text-bright);
   letter-spacing: 0.04em;
@@ -121,6 +144,7 @@ function sevLabel(sev) {
   margin: 0;
   padding: 0;
 }
+
 .diag {
   padding: 10px 14px;
   border-bottom: 1px solid var(--grid-line);
@@ -130,10 +154,22 @@ function sevLabel(sev) {
   border-left: 3px solid transparent;
   transition: background 0.1s ease;
 }
-.diag:hover { background: rgba(127, 232, 154, 0.05); }
-.diag.is-error { border-left-color: var(--error); }
-.diag.is-warning { border-left-color: var(--warning); }
-.diag.is-info { border-left-color: var(--info); }
+
+.diag:hover {
+  background: rgba(127, 232, 154, 0.05);
+}
+
+.diag.is-error {
+  border-left-color: var(--error);
+}
+
+.diag.is-warning {
+  border-left-color: var(--warning);
+}
+
+.diag.is-info {
+  border-left-color: var(--info);
+}
 
 .diag-head {
   display: flex;
@@ -144,22 +180,43 @@ function sevLabel(sev) {
   letter-spacing: 0.06em;
   font-size: 10.5px;
 }
-.diag-sev { font-weight: 700; }
-.diag.is-error .diag-sev { color: var(--error); }
-.diag.is-warning .diag-sev { color: var(--warning); }
-.diag.is-info .diag-sev { color: var(--info); }
-.diag-loc { color: var(--text-dim); }
-.diag-code { color: var(--text-faint); margin-left: auto; }
+
+.diag-sev {
+  font-weight: 700;
+}
+
+.diag.is-error .diag-sev {
+  color: var(--error);
+}
+
+.diag.is-warning .diag-sev {
+  color: var(--warning);
+}
+
+.diag.is-info .diag-sev {
+  color: var(--info);
+}
+
+.diag-loc {
+  color: var(--text-dim);
+}
+
+.diag-code {
+  color: var(--text-faint);
+  margin-left: auto;
+}
 
 .diag-msg {
   color: var(--text-bright);
   line-height: 1.45;
 }
+
 .diag-fix {
   margin-top: 5px;
   color: var(--text-dim);
   line-height: 1.4;
 }
+
 .diag-fix__label {
   color: var(--field-turquoise);
   font-weight: 600;

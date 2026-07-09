@@ -34,6 +34,7 @@
   background: var(--surface);
   margin-top: 80px;
 }
+
 .footer-inner {
   max-width: 1120px;
   margin: 0 auto;
@@ -43,13 +44,19 @@
   gap: 32px;
   flex-wrap: wrap;
 }
+
 .footer-brand__word {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 18px;
   color: var(--text-bright);
 }
-.footer-brand__mark { color: var(--brand); font-family: var(--font-mono); }
+
+.footer-brand__mark {
+  color: var(--brand);
+  font-family: var(--font-mono);
+}
+
 .footer-brand p {
   margin: 8px 0 0;
   color: var(--text-dim);
@@ -57,15 +64,18 @@
   max-width: 280px;
   line-height: 1.5;
 }
+
 .footer-links {
   display: flex;
   gap: 56px;
 }
+
 .footer-col {
   display: flex;
   flex-direction: column;
   gap: 9px;
 }
+
 .footer-col__title {
   font-family: var(--font-cond);
   font-size: 11px;
@@ -73,12 +83,16 @@
   color: var(--text-faint);
   margin-bottom: 3px;
 }
+
 .footer-col a {
   font-size: 13.5px;
   color: var(--text-dim);
   text-decoration: none;
 }
-.footer-col a:hover { color: var(--brand-dark); }
+
+.footer-col a:hover {
+  color: var(--brand-dark);
+}
 
 .footer-bottom {
   max-width: 1120px;
@@ -92,5 +106,9 @@
   color: var(--text-faint);
   border-top: 1px solid var(--grid-line);
 }
-.footer-bottom a { color: var(--text-dim); text-decoration: underline; }
+
+.footer-bottom a {
+  color: var(--text-dim);
+  text-decoration: underline;
+}
 </style>

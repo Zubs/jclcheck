@@ -9,7 +9,7 @@
       <nav class="nav-links">
         <router-link to="/" class="nav-link" exact-active-class="is-active">Product</router-link>
         <router-link to="/about" class="nav-link" exact-active-class="is-active">About</router-link>
-        <a class="nav-link" href="https://github.com/Zubs" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-link" href="https://github.com/Zubs/jclcheck" target="_blank" rel="noopener">GitHub</a>
       </nav>
 
       <router-link to="/app" class="nav-cta">Launch Workbench →</router-link>
@@ -29,6 +29,7 @@
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--grid-line);
 }
+
 .nav-inner {
   max-width: 1120px;
   margin: 0 auto;
@@ -37,6 +38,7 @@
   align-items: center;
   gap: 32px;
 }
+
 .nav-brand {
   display: flex;
   align-items: baseline;
@@ -44,18 +46,21 @@
   text-decoration: none;
   margin-right: auto;
 }
+
 .nav-brand__mark {
   font-family: var(--font-mono);
   color: var(--brand);
   font-weight: 700;
   font-size: 18px;
 }
+
 .nav-brand__word {
   font-family: var(--font-display);
   font-weight: 700;
   font-size: 19px;
   color: var(--text-bright);
 }
+
 .nav-brand__word em {
   font-style: normal;
   color: var(--brand);
@@ -65,6 +70,7 @@
   display: flex;
   gap: 24px;
 }
+
 .nav-link {
   font-family: var(--font-sans);
   font-weight: 500;
@@ -75,8 +81,15 @@
   border-bottom: 2px solid transparent;
   transition: color 0.15s ease;
 }
-.nav-link:hover { color: var(--text-bright); }
-.nav-link.is-active { color: var(--text-bright); border-bottom-color: var(--brand); }
+
+.nav-link:hover {
+  color: var(--text-bright);
+}
+
+.nav-link.is-active {
+  color: var(--text-bright);
+  border-bottom-color: var(--brand);
+}
 
 .nav-cta {
   font-family: var(--font-sans);
@@ -91,6 +104,7 @@
   white-space: nowrap;
   transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease;
 }
+
 .nav-cta:hover {
   background: var(--accent-dark);
   transform: translateY(-1px);
@@ -98,7 +112,12 @@
 }
 
 @media (max-width: 720px) {
-  .nav-links { display: none; }
-  .nav-inner { gap: 12px; }
+  .nav-links {
+    display: none;
+  }
+
+  .nav-inner {
+    gap: 12px;
+  }
 }
 </style>

@@ -7,137 +7,163 @@
    existing Editor/ErrorPanel/PfBar/HelpModal components work unchanged. */
 
 :root {
-  /* Surface (bright) */
-  --bg: #f5f8f5;
-  --surface: #ffffff;
-  --surface-raised: #ffffff;
-  --surface-inset: #eef4ee;
-  --grid-line: #dbe6db;
-  --grid-line-strong: #c3d6c4;
+    /* Surface (bright) */
+    --bg: #f5f8f5;
+    --surface: #ffffff;
+    --surface-raised: #ffffff;
+    --surface-inset: #eef4ee;
+    --grid-line: #dbe6db;
+    --grid-line-strong: #c3d6c4;
 
-  /* Text (bright) */
-  --text-primary: #1c2b20;
-  --text-bright: #0f1a13;
-  --text-dim: #5c705f;
-  --text-faint: #8a9c8c;
+    /* Text (bright) */
+    --text-primary: #1c2b20;
+    --text-bright: #0f1a13;
+    --text-dim: #5c705f;
+    --text-faint: #8a9c8c;
 
-  /* Brand accents */
-  --field-turquoise: #0f9d84;
-  --field-blue: #3b7fc4;
-  --field-red: #e0483e;
-  --field-yellow: #dd9a1c;
-  --field-pink: #d1568a;
+    /* Brand accents */
+    --field-turquoise: #0f9d84;
+    --field-blue: #3b7fc4;
+    --field-red: #e0483e;
+    --field-yellow: #dd9a1c;
+    --field-pink: #d1568a;
 
-  --brand: #189a63;
-  --brand-dark: #0f7a4d;
-  --brand-light: #e3f5ea;
-  --accent: #ff6b4a;
-  --accent-dark: #e8532f;
+    --brand: #189a63;
+    --brand-dark: #0f7a4d;
+    --brand-light: #e3f5ea;
+    --accent: #ff6b4a;
+    --accent-dark: #e8532f;
 
-  /* Semantic */
-  --error: var(--field-red);
-  --warning: var(--field-yellow);
-  --info: var(--field-blue);
-  --success: var(--brand);
+    /* Semantic */
+    --error: var(--field-red);
+    --warning: var(--field-yellow);
+    --info: var(--field-blue);
+    --success: var(--brand);
 
-  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
-  --font-sans: 'IBM Plex Sans', ui-sans-serif, sans-serif;
-  --font-cond: 'IBM Plex Sans Condensed', ui-sans-serif, sans-serif;
-  --font-display: 'Sora', var(--font-sans);
+    --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+    --font-sans: 'IBM Plex Sans', ui-sans-serif, sans-serif;
+    --font-cond: 'IBM Plex Sans Condensed', ui-sans-serif, sans-serif;
+    --font-display: 'Sora', var(--font-sans);
 
-  --radius: 10px;
-  --radius-sm: 6px;
-  --shadow-sm: 0 1px 2px rgba(20, 40, 25, 0.06);
-  --shadow-md: 0 8px 24px rgba(20, 40, 25, 0.08);
-  --shadow-lg: 0 20px 48px rgba(20, 40, 25, 0.12);
+    --radius: 10px;
+    --radius-sm: 6px;
+    --shadow-sm: 0 1px 2px rgba(20, 40, 25, 0.06);
+    --shadow-md: 0 8px 24px rgba(20, 40, 25, 0.08);
+    --shadow-lg: 0 20px 48px rgba(20, 40, 25, 0.12);
 }
 
 /* Dark 3270-terminal theme, scoped to the workbench screen only */
 .workbench-theme {
-  --bg: #0a0d0a;
-  --surface: #0f130f;
-  --surface-raised: #151b14;
-  --surface-inset: #0c100b;
-  --grid-line: #1e2a1c;
-  --grid-line-strong: #2c3d28;
+    --bg: #0a0d0a;
+    --surface: #0f130f;
+    --surface-raised: #151b14;
+    --surface-inset: #0c100b;
+    --grid-line: #1e2a1c;
+    --grid-line-strong: #2c3d28;
 
-  --text-primary: #7fe89a;
-  --text-bright: #b8ffce;
-  --text-dim: #4c7a58;
-  --text-faint: #34503c;
+    --text-primary: #7fe89a;
+    --text-bright: #b8ffce;
+    --text-dim: #4c7a58;
+    --text-faint: #34503c;
 
-  --field-turquoise: #4fd8d0;
-  --field-blue: #6fa8e8;
-  --field-red: #ff6b6b;
-  --field-yellow: #f0c64d;
-  --field-pink: #e37fd8;
+    --field-turquoise: #4fd8d0;
+    --field-blue: #6fa8e8;
+    --field-red: #ff6b6b;
+    --field-yellow: #f0c64d;
+    --field-pink: #e37fd8;
 
-  --error: var(--field-red);
-  --warning: var(--field-yellow);
-  --info: var(--field-blue);
-  --success: var(--text-bright);
+    --error: var(--field-red);
+    --warning: var(--field-yellow);
+    --info: var(--field-blue);
+    --success: var(--text-bright);
 
-  --radius: 3px;
+    --radius: 3px;
 }
 
-* { box-sizing: border-box; }
+* {
+    box-sizing: border-box;
+}
 
 html, body, #app {
-  height: 100%;
-  margin: 0;
+    height: 100%;
+    margin: 0;
 }
 
 body {
-  background: var(--bg);
-  color: var(--text-primary);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
 }
 
 .workbench-theme {
-  background-image: radial-gradient(ellipse at top, rgba(127, 232, 154, 0.05), transparent 60%);
+    background-image: radial-gradient(ellipse at top, rgba(127, 232, 154, 0.05), transparent 60%);
 }
+
 .workbench-theme::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    rgba(127, 232, 154, 0.018) 0px,
-    rgba(127, 232, 154, 0.018) 1px,
-    transparent 1px,
-    transparent 3px
-  );
-  z-index: 999;
+    content: '';
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+            to bottom,
+            rgba(127, 232, 154, 0.018) 0px,
+            rgba(127, 232, 154, 0.018) 1px,
+            transparent 1px,
+            transparent 3px
+    );
+    z-index: 999;
 }
 
 ::selection {
-  background: rgba(24, 154, 99, 0.25);
-  color: var(--text-bright);
-}
-.workbench-theme ::selection {
-  background: rgba(127, 232, 154, 0.35);
-  color: var(--text-bright);
+    background: rgba(24, 154, 99, 0.25);
+    color: var(--text-bright);
 }
 
-a { color: inherit; }
+.workbench-theme ::selection {
+    background: rgba(127, 232, 154, 0.35);
+    color: var(--text-bright);
+}
+
+a {
+    color: inherit;
+}
 
 button {
-  font-family: inherit;
-  cursor: pointer;
+    font-family: inherit;
+    cursor: pointer;
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--grid-line-strong); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-faint); }
+::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--surface);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--grid-line-strong);
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-faint);
+}
 
 @keyframes blink-cursor {
-  0%, 49% { opacity: 1; }
-  50%, 100% { opacity: 0; }
+    0%, 49% {
+        opacity: 1;
+    }
+    50%, 100% {
+        opacity: 0;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+    * {
+        animation-duration: 0.001ms !important;
+        transition-duration: 0.001ms !important;
+    }
 }
