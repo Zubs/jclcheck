@@ -5,7 +5,7 @@
     <section class="hero">
       <div class="hero-inner">
         <div class="hero-copy">
-          <span class="eyebrow">A validation workbench for JCL</span>
+          <span class="eyebrow">Free JCL check, online — no mainframe needed</span>
           <h1>Learn mainframe JCL<br/>without a mainframe.</h1>
           <p class="lede">
             JCLcheck parses your Job Control Language the way z/OS would — statement
@@ -95,6 +95,19 @@
       </div>
     </section>
 
+    <section class="section faq">
+      <div class="section-head">
+        <span class="eyebrow">FAQ</span>
+        <h2>Questions people ask before their first JCL check online</h2>
+      </div>
+      <div class="faq-list">
+        <details v-for="(item, i) in faq" :key="i" class="faq-item">
+          <summary>{{ item.q }}</summary>
+          <p>{{ item.a }}</p>
+        </details>
+      </div>
+    </section>
+
     <section class="cta">
       <div class="cta-inner">
         <h2>Paste some JCL. See what breaks. Learn why.</h2>
@@ -111,6 +124,9 @@ import Navbar from '../components/marketing/Navbar.vue';
 import Footer from '../components/marketing/Footer.vue';
 import FeatureCard from '../components/marketing/FeatureCard.vue';
 import CodePreview from '../components/marketing/CodePreview.vue';
+import { LANDING_FAQ } from '../faq';
+
+const faq = LANDING_FAQ;
 </script>
 
 <style scoped>
@@ -314,6 +330,57 @@ import CodePreview from '../components/marketing/CodePreview.vue';
   font-size: 28px;
   color: var(--text-bright);
   margin: 0 0 24px;
+}
+
+.faq-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.faq-item {
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  border-radius: var(--radius);
+  padding: 6px 18px;
+  box-shadow: var(--shadow-sm);
+}
+
+.faq-item summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 14px 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-bright);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.faq-item summary::-webkit-details-marker {
+  display: none;
+}
+
+.faq-item summary::after {
+  content: '+';
+  font-family: var(--font-mono);
+  font-size: 18px;
+  color: var(--brand);
+  margin-left: 12px;
+}
+
+.faq-item[open] summary::after {
+  content: '−';
+}
+
+.faq-item p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-dim);
 }
 
 @media (max-width: 900px) {

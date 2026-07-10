@@ -1,0 +1,12 @@
+{
+  "name": "JCLcheck",
+  "short_name": "JCLcheck",
+  "description": "Free online JCL checker and validation workbench.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f8f5",
+  "theme_color": "#189a63",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

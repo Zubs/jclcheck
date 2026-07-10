@@ -3,10 +3,61 @@
 <head>
     <meta charset="UTF-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>JCLcheck — JCL Validation Workbench</title>
+    <title>JCLcheck — Free JCL Check Online, No Mainframe Required</title>
+    <meta name="description"
+          content="JCLcheck is a free online JCL checker and validation workbench. Catch statement-order, DD, keyword and PROC errors in your Job Control Language instantly, with plain-English fixes — no mainframe required."/>
+    <meta name="robots" content="index, follow"/>
+    <link rel="canonical" href="https://jclcheck.xyz/"/>
+    <meta name="theme-color" content="#189a63"/>
+
+    <!-- Open Graph / social unfurlers (these don't execute JS, so they need static tags) -->
+    <meta property="og:type" content="website"/>
+    <meta property="og:site_name" content="JCLcheck"/>
+    <meta property="og:title" content="JCLcheck — Free JCL Check Online, No Mainframe Required"/>
+    <meta property="og:description"
+          content="A free online JCL checker and validation workbench. Statement ordering, DD rules, keyword syntax and PROC symbolics — explained in plain English, with a fix."/>
+    <meta property="og:url" content="https://jclcheck.xyz/"/>
+    <meta property="og:image" content="https://jclcheck.xyz/og-image.png"/>
+    <meta property="og:image:width" content="1200"/>
+    <meta property="og:image:height" content="630"/>
+    <meta name="twitter:card" content="summary_large_image"/>
+    <meta name="twitter:title" content="JCLcheck — Free JCL Check Online, No Mainframe Required"/>
+    <meta name="twitter:description"
+          content="A free online JCL checker and validation workbench. Statement ordering, DD rules, keyword syntax and PROC symbolics — explained in plain English, with a fix."/>
+    <meta name="twitter:image" content="https://jclcheck.xyz/og-image.png"/>
+
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg"/>
+    <link rel="manifest" href="/site.webmanifest"/>
+
+    <!-- fonts.gstatic.com serves the actual font files — missing this preconnect
+         costs an extra DNS+TLS round trip on first paint. Weight lists trimmed
+         to only what's actually used in the UI. -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Sans+Condensed:wght@500;600;700&family=Sora:wght@400;500;600;700;800&display=swap"
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&family=Sora:wght@600;700&display=swap"
           rel="stylesheet">
+
+    <script type="application/ld+json">
+        {
+            "@context": "https://schema.org",
+            "@type": "SoftwareApplication",
+            "name": "JCLcheck",
+            "url": "https://jclcheck.xyz",
+            "applicationCategory": "DeveloperApplication",
+            "operatingSystem": "Web",
+            "description": "A free online JCL checker and validation workbench. Validates Job Control Language syntax, statement ordering, DD statements, keywords and PROC symbolics without needing a mainframe.",
+            "offers": {
+                "@type": "Offer",
+                "price": "0",
+                "priceCurrency": "USD"
+            },
+            "author": {
+                "@type": "Person",
+                "name": "Zubair",
+                "url": "https://zubs.github.io"
+            }
+        }
+    </script>
 </head>
 <body>
 <div id="app"></div>

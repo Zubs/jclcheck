@@ -1,0 +1,23 @@
+[build]
+command = "npm install && npm run build"
+publish = "dist"
+
+# Canonicalize on the apex domain to avoid duplicate-content SEO issues
+# between www.jclcheck.xyz and jclcheck.xyz.
+[[redirects]]
+from = "https://www.jclcheck.xyz/*"
+to = "https://jclcheck.xyz/:splat"
+status = 301
+force = true
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200
+
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+X-Frame-Options = "SAMEORIGIN"
+Referrer-Policy = "strict-origin-when-cross-origin"
