@@ -1,0 +1,8 @@
+{
+  "source": "Nick's item 13 (Features.md feature 19), wrapped in a JOB and EXEC statement",
+  "todo": {
+    "feature": 19,
+    "reason": "Member names in DSN are not understood"
+  },
+  "diagnostics": []
+}

@@ -1,0 +1,18 @@
+{
+  "source": "Workbench sample 'PROC + SYMBOLICS' in frontend/src/samples.js",
+  "valid": true,
+  "diagnostics": [
+    {
+      "code": "JCLR003",
+      "severity": "warning",
+      "line": 10,
+      "column": 1
+    },
+    {
+      "code": "JCLK001",
+      "severity": "warning",
+      "line": 11,
+      "column": 29
+    }
+  ]
+}

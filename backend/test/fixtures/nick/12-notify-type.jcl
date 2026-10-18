@@ -1,0 +1,2 @@
+//NICK     JOB
+//N1   NOTIFY USER=IBMUSER,TYPE=EMAILaasdasd
