@@ -32,6 +32,9 @@
           <li><strong>JES2 statements</strong> — <code>/*ROUTE</code>, <code>/*JOBPARM</code> and the other JES2
             control statements: known names, the ROUTE operand, and placement around the JOB statement.
           </li>
+          <li><strong>JES3 statements</strong> — when JES3 is chosen (z/OS 2.5 or earlier): <code>//*MAIN</code>,
+            <code>//*FORMAT</code> and the other JES3 statements, their keywords and placement.
+          </li>
         </ul>
 
         <h3>Columns</h3>
@@ -78,7 +81,7 @@
           </tr>
           <tr>
             <td>JCLJxxx</td>
-            <td>JES2 control statements</td>
+            <td>JES2 and JES3 control statements</td>
           </tr>
         </table>
 

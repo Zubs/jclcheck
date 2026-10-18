@@ -32,7 +32,26 @@ function availability(entry, level) {
     return null;
 }
 
+// A shop runs one JES. IBM removed JES3 in z/OS 3.1; keywords.js marks every
+// JES3 statement `until` this level.
+const JES_TYPES = ['JES2', 'JES3'];
+const DEFAULT_JES = 'JES2';
+const JES3_LAST_LEVEL = '2.5';
+
+function isJes(value) {
+    return typeof value === 'string' && JES_TYPES.includes(value);
+}
+
+function jesAvailable(jes, level) {
+    return jes !== 'JES3' || availability({ until: JES3_LAST_LEVEL }, level) === null;
+}
+
 module.exports = {
+    JES_TYPES,
+    DEFAULT_JES,
+    JES3_LAST_LEVEL,
+    isJes,
+    jesAvailable,
     ZOS_LEVELS,
     DEFAULT_ZOS_LEVEL,
     isZosLevel,

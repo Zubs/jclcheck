@@ -32,7 +32,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 6. In-stream data delimiters
 - [x] 7. JCL inside `DD DATA`
 - [x] 8. JES2 control statements
-- [ ] 9. JES3 control statements
+- [x] 9. JES3 control statements
 - [ ] 10. Several jobs in one job stream
 - [ ] 11. JCLLIB placement
 - [ ] 12. Positional parameter limits
@@ -618,6 +618,8 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
 - A new warning, `JCLS009`, covers any value that breaks its rule. The message is built from the rule, for example "TYPE must be one of MSG, EMAIL; found 'EMAILAASDASD'." A "did you mean" suggestion is added for `enum` values.
 - Values that are symbolic (`&SYM`) or that come from a referback are skipped, as the DSN check already does.
 - A first set of rules: `CLASS` and `MSGCLASS` (one character A–Z or 0–9), `TYPRUN` (SCAN, HOLD, JCLHOLD, COPY), `PRTY` (0–15), `ADDRSPC` (VIRT, REAL), `RD` (R, RNC, NR, NC), `FREE` (END, CLOSE), `AVGREC` (U, K, M) and `RETPD` (0–93000). Features 15–17 add MSGLEVEL and NOTIFY.
+
+- *Added by feature 9:* JES3 statement keywords (`//*MAIN`, `//*FORMAT`, `//*NET`, `//*NETACCT`, `//*DATASET`) are checked by name only so far. Their values should get rules here too, for example `MAIN HOLD=YES|NO`.
 
 **Tests**
 - **Z** — A keyword with no value rule is accepted with any value, as today.
@@ -1538,7 +1540,7 @@ after:
 - **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have.
 - **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message.
 - **In-stream PROC before the first JOB (feature 10).** The bundled "PROC + SYMBOLICS" sample defines `MYPROC` before the JOB statement. Confirm whether z/OS accepts this. If not, fix the sample and add a placement rule.
-- **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference.
+- **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference. The keyword tables for `MAIN`, `FORMAT`, `NET`, `NETACCT` and `DATASET` in `keywords.js`, and which statements must come before the first EXEC (`MAIN`, `NET`, `NETACCT`, `PROCESS`, `ENDPROCESS`) or before the JOB statement (`PAUSE`), were written from memory of the reference and need checking.
 - **JES3plus (feature 9).** Phoenix Software's JES3plus keeps JES3 running on z/OS 3.1 and later. JES3 support here follows IBM and stops at 2.5. Decide whether JES3plus shops should be able to choose JES3 at 3.x.
 - **Level marks (feature 3).** Only `EMAIL=` on the JOB statement and the NOTIFY statement carry a `since` level so far (both z/OS 2.3, the oldest supported level), so `JCLK005` can't fire on today's real data. Fill in `since`/`until` for other keywords from each release's "Summary of changes" in the MVS JCL Reference, citing the source in a comment.
 - **Doubled quote split over a line break (feature 5).** When a quoted string closes exactly in column 71 and the next line has a quote in column 16, JCLcheck reads the pair as one literal quote (`''`) inside a continued string. The JCL Reference doesn't spell this case out; confirm it on a real system.

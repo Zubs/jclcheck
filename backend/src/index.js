@@ -1,7 +1,15 @@
 const express = require('express');
 const cors = require('cors');
 const validator = require('./validator');
-const { ZOS_LEVELS, isZosLevel } = require('./levels');
+const {
+    ZOS_LEVELS,
+    DEFAULT_ZOS_LEVEL,
+    JES_TYPES,
+    JES3_LAST_LEVEL,
+    isZosLevel,
+    isJes,
+    jesAvailable
+} = require('./levels');
 const {
     GOATCOUNTER_SITE_URL,
     MAX_USAGE_EVENTS,
@@ -44,12 +52,31 @@ function countDirectUse(analytics, endpoint) {
                 if (res.locals.zosLevel) {
                     const level = res.locals.zosLevel;
                     analytics.record({ path: `api/level/${level}`, title: `Direct API z/OS level: ${level}`, ...client });
+                    analytics.record({ path: `api/jes/${res.locals.jes}`, title: `Direct API JES: ${res.locals.jes}`, ...client });
                 }
             });
         }
 
         next();
     };
+}
+
+// Why a request's zosLevel/jes can't be used, or null when they can.
+function optionsProblem(zosLevel, jes) {
+    if (zosLevel !== undefined && !isZosLevel(zosLevel)) {
+        return `Unknown z/OS level. Supported levels: ${ZOS_LEVELS.join(', ')}.`;
+    }
+
+    if (jes !== undefined && !isJes(jes)) {
+        return `Unknown JES. Supported values: ${JES_TYPES.join(', ')}.`;
+    }
+
+    const level = zosLevel === undefined ? DEFAULT_ZOS_LEVEL : zosLevel;
+    if (jes !== undefined && !jesAvailable(jes, level)) {
+        return `JES3 was removed in z/OS 3.1, so it can only be checked at z/OS ${JES3_LAST_LEVEL} or earlier (requested ${level}).`;
+    }
+
+    return null;
 }
 
 function createApp({
@@ -62,18 +89,17 @@ function createApp({
     app.use(express.json({ limit: '2mb' }));
 
     app.post('/api/validate', countDirectUse(analytics, 'validate'), (req, res) => {
-        const zosLevel = req.body ? req.body.zosLevel : undefined;
-        if (zosLevel !== undefined && !isZosLevel(zosLevel)) {
-            return res.status(400).json({
-                error: 'bad_request',
-                message: `Unknown z/OS level. Supported levels: ${ZOS_LEVELS.join(', ')}.`
-            });
+        const { zosLevel, jes } = req.body || {};
+        const problem = optionsProblem(zosLevel, jes);
+        if (problem) {
+            return res.status(400).json({ error: 'bad_request', message: problem });
         }
 
         try {
             const source = req.body && typeof req.body.source === 'string' ? req.body.source : '';
-            const result = validator.validate(source, { zosLevel });
+            const result = validator.validate(source, { zosLevel, jes });
             res.locals.zosLevel = result.zosLevel;
+            res.locals.jes = result.jes;
             res.json(result);
         } catch (err) {
             console.error(err);

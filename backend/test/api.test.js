@@ -74,7 +74,7 @@ test('counting direct API use', async (t) => {
         const request = await serve(t, { analytics });
         await request('/api/validate', { body: { source: '' }, headers: { 'User-Agent': 'curl/8.4.0' } });
         await settle();
-        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/3.2']);
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/3.2', 'api/jes/JES2']);
         assert.ok(analytics.hits.every(h => h.userAgent === 'curl/8.4.0' && h.ip === '127.0.0.1' && h.title));
     });
 
@@ -156,7 +156,7 @@ test('z/OS level in /api/validate', async (t) => {
         analytics.hits.length = 0;
         await request('/api/validate', { body: { source: '', zosLevel: '2.5' } });
         await settle();
-        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/2.5']);
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/2.5', 'api/jes/JES2']);
     });
 
     await t.test('E: a rejected level records bad-request and no level', async () => {
@@ -164,6 +164,38 @@ test('z/OS level in /api/validate', async (t) => {
         await request('/api/validate', { body: { source: '', zosLevel: '9.9' } });
         await settle();
         assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/bad-request']);
+    });
+});
+
+test('JES in /api/validate', async (t) => {
+    const analytics = fakeAnalytics();
+    const request = await serve(t, { analytics });
+
+    await t.test('Z: with no jes the response says JES2', async () => {
+        const res = await request('/api/validate', { body: { source: '' } });
+        assert.equal((await res.json()).jes, 'JES2');
+    });
+
+    await t.test('O: JES3 at z/OS 2.5 is used and counted', async () => {
+        analytics.hits.length = 0;
+        const res = await request('/api/validate', { body: { source: '', jes: 'JES3', zosLevel: '2.5' } });
+        assert.equal((await res.json()).jes, 'JES3');
+        await settle();
+        assert.ok(analytics.hits.some(h => h.path === 'api/jes/JES3'));
+    });
+
+    for (const body of [{ jes: 'JES3', zosLevel: '3.1' }, { jes: 'JES3' }]) {
+        await t.test(`B: JES3 at ${body.zosLevel || 'the default level'} gets 400 saying it was removed`, async () => {
+            const res = await request('/api/validate', { body: { source: '', ...body } });
+            assert.equal(res.status, 400);
+            assert.match((await res.json()).message, /JES3 was removed in z\/OS 3\.1/);
+        });
+    }
+
+    await t.test('E: an unknown JES gets 400 listing JES2 and JES3', async () => {
+        const res = await request('/api/validate', { body: { source: '', jes: 'JES4' } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /JES2, JES3/);
     });
 });
 

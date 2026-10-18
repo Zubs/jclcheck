@@ -17,6 +17,7 @@
 // trailing comma or an open parenthesis/quote.
 
 const { makeDiagnostic } = require('./errors');
+const { JES3_STATEMENTS } = require('./keywords');
 
 function isCommentLine(line) {
     return /^\/\/\*/.test(line);
@@ -199,11 +200,37 @@ function splitsDoubledQuote(line, next) {
 }
 
 /**
+ * With JES3, "//**" is a command and "//*NAME" followed by a blank, for a
+ * known JES3 statement, is a statement; any other "//*" line stays a comment.
+ * @returns {object|null} a JES3 entry, or null for a comment
+ */
+function jes3Statement(rawLine, lineNo) {
+    const text = statementText(rawLine);
+    const entry = { type: 'JES3', line: lineNo, endLine: lineNo, raw: [rawLine] };
+    if (text.startsWith('//**')) {
+        return { ...entry, name: '*', operand: text.slice(4).trim(), operandCol: 5 };
+    }
+
+    const m = text.match(/^\/\/\*([A-Za-z]+)( +|$)/);
+    if (!m || !JES3_STATEMENTS.has(m[1].toUpperCase())) {
+        return null;
+    }
+
+    return {
+        ...entry,
+        name: m[1].toUpperCase(),
+        nameCol: 4,
+        operand: text.slice(m[0].length).trimEnd(),
+        operandCol: m[0].length + 1
+    };
+}
+
+/**
  * Main lexer entry point.
  * @param {string} source raw JCL text
  * @returns {{ statements: LogicalStatement[], diagnostics: Diagnostic[] }}
  */
-function lex(source) {
+function lex(source, { jes = 'JES2' } = {}) {
     const lines = source.replace(/\r\n/g, '\n').split('\n');
     const diagnostics = [];
     const statements = [];
@@ -212,6 +239,7 @@ function lex(source) {
     let instreamDelim = null; // the DLM= delimiter, or null for the default rules
     let instreamKind = 'star'; // 'star' (DD *) or 'data' (DD DATA)
     let instreamOwner = null;
+    let jes3Dataset = null; // an open //*DATASET, whose lines are data until //*ENDDATASET
 
     while (i < lines.length) {
         const rawLine = lines[i];
@@ -239,6 +267,17 @@ function lex(source) {
                 continue; // re-process this line as JCL
             } else {
                 instreamOwner.instreamData.push(rawLine);
+                i++;
+                continue;
+            }
+        }
+
+        if (jes3Dataset) {
+            if (/^\/\/\*ENDDATASET( |$)/.test(statementText(rawLine))) {
+                jes3Dataset.unclosed = false;
+                jes3Dataset = null;
+            } else {
+                jes3Dataset.data.push(rawLine);
                 i++;
                 continue;
             }
@@ -282,6 +321,17 @@ function lex(source) {
                     source: 'lexer'
                 }
             ));
+
+            i++;
+            continue;
+        }
+
+        const jes3 = jes === 'JES3' && isCommentLine(rawLine) && jes3Statement(rawLine, lineNo);
+        if (jes3) {
+            statements.push(jes3);
+            if (jes3.name === 'DATASET') {
+                jes3Dataset = Object.assign(jes3, { data: [], unclosed: true });
+            }
 
             i++;
             continue;

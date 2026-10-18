@@ -130,6 +130,40 @@ const CATALOG = {
         suggestion: (d) => d.before ? `Move /*${d.name} above the JOB statement.` : `Move /*${d.name} below the JOB statement.`
     },
 
+    // JES3 control statements (JCLJ3xx)
+    JCLJ301: {
+        message: (d) => `'//*${d.name}' looks like a JES3 statement, but '${d.name}' isn't one.`,
+        suggestion: (d) => `Did you mean '${d.closest}'? If this line is a comment, add a blank after '//*'.`
+    },
+    JCLJ302: {
+        message: (d) => `'${d.keyword}' is not a recognized keyword on the JES3 ${d.name} statement.`,
+        suggestion: (d) => d.closest ? `Did you mean '${d.closest}'?` : `Check the keyword against the ${d.name} statement in the JES3 section of the JCL Reference.`
+    },
+    JCLJ303: {
+        message: (d) => ({
+            before: `//*${d.name} must come before the JOB statement.`,
+            beforeExec: `//*${d.name} must come after the JOB statement and before the first EXEC statement.`,
+            afterJob: `//*${d.name} must come after the JOB statement.`
+        })[d.place],
+        suggestion: (d) => ({
+            before: `Move //*${d.name} above the JOB statement.`,
+            beforeExec: `Move //*${d.name} between the JOB statement and the first EXEC statement.`,
+            afterJob: `Move //*${d.name} below the JOB statement.`
+        })[d.place]
+    },
+    JCLJ304: {
+        message: () => `//*DATASET is not closed by a //*ENDDATASET statement.`,
+        suggestion: () => `Add //*ENDDATASET after the last line of the data.`
+    },
+    JCLJ305: {
+        message: (d) => `/*${d.name} is a JES2 statement, but this job is being checked for JES3.`,
+        suggestion: () => `Remove it, use the JES3 equivalent, or check the job for JES2.`
+    },
+    JCLJ306: {
+        message: (d) => `This looks like the JES3 ${d.name} statement. It is treated as a comment unless JES3 is selected.`,
+        suggestion: () => `Choose JES3 (at z/OS 2.5 or earlier) to check it, or ignore this if your shop runs JES2.`
+    },
+
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
         message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'.`,

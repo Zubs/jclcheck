@@ -94,7 +94,7 @@ A job counts as **valid** when it has no errors. Warnings do not make a job inva
 
 | Endpoint | Description |
 |---|---|
-| `POST /api/validate` | Body `{ "source": "<JCL text>", "zosLevel": "3.1" }` (2 MB limit). `zosLevel` is optional: one of `2.3`, `2.4`, `2.5`, `3.1` or `3.2`, with `3.2` the default. Any other level gets a 400 response listing the supported ones. Returns `{ diagnostics, ast, stats, zosLevel }`, where `zosLevel` is the level used. A keyword or statement that exists but not at the chosen level gets the warning `JCLK005`. Each diagnostic has `code`, `severity`, `line`, `column`, `length`, `message`, `suggestion` and `source`. `stats` has `errors`, `warnings`, `info`, `statementCount`, `stepCount`, `procCount` and `valid` |
+| `POST /api/validate` | Body `{ "source": "<JCL text>", "zosLevel": "2.5", "jes": "JES3" }` (2 MB limit). `zosLevel` is optional: one of `2.3`, `2.4`, `2.5`, `3.1` or `3.2`, with `3.2` the default. Any other level gets a 400 response listing the supported ones. `jes` is optional: `JES2` (the default) or `JES3`; JES3 can only be chosen at z/OS 2.5 or earlier, since IBM removed it in 3.1, and other values get a 400 response. Returns `{ diagnostics, ast, stats, zosLevel, jes }`, where `zosLevel` and `jes` are the ones used. A keyword or statement that exists but not at the chosen level gets the warning `JCLK005`. Each diagnostic has `code`, `severity`, `line`, `column`, `length`, `message`, `suggestion` and `source`. `stats` has `errors`, `warnings`, `info`, `statementCount`, `stepCount`, `procCount` and `valid` |
 | `GET /api/health` | Returns `{ "ok": true }` |
 
 ---
