@@ -47,6 +47,10 @@ const CATALOG = {
         message: (d) => `Unterminated quoted string.`,
         suggestion: () => `Add the closing single quote. Use '' to represent a literal quote inside the string.`
     },
+    JCLL005: {
+        message: (d) => `A continued quoted string must resume in column 16 (found column ${d.column}).`,
+        suggestion: () => `Extend the string to column 71, then continue it on the next line with '//', blanks in columns 3-15, and the rest of the string starting in column 16.`
+    },
     JCLL004: {
         message: () => `Column 72 is not blank, so the next line should continue this statement's comment, but it doesn't.`,
         suggestion: () => `Only columns 1-71 hold the statement. Clear column 72, or start the next line with '//' and a blank in column 3. If the statement runs past column 71, break it after a comma and continue on the next line.`

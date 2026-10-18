@@ -89,9 +89,9 @@ function splitFields(line) {
  * field ends and a trailing comment begins: the first blank that is
  * outside of any parentheses/quotes.
  */
-function splitOperandAndComment(rest) {
+function splitOperandAndComment(rest, startInQuote = false) {
     let depth = 0;
-    let inQuote = false;
+    let inQuote = startInQuote;
     for (let i = 0; i < rest.length; i++) {
         const ch = rest[i];
         if (inQuote) {
@@ -167,6 +167,16 @@ function needsContinuation(operand) {
         openQuote: inQuote,
         trailingComma
     };
+}
+
+/**
+ * A string closed exactly in column 71 followed by a quote in column 16 of the
+ * next line is a doubled quote ('') split over the break, not two strings.
+ */
+function splitsDoubledQuote(line, next) {
+    const text = statementText(line);
+    return next !== undefined && text.length === 71 && text[70] === "'" &&
+        isJclLine(next) && statementText(next).slice(2, 15).trim() === '' && next[15] === "'";
 }
 
 /**
@@ -283,8 +293,9 @@ function lex(source) {
 
         // Handle continuations
         let cont = needsContinuation(operand);
+        let quoted = cont.openQuote || splitsDoubledQuote(rawLine, lines[nextIdx0]);
         let operandComplete = true;
-        while (cont.continues) {
+        while (cont.continues || quoted) {
             const looksLikeNewStatement = nextIdx0 < lines.length && isJclLine(lines[nextIdx0]) && !isCommentLine(lines[nextIdx0]) && lines[nextIdx0].length > 2 && lines[nextIdx0][2] !== ' ';
             if (nextIdx0 >= lines.length || !isJclLine(lines[nextIdx0]) || isCommentLine(lines[nextIdx0]) || looksLikeNewStatement) {
                 if (cont.openQuote) {
@@ -315,16 +326,42 @@ function lex(source) {
 
             const contLine = lines[nextIdx0];
             rawPhysicalLines.push(contLine);
-            // Continuation content: strip leading '//' then leading blanks - the
-            // remainder is the continued operand (conventionally cols 4-16, but
-            // we accept any indent for resilience).
-            const stripped = statementText(contLine).replace(/^\/\//, '').replace(/^\s*/, '');
-            const split2 = splitOperandAndComment(stripped);
-            operand += split2.operand;
+            let split2;
+            if (quoted) {
+                // A quoted string runs through column 71 (a short line is padded
+                // with blanks, as on a card) and resumes in column 16.
+                const prevText = statementText(lines[lastConsumedLineNo - 1]);
+                const text = statementText(contLine);
+                const firstText = text.slice(2).search(/\S/);
+                const start = firstText === -1 ? text.length : firstText + 2;
+                if (start !== 15) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLL005',
+                        { column: start + 1 },
+                        {
+                            line: nextIdx0 + 1,
+                            column: start + 1,
+                            source: 'lexer'
+                        }
+                    ));
+                }
+
+                split2 = splitOperandAndComment(text.slice(start), cont.openQuote);
+                operand += ' '.repeat(71 - prevText.length) + split2.operand;
+            } else {
+                // Continuation content: strip leading '//' then leading blanks - the
+                // remainder is the continued operand (conventionally cols 4-16, but
+                // we accept any indent for resilience).
+                const stripped = statementText(contLine).replace(/^\/\//, '').replace(/^\s*/, '');
+                split2 = splitOperandAndComment(stripped);
+                operand += split2.operand;
+            }
+
             comment = split2.comment || comment;
             lastConsumedLineNo = nextIdx0 + 1;
             nextIdx0 += 1;
             cont = needsContinuation(operand);
+            quoted = cont.openQuote || splitsDoubledQuote(contLine, lines[nextIdx0]);
         }
 
         // A marked column 72 after a complete operand continues the comment

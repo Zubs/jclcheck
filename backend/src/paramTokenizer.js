@@ -43,7 +43,8 @@ function unbalancedParenCheck(text) {
         }
     }
 
-    if (depth !== 0 || inQuote) {
+    // An unclosed quote alone is the lexer's JCLL003, not a parenthesis error.
+    if (depth > 0) {
         return { ok: false, at: text.length };
     }
 

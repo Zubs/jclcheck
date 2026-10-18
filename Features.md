@@ -28,7 +28,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 2. Analytics
 - [x] 3. z/OS level support
 - [x] 4. Columns 72–80 and comments on continued statements
-- [ ] 5. Quoted strings continued onto the next line
+- [x] 5. Quoted strings continued onto the next line
 - [ ] 6. In-stream data delimiters
 - [ ] 7. JCL inside `DD DATA`
 - [ ] 8. JES2 control statements
@@ -291,21 +291,21 @@ Today this gives `JCLL003` (unterminated quoted string) and `JCLP003` (unmatched
 - When a line ends inside an open quote, the lexer treats the string as running through column 71. A line that stops short of column 71 is padded with blanks, as it would be on a real 80-column record.
 - The next line must start with `//`, have blanks in columns 3–15 and continue the string in column 16. Its text from column 16 onwards is joined directly to the string.
 - Quote and parenthesis tracking runs over the whole joined operand, never over a single continuation line in isolation.
-- If the continued text starts in any column other than 16, a new diagnostic, `JCLL004`, is raised: "A continued quoted string must resume in column 16 (found column N)."
+- If the continued text starts in any column other than 16, a new diagnostic, `JCLL005`, is raised: "A continued quoted string must resume in column 16 (found column N)."
 - Feature 4's column rules still apply: columns 72–80 of the first line are not part of the string.
 
 **Tests**
 - **Z** — A quoted value that opens and closes on one line is read exactly as today.
 - **O** — Nick's item 3 example gives no diagnostics, and the PARM value contains the full sentence.
 - **M** — A string continued over three lines is joined in order into one value.
-- **B** — The continuation text starts in column 16 and is accepted. Starting in column 15 or 17 gives `JCLL004` with the column it found.
+- **B** — The continuation text starts in column 16 and is accepted. Starting in column 15 or 17 gives `JCLL005` with the column it found.
 - **B** — A string whose first line ends exactly at column 71 joins with no extra blanks. One that ends at column 60 includes the blanks up to column 71.
-- **I** — `JCLL004` points to the continuation line and the column where the text actually starts.
+- **I** — `JCLL005` points to the continuation line and the column where the text actually starts.
 - **E** — A doubled quote (`''`) split across the line break is still read as one literal quote.
 - **E** — A string that is never closed, even after continuing, still gets `JCLL003` on the last line, and no `JCLP003` appears just because of it.
 - **S** — A user writes a long PARM, breaks it at column 71 and continues in column 16, and the job checks clean.
 
-**Done when:** Nick's item 3 example checks clean, and a continuation that starts in the wrong column gets `JCLL004`.
+**Done when:** Nick's item 3 example checks clean, and a continuation that starts in the wrong column gets `JCLL005`. (`JCLL004` is feature 4's column-72 diagnostic.)
 
 ### 6. In-stream data delimiters
 
@@ -1129,7 +1129,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLK004`, `JCLK005`, `JCLL004`, `JCLO005`–`JCLO007`, `JCLS009`, `JCLS010`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLK004`, `JCLK005`, `JCLL004`, `JCLL005`, `JCLO005`–`JCLO007`, `JCLS009`, `JCLS010`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
@@ -1540,6 +1540,7 @@ after:
 - **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference.
 - **JES3plus (feature 9).** Phoenix Software's JES3plus keeps JES3 running on z/OS 3.1 and later. JES3 support here follows IBM and stops at 2.5. Decide whether JES3plus shops should be able to choose JES3 at 3.x.
 - **Level marks (feature 3).** Only `EMAIL=` on the JOB statement and the NOTIFY statement carry a `since` level so far (both z/OS 2.3, the oldest supported level), so `JCLK005` can't fire on today's real data. Fill in `since`/`until` for other keywords from each release's "Summary of changes" in the MVS JCL Reference, citing the source in a comment.
+- **Doubled quote split over a line break (feature 5).** When a quoted string closes exactly in column 71 and the next line has a quote in column 16, JCLcheck reads the pair as one literal quote (`''`) inside a continued string. The JCL Reference doesn't spell this case out; confirm it on a real system.
 - **Supported z/OS levels (feature 3).** The proposed list is 2.3, 2.4, 2.5, 3.1 and 3.2, with 3.2 as the default. Decide whether to keep releases that are out of support.
 - **Checking JCL sent to the internal reader (feature 7).** It is left unchecked for now. Checking it as a separate job stream could be added later.
 - **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).
