@@ -29,6 +29,9 @@
           <li><strong>Procedures</strong> — in-stream PROC/PEND resolution, symbolic parameters (&amp;SYM), and
             DD-override matching.
           </li>
+          <li><strong>JES2 statements</strong> — <code>/*ROUTE</code>, <code>/*JOBPARM</code> and the other JES2
+            control statements: known names, the ROUTE operand, and placement around the JOB statement.
+          </li>
         </ul>
 
         <h3>Columns</h3>
@@ -72,6 +75,10 @@
           <tr>
             <td>JCLRxxx</td>
             <td>PROC resolution / symbolics</td>
+          </tr>
+          <tr>
+            <td>JCLJxxx</td>
+            <td>JES2 control statements</td>
           </tr>
         </table>
 

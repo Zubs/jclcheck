@@ -249,6 +249,29 @@ function lex(source) {
             continue;
         }
 
+        // "/*" straight followed by a letter, or "$" for a command, is a JES2
+        // control statement rather than a malformed line.
+        if (/^\/\*[A-Za-z$]/.test(rawLine)) {
+            const text = statementText(rawLine);
+            const isCommand = text[2] === '$';
+            const nameMatch = text.slice(2).match(/^\S*/);
+            const afterName = 2 + nameMatch[0].length;
+            const operandStart = afterName + (text.slice(afterName).length - text.slice(afterName).trimStart().length);
+            statements.push({
+                type: 'JES2',
+                name: isCommand ? '$' : nameMatch[0].toUpperCase(),
+                operand: isCommand ? text.slice(2).trimEnd() : text.slice(operandStart).trimEnd(),
+                nameCol: 3,
+                operandCol: isCommand ? 3 : operandStart + 1,
+                line: lineNo,
+                endLine: lineNo,
+                raw: [rawLine]
+            });
+
+            i++;
+            continue;
+        }
+
         if (!isJclLine(rawLine)) {
             diagnostics.push(makeDiagnostic(
                 'JCLL001',

@@ -3,6 +3,7 @@ const { parse } = require('./parser');
 const { checkDDStatements } = require('./rules/ddRules');
 const { checkAllParams, checkStepsAndDDs } = require('./rules/paramRules');
 const { runProcRules } = require('./rules/procRules');
+const { checkJesStatements } = require('./rules/jesRules');
 const { DEFAULT_ZOS_LEVEL, isZosLevel } = require('./levels');
 
 /**
@@ -33,6 +34,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     ); // resolve proc calls first so paramRules can see them
 
     checkAllParams(job, ruleDiags, context);
+    checkJesStatements(statements, ruleDiags);
     checkDDStatements(job, ruleDiags);
     // Also validate parameters inside in-stream PROC bodies themselves.
     for (const proc of procs) {

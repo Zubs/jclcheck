@@ -116,6 +116,20 @@ const CATALOG = {
         suggestion: () => `Remove the extra JOB statement, or split into separate jobs.`
     },
 
+    // JES2 control statements (JCLJ0xx)
+    JCLJ001: {
+        message: (d) => `'/*${d.name}' is not a recognized JES2 control statement.`,
+        suggestion: (d) => d.closest ? `Did you mean '${d.closest}'?` : `JES2 statements are JOBPARM, MESSAGE, NETACCT, NOTIFY, OUTPUT, PRIORITY, ROUTE, SETUP, SIGNOFF, SIGNON, XEQ and XMIT. Check the spelling, or ignore this if your shop defines its own.`
+    },
+    JCLJ002: {
+        message: (d) => d.found ? `/*ROUTE must start with PRINT, PUNCH or XEQ followed by a destination; found '${d.found}'.` : `/*ROUTE must start with PRINT, PUNCH or XEQ followed by a destination.`,
+        suggestion: () => `For example: /*ROUTE PRINT NODE1, /*ROUTE PUNCH RMT5 or /*ROUTE XEQ N5.`
+    },
+    JCLJ003: {
+        message: (d) => d.before ? `/*${d.name} must come before the JOB statement.` : `/*${d.name} must come after the JOB statement.`,
+        suggestion: (d) => d.before ? `Move /*${d.name} above the JOB statement.` : `Move /*${d.name} below the JOB statement.`
+    },
+
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
         message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'.`,
@@ -241,7 +255,7 @@ function makeDiagnostic(
         code,
         message: entry.message(data),
         suggestion: entry.suggestion ? entry.suggestion(data) : null,
-        severity: overrides.severity || (code.startsWith('JCLK') || code.startsWith('JCLS') ? SEVERITY.WARNING : SEVERITY.ERROR),
+        severity: overrides.severity || (/^JCL[KSJ]/.test(code) ? SEVERITY.WARNING : SEVERITY.ERROR),
         line: overrides.line,
         column: overrides.column || 1,
         length: overrides.length || 1,

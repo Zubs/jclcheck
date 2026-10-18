@@ -131,6 +131,28 @@ const DD_KEYWORDS = table([
     'DLM'
 ]);
 
+// JES2 control statements ("/*NAME ..."), from the z/OS JES2 JCL statement
+// descriptions in the MVS JCL Reference. `place` says where each goes:
+// 'before' the JOB statement, 'anywhere', or (by default) after it.
+const JES2_STATEMENTS = table([
+    'JOBPARM',
+    'MESSAGE',
+    'NETACCT',
+    'NOTIFY',
+    'OUTPUT',
+    'PRIORITY',
+    'ROUTE',
+    'SETUP',
+    'SIGNOFF',
+    'SIGNON',
+    'XEQ',
+    'XMIT'
+], {
+    PRIORITY: { place: 'before' },
+    SIGNOFF: { place: 'anywhere' },
+    SIGNON: { place: 'anywhere' }
+});
+
 const ALL_KNOWN_KEYWORDS = new Set([
     ...JOB_KEYWORDS.keys(),
     ...EXEC_KEYWORDS.keys(),
@@ -190,6 +212,7 @@ module.exports = {
     JOB_KEYWORDS,
     EXEC_KEYWORDS,
     DD_KEYWORDS,
+    JES2_STATEMENTS,
     ALL_KNOWN_KEYWORDS,
     DISP_STATUS,
     DISP_NORMAL,

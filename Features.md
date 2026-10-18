@@ -31,7 +31,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 5. Quoted strings continued onto the next line
 - [x] 6. In-stream data delimiters
 - [x] 7. JCL inside `DD DATA`
-- [ ] 8. JES2 control statements
+- [x] 8. JES2 control statements
 - [ ] 9. JES3 control statements
 - [ ] 10. Several jobs in one job stream
 - [ ] 11. JCLLIB placement
