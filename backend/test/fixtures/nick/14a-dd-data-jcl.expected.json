@@ -1,4 +1,11 @@
 {
-  "source": "Nick's item 14, DD DATA example (Features.md feature 7), wrapped in a JOB and EXEC statement",
-  "diagnostics": []
+  "source": "Nick's item 14, DD DATA example (Features.md feature 7), wrapped in a JOB and EXEC statement. The nested job is sent to the internal reader, so it gets the JCLD004 note instead of being checked.",
+  "diagnostics": [
+    {
+      "code": "JCLD004",
+      "severity": "info",
+      "line": 3,
+      "column": 1
+    }
+  ]
 }

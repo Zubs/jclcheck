@@ -130,6 +130,11 @@ const CATALOG = {
         suggestion: () => `Choose only one of DSN, DUMMY, SYSOUT, or instream data (* / DATA) per DD statement.`
     },
 
+    JCLD004: {
+        message: () => `This in-stream JCL will be submitted as a separate job and is not checked here.`,
+        suggestion: () => `To check the nested job, paste it into the workbench on its own.`
+    },
+
     // Validator: keywords / params (JCLK0xx)
     JCLK001: {
         message: (d) => `'${d.keyword}' is not a recognized keyword for a ${d.stmt} statement.`,

@@ -7,6 +7,7 @@ function checkDDStatements(job, diagnostics) {
     }
 
     for (const step of job.steps) {
+        checkInternalReader(step, diagnostics);
         const seen = new Map();
         for (const dd of step.dds) {
             if (dd.name) {
@@ -70,6 +71,24 @@ function checkDataSource(dd, step, diagnostics) {
             { a: sources[0], b: sources[1] },
             { line: dd.line, column: 1 }
         ));
+    }
+}
+
+const JOB_LINE_RE = /^\/\/\S*\s+JOB(\s|$)/i;
+
+// A job carried as in-stream data and written to the internal reader is
+// submitted on its own; say so, since its JCL isn't checked here.
+function checkInternalReader(step, diagnostics) {
+    const toIntrdr = step.dds.some(dd => dd.params.some(p => p.kind === 'keyword' && p.key === 'SYSOUT' &&
+        p.subvalues && (p.subvalues[1] || '').toUpperCase() === 'INTRDR'));
+    if (!toIntrdr) {
+        return;
+    }
+
+    for (const dd of step.dds) {
+        if (dd.instreamData && dd.instreamData.some(line => JOB_LINE_RE.test(line))) {
+            diagnostics.push(makeDiagnostic('JCLD004', {}, { line: dd.line, column: 1, severity: 'info' }));
+        }
     }
 }
 
