@@ -12,9 +12,7 @@ const {
     StepNode,
     DDNode,
     ProcNode,
-    IfNode,
-    IncludeNode,
-    SetNode
+    IfNode
 } = require('./ast');
 const { tokenizeParams } = require('./paramTokenizer');
 const { makeDiagnostic } = require('./errors');
@@ -42,7 +40,7 @@ function attachParams(
                 column: e.column,
                 source: 'parser'
             }
-          ));
+        ));
     }
 
     return params;
@@ -144,7 +142,7 @@ function parse(statements) {
 
                 procStack.endLine = stmt.line;
                 procStack = null;
-                container = job || {steps: []};
+                container = job || { steps: [] };
                 currentStep = null;
                 break;
             }
@@ -246,7 +244,6 @@ function parse(statements) {
                 break;
             }
             case 'SET': {
-                const { params } = tokenizeParams(stmt.operand, stmt.operandCol);
                 break;
             }
             case 'INCLUDE': {
@@ -272,6 +269,7 @@ function parse(statements) {
             { line: node.line, column: 1 }
         ));
     }
+
     if (procStack) {
         diagnostics.push(makeDiagnostic(
             'JCLP009',

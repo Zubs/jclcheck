@@ -184,7 +184,7 @@ const CATALOG = {
     JCLR003: {
         message: (d) => `Overriding DD '${d.name}' does not match any DD in procedure step '${d.step}'.`,
         suggestion: (d) => `Check the ddname against the procedure step, or use ${d.step}.${d.name} to be explicit.`
-    },
+    }
 };
 
 function makeDiagnostic(

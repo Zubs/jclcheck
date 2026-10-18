@@ -7,15 +7,22 @@
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
   },
   "dependencies": {
     "vue": "^3.4.21",
     "vue-router": "^4.6.4"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@stylistic/eslint-plugin": "^5.10.0",
     "@vitejs/plugin-vue": "^5.0.4",
     "@vue/test-utils": "^2.5.1",
+    "eslint": "^9.39.5",
+    "eslint-plugin-vue": "^10.11.1",
+    "globals": "^17.13.0",
     "jsdom": "^25.0.1",
     "vite": "^5.2.8",
     "vitest": "^2.1.9"

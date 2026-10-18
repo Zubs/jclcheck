@@ -37,7 +37,6 @@ function checkDataSource(dd, step, diagnostics) {
     const hasStar = params.some(p => p.kind === 'positional' && p.value.trim() === '*');
     const hasData = params.some(p => (p.kind === 'positional' && p.value.toUpperCase() === 'DATA') || dd.instreamData);
     const hasLike = params.some(p => p.kind === 'keyword' && p.key === 'LIKE');
-    const hasReferBack = params.some(p => p.kind === 'keyword' && ['DSN', 'DSNAME'].includes(p.key) && p.value.startsWith('*.'));
 
     const sources = [];
     if (hasDSN) {

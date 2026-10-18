@@ -91,6 +91,7 @@ The backend tests use Node's built-in test runner (Node 22 or later) and need no
 ```bash
 cd backend
 npm test           # exits non-zero if any test fails
+npm run lint       # ESLint: bugs and formatting (npm run lint:fix fixes most)
 npm run inspect    # prints full validator output (with messages and fixes) for the bundled fixtures
 ```
 
@@ -120,6 +121,7 @@ The frontend tests use Vitest with Vue Test Utils in jsdom. The API is mocked, s
 ```bash
 cd frontend
 npm test           # runs once and exits non-zero if any test fails
+npm run lint       # ESLint: bugs and formatting, including .vue files (npm run lint:fix fixes most)
 npx vitest         # watch mode
 ```
 

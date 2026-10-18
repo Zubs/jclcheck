@@ -22,10 +22,6 @@ function isJclLine(line) {
     return /^\/\//.test(line);
 }
 
-function isDelimiterLine(line, delimiter) {
-    return line.trimEnd() === delimiter || line.trimEnd().startsWith(delimiter + ' ');
-}
-
 /**
  * Splits a raw physical "//name OP operand comment" line into fields.
  * Returns { name, op, rest, nameCol, opCol, restCol }
@@ -36,7 +32,7 @@ function splitFields(line) {
     const len = line.length;
 
     // name field: non-blank chars right after //
-    let nameStart = i;
+    const nameStart = i;
     while (i < len && line[i] !== ' ') {
         i++;
     }
@@ -49,7 +45,7 @@ function splitFields(line) {
         i++;
     }
 
-    let opStart = i;
+    const opStart = i;
     while (i < len && line[i] !== ' ') {
         i++;
     }
@@ -255,7 +251,7 @@ function lex(source) {
                     column: 81,
                     source: 'lexer'
                 }
-              ));
+            ));
         }
 
         const {
@@ -267,7 +263,7 @@ function lex(source) {
             restCol
         } = splitFields(rawLine);
         let { operand, comment } = splitOperandAndComment(rest);
-        let operandCol = restCol;
+        const operandCol = restCol;
         const rawPhysicalLines = [rawLine];
         let nextIdx0 = i + 1; // 0-indexed index of the next unconsumed physical line
         let lastConsumedLineNo = lineNo;
@@ -307,7 +303,7 @@ function lex(source) {
             // Continuation content: strip leading '//' then leading blanks - the
             // remainder is the continued operand (conventionally cols 4-16, but
             // we accept any indent for resilience).
-            let stripped = contLine.replace(/^\/\//, '').replace(/^\s*/, '');
+            const stripped = contLine.replace(/^\/\//, '').replace(/^\s*/, '');
             const split2 = splitOperandAndComment(stripped);
             operand += split2.operand;
             comment = split2.comment || comment;

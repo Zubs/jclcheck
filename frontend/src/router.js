@@ -34,7 +34,7 @@ const routes = [
         component: About,
         meta: {
             title: 'About',
-            description: "Why JCLcheck exists, and who built it — a free online JCL validation workbench for learning mainframe Job Control Language."
+            description: 'Why JCLcheck exists, and who built it — a free online JCL validation workbench for learning mainframe Job Control Language.'
         }
     },
     {

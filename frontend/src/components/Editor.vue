@@ -38,8 +38,7 @@
 import {
   ref,
   computed,
-  nextTick,
-  watch
+  nextTick
 } from 'vue';
 
 const props = defineProps({

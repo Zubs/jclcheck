@@ -95,7 +95,9 @@ test('counting direct API use', async (t) => {
 
     await t.test('E: a validator crash records api/result/error', async (t) => {
         t.mock.method(console, 'error', () => {});
-        t.mock.method(require('../src/validator'), 'validate', () => { throw new Error('boom'); });
+        t.mock.method(require('../src/validator'), 'validate', () => {
+            throw new Error('boom');
+        });
         const analytics = fakeAnalytics();
         const request = await serve(t, { analytics });
         const res = await request('/api/validate', { body: { source: '//J JOB' } });
