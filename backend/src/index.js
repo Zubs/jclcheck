@@ -95,7 +95,7 @@ function createApp({
     });
 
     app.get('/api/health', (req, res) => {
-        res.json({ ok: true })
+        res.json({ ok: true });
     });
 
     return app;
@@ -127,6 +127,7 @@ if (require.main === module) {
         await analytics.flush();
         process.exit(0);
     };
+
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
 }

@@ -13,10 +13,10 @@ export const LANDING_FAQ = [
     },
     {
         q: 'Is this suitable for beginners learning JCL?',
-        a: "Yes — it was built for exactly that. Every finding includes a plain-English explanation and a suggested fix instead of just an abend code, so you learn the syntax as you go."
+        a: 'Yes — it was built for exactly that. Every finding includes a plain-English explanation and a suggested fix instead of just an abend code, so you learn the syntax as you go.'
     },
     {
         q: 'Does JCLcheck track me or keep my JCL?',
-        a: "Your JCL is sent to the JCLcheck API to be checked, and is never stored or counted. The site counts anonymous usage with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. If your browser sends Do Not Track or Global Privacy Control, nothing is counted at all."
+        a: 'Your JCL is sent to the JCLcheck API to be checked, and is never stored or counted. The site counts anonymous usage with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. If your browser sends Do Not Track or Global Privacy Control, nothing is counted at all.'
     }
 ];

@@ -11,7 +11,9 @@ function fakeGoatCounter() {
     const requests = [];
     const server = http.createServer((req, res) => {
         let body = '';
-        req.on('data', chunk => { body += chunk; });
+        req.on('data', chunk => {
+            body += chunk;
+        });
         req.on('end', () => {
             requests.push({ url: req.url, auth: req.headers.authorization, body: JSON.parse(body) });
             res.writeHead(202, { 'Content-Type': 'application/json' });

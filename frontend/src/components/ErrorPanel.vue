@@ -15,8 +15,8 @@
         <div class="panel-empty__text">
           <strong>NO PROBLEMS FOUND</strong>
           <span v-if="stats">{{ stats.statementCount }} statements · {{
-              stats.stepCount
-            }} steps{{ stats.procCount ? ' · ' + stats.procCount + ' procs' : '' }} checked clean.</span>
+            stats.stepCount
+          }} steps{{ stats.procCount ? ' · ' + stats.procCount + ' procs' : '' }} checked clean.</span>
         </div>
       </div>
 

@@ -169,7 +169,9 @@ describe('Workbench', () => {
         const w = await mountWorkbench();
         let resolveSlow;
         validateJcl
-            .mockReturnValueOnce(new Promise(resolve => { resolveSlow = resolve; }))
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolveSlow = resolve;
+            }))
             .mockResolvedValueOnce(errorsResult(1));
 
         await edit(w, '//OLD');

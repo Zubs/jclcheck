@@ -1,7 +1,7 @@
 export const SAMPLES = {
-  clean: {
-    label: 'CLEAN JOB',
-    code: `//PAYROLL  JOB (ACCT123),'J SMITH',CLASS=A,MSGCLASS=X,
+    clean: {
+        label: 'CLEAN JOB',
+        code: `//PAYROLL  JOB (ACCT123),'J SMITH',CLASS=A,MSGCLASS=X,
 //             MSGLEVEL=(1,1),NOTIFY=&SYSUID
 //STEP010  EXEC PGM=IEFBR14
 //DD1      DD   DSN=PROD.PAYROLL.INPUT,DISP=SHR
@@ -19,10 +19,10 @@ export const SAMPLES = {
   SORT FIELDS=(1,10,CH,A)
 /*
 `
-  },
-  broken: {
-    label: 'BROKEN JOB',
-    code: `//STEP010  EXEC PGM=IEFBR14
+    },
+    broken: {
+        label: 'BROKEN JOB',
+        code: `//STEP010  EXEC PGM=IEFBR14
 //DD1      DD   DSN=PROD.PAYROLL.INPUT,DISP=SHR
 //BADJOB   JOB CLASS=A
 //STEP020  EXEC PGM=SORT,REGON=4M
@@ -36,10 +36,10 @@ export const SAMPLES = {
 //         IF (STEP020.RC = 0) THEN
 //STEP050  EXEC PGM=P3
 `
-  },
-  proc: {
-    label: 'PROC + SYMBOLICS',
-    code: `//MYPROC   PROC LIB=PROD.LOAD,MEM=PGMA
+    },
+    proc: {
+        label: 'PROC + SYMBOLICS',
+        code: `//MYPROC   PROC LIB=PROD.LOAD,MEM=PGMA
 //STEP1    EXEC PGM=&MEM
 //STEPLIB  DD   DSN=&LIB,DISP=SHR
 //OUT1     DD   DSN=&LIB..OUTPUT,DISP=SHR
@@ -51,7 +51,7 @@ export const SAMPLES = {
 //BADOVR   DD   DSN=X.Y,DISP=SHR
 //RUN3     EXEC PROC=MYPROC,BADSYM=1
 `
-  }
+    }
 };
 
 export const SAMPLE_ORDER = ['clean', 'broken', 'proc'];

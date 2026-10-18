@@ -12,6 +12,7 @@ function fakeSend() {
         calls.push({ url, options, body: JSON.parse(options.body) });
         return { status: 202 };
     };
+
     return { calls, send };
 }
 
@@ -113,8 +114,13 @@ test('createAnalytics', async (t) => {
         const realClearInterval = global.clearInterval;
         let unrefCalled = false;
         let cleared = null;
-        global.setInterval = () => ({ unref() { unrefCalled = true; } });
-        global.clearInterval = (t) => { cleared = t; };
+        global.setInterval = () => ({ unref() {
+            unrefCalled = true;
+        } });
+        global.clearInterval = (t) => {
+            cleared = t;
+        };
+
         try {
             const analytics = createAnalytics({ token: 'secret', send: async () => {} });
             analytics.stop();

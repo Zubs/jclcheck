@@ -66,7 +66,7 @@ function checkName(
         diagnostics.push(makeDiagnostic(
             'JCLN001',
             { name, stmt: stmtLabel },
-            { line, column: 3}
+            { line, column: 3 }
         ));
     }
 }
@@ -91,9 +91,9 @@ function checkKeywords(
                         stmt: stmtLabel,
                         closest
                     }, {
-                    line,
-                    column: p.col
-                }));
+                        line,
+                        column: p.col
+                    }));
             }
         } else if (p.kind === 'positional') {
             if (sawKeyword) {
@@ -327,7 +327,6 @@ function checkDsn(
     diagnostics
 ) {
     let v = value.trim();
-    let generationRef = '';
     const genMatch = v.match(/\(([+-]?\d+)\)$/);
     if (genMatch) {
         v = v.slice(0, genMatch.index);
@@ -366,7 +365,7 @@ function checkDsn(
         if (q.length === 0) {
             diagnostics.push(makeDiagnostic(
                 'JCLS006',
-                { value, hint: `Empty qualifier (check for a stray or missing period).`},
+                { value, hint: `Empty qualifier (check for a stray or missing period).` },
                 { line, column: col }
             ));
 

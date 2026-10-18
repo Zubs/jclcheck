@@ -17,7 +17,7 @@ export async function validateJcl(source) {
                 // Tells the backend this check is already counted in the browser.
                 'X-JCLcheck-Client': 'workbench'
             },
-            body: JSON.stringify({source})
+            body: JSON.stringify({ source })
         });
     } catch (err) {
         throw apiError(`Validation request failed: ${err.message}`, 0);
