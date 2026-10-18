@@ -27,7 +27,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 1. Regression test suite
 - [x] 2. Analytics
 - [x] 3. z/OS level support
-- [ ] 4. Columns 72–80 and comments on continued statements
+- [x] 4. Columns 72–80 and comments on continued statements
 - [ ] 5. Quoted strings continued onto the next line
 - [ ] 6. In-stream data delimiters
 - [ ] 7. JCL inside `DD DATA`

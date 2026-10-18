@@ -57,6 +57,12 @@
       "column": 21
     },
     {
+      "code": "JCLL004",
+      "severity": "error",
+      "line": 9,
+      "column": 72
+    },
+    {
       "code": "JCLL002",
       "severity": "error",
       "line": 9,

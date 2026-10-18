@@ -1,8 +1,8 @@
 {
   "source": "Nick's item 2 (Features.md features 4 and 18). JCLR001 stays because the catalogued PROC BILLING can't be seen.",
   "todo": {
-    "feature": 4,
-    "reason": "Continued comment in columns 72-80 is read as new statements"
+    "feature": 18,
+    "reason": "COND.stepname keywords on EXEC are reported as unknown"
   },
   "diagnostics": [
     {

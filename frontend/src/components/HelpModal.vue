@@ -31,6 +31,14 @@
           </li>
         </ul>
 
+        <h3>Columns</h3>
+        <p>
+          Each line is read like an 80-column card, as z/OS reads it. Columns 1–71 hold the
+          statement. A non-blank column 72 continues the comment onto the next line, which
+          starts with <code>//</code> and a blank in column 3. Columns 73–80 are sequence
+          numbers and are ignored. In-stream data lines are kept whole.
+        </p>
+
         <h3>Error codes</h3>
         <table>
           <tr>

@@ -1,16 +1,20 @@
 // Turns raw JCL source text into a stream of "logical statements".
 // A logical statement is one or more physical lines joined via continuation.
 //
-// Each physical JCL line has the classic layout:
+// Each physical JCL line is an 80-column record:
 //   cols 1-2   : "//"
 //   cols 3-10  : name field (optional)
 //   col  11    : blank
 //   cols 12-15 : operation (JOB/EXEC/DD/...)  -- free-ish in practice
-//   operand field, then comments after a blank
+//   operand field, then comments after a blank, up to column 71
+//   col  72    : continuation column - non-blank continues a comment
+//   cols 73-80 : sequence numbers, ignored
 //
-// We are lenient about exact column positions (as most modern shops are)
-// but still flag lines that are clearly too long, and correctly detect
-// continuations via a trailing comma or an open parenthesis/quote.
+// Only columns 1-71 are read as statement text, as z/OS does; in-stream
+// data lines are kept whole. We are lenient about the positions of the
+// name, operation and operand fields (as most modern shops are) but flag
+// lines that are too long, and detect operand continuations via a
+// trailing comma or an open parenthesis/quote.
 
 const { makeDiagnostic } = require('./errors');
 
@@ -20,6 +24,14 @@ function isCommentLine(line) {
 
 function isJclLine(line) {
     return /^\/\//.test(line);
+}
+
+function statementText(line) {
+    return line.slice(0, 71);
+}
+
+function continuationMark(line) {
+    return line.length > 71 && line[71] !== ' ';
 }
 
 /**
@@ -177,8 +189,9 @@ function lex(source) {
 
         if (inInstreamData) {
             // Pass through raw data lines until the delimiter.
-            if (rawLine.trimEnd() === instreamDelim || (isJclLine(rawLine) && !isCommentLine(rawLine))) {
-                if (rawLine.trimEnd() === instreamDelim) {
+            const isDelim = statementText(rawLine).trimEnd() === instreamDelim;
+            if (isDelim || (isJclLine(rawLine) && !isCommentLine(rawLine))) {
+                if (isDelim) {
                     instreamOwner.instreamEndLine = lineNo;
                     inInstreamData = false;
                     i++;
@@ -229,7 +242,7 @@ function lex(source) {
             continue;
         }
 
-        if (rawLine.trimEnd() === '//') {
+        if (statementText(rawLine).trimEnd() === '//') {
             // null statement - end of job stream marker
             statements.push({
                 type: 'NULL',
@@ -261,7 +274,7 @@ function lex(source) {
             nameCol,
             opCol,
             restCol
-        } = splitFields(rawLine);
+        } = splitFields(statementText(rawLine));
         let { operand, comment } = splitOperandAndComment(rest);
         const operandCol = restCol;
         const rawPhysicalLines = [rawLine];
@@ -270,6 +283,7 @@ function lex(source) {
 
         // Handle continuations
         let cont = needsContinuation(operand);
+        let operandComplete = true;
         while (cont.continues) {
             const looksLikeNewStatement = nextIdx0 < lines.length && isJclLine(lines[nextIdx0]) && !isCommentLine(lines[nextIdx0]) && lines[nextIdx0].length > 2 && lines[nextIdx0][2] !== ' ';
             if (nextIdx0 >= lines.length || !isJclLine(lines[nextIdx0]) || isCommentLine(lines[nextIdx0]) || looksLikeNewStatement) {
@@ -295,6 +309,7 @@ function lex(source) {
                     ));
                 }
 
+                operandComplete = false;
                 break;
             }
 
@@ -303,13 +318,40 @@ function lex(source) {
             // Continuation content: strip leading '//' then leading blanks - the
             // remainder is the continued operand (conventionally cols 4-16, but
             // we accept any indent for resilience).
-            const stripped = contLine.replace(/^\/\//, '').replace(/^\s*/, '');
+            const stripped = statementText(contLine).replace(/^\/\//, '').replace(/^\s*/, '');
             const split2 = splitOperandAndComment(stripped);
             operand += split2.operand;
             comment = split2.comment || comment;
             lastConsumedLineNo = nextIdx0 + 1;
             nextIdx0 += 1;
             cont = needsContinuation(operand);
+        }
+
+        // A marked column 72 after a complete operand continues the comment
+        // onto following "//" lines with a blank column 3; they're never parsed.
+        let marked = operandComplete && continuationMark(lines[lastConsumedLineNo - 1]);
+        while (marked) {
+            const next = lines[nextIdx0];
+            if (next === undefined || !isJclLine(next) || isCommentLine(next) || (next.length > 2 && next[2] !== ' ')) {
+                diagnostics.push(makeDiagnostic(
+                    'JCLL004',
+                    {},
+                    {
+                        line: lastConsumedLineNo,
+                        column: 72,
+                        source: 'lexer'
+                    }
+                ));
+
+                break;
+            }
+
+            rawPhysicalLines.push(next);
+            const text = statementText(next).slice(2).trim();
+            comment = comment ? `${comment} ${text}` : text;
+            lastConsumedLineNo = nextIdx0 + 1;
+            nextIdx0 += 1;
+            marked = continuationMark(next);
         }
 
         statements.push({
@@ -352,5 +394,7 @@ module.exports = {
     splitOperandAndComment,
     needsContinuation,
     isCommentLine,
-    isJclLine
+    isJclLine,
+    statementText,
+    continuationMark
 };
