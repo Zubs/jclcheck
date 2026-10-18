@@ -127,7 +127,8 @@ const DD_KEYWORDS = table([
     'ACCODE',
     'PROTECT',
     'QNAME',
-    'CHKPT'
+    'CHKPT',
+    'DLM'
 ]);
 
 const ALL_KNOWN_KEYWORDS = new Set([

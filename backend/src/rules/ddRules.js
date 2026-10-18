@@ -1,4 +1,5 @@
 const { makeDiagnostic } = require('../errors');
+const { parseDelimiter } = require('../lexer');
 
 function checkDDStatements(job, diagnostics) {
     if (!job) {
@@ -25,6 +26,8 @@ function checkDDStatements(job, diagnostics) {
                 step,
                 diagnostics
             );
+
+            checkDelimiter(dd, diagnostics);
         }
     }
 }
@@ -67,6 +70,19 @@ function checkDataSource(dd, step, diagnostics) {
             { a: sources[0], b: sources[1] },
             { line: dd.line, column: 1 }
         ));
+    }
+}
+
+function checkDelimiter(dd, diagnostics) {
+    const dlm = dd.params.find(p => p.kind === 'keyword' && p.key === 'DLM');
+    if (!dlm) {
+        return;
+    }
+
+    if (!dd.instreamData) {
+        diagnostics.push(makeDiagnostic('JCLK006', {}, { line: dd.line, column: dlm.col }));
+    } else if (!parseDelimiter(dlm.value)) {
+        diagnostics.push(makeDiagnostic('JCLS011', { value: dlm.value }, { line: dd.line, column: dlm.valueCol }));
     }
 }
 

@@ -170,6 +170,25 @@ function needsContinuation(operand) {
 }
 
 /**
+ * The two-character in-stream delimiter a DLM= value names, or null when the
+ * value isn't valid. Letters, digits and $#@ may be written as they are; any
+ * other characters must be quoted, with '' for a quote.
+ */
+function parseDelimiter(value) {
+    if (/^[A-Za-z0-9$#@]{2}$/.test(value)) {
+        return value;
+    }
+
+    const quoted = value.match(/^'((?:[^']|'')*)'$/);
+    if (quoted) {
+        const delim = quoted[1].replace(/''/g, "'");
+        return delim.length === 2 ? delim : null;
+    }
+
+    return null;
+}
+
+/**
  * A string closed exactly in column 71 followed by a quote in column 16 of the
  * next line is a doubled quote ('') split over the break, not two strings.
  */
@@ -190,7 +209,8 @@ function lex(source) {
     const statements = [];
     let i = 0;
     let inInstreamData = false;
-    let instreamDelim = '/*';
+    let instreamDelim = null; // the DLM= delimiter, or null for the default rules
+    let instreamKind = 'star'; // 'star' (DD *) or 'data' (DD DATA)
     let instreamOwner = null;
 
     while (i < lines.length) {
@@ -198,9 +218,14 @@ function lex(source) {
         const lineNo = i + 1;
 
         if (inInstreamData) {
-            // Pass through raw data lines until the delimiter.
-            const isDelim = statementText(rawLine).trimEnd() === instreamDelim;
-            if (isDelim || (isJclLine(rawLine) && !isCommentLine(rawLine))) {
+            // Pass through raw data lines until the delimiter. With DLM= only
+            // the delimiter in column 1 ends the data; otherwise "/*" followed by
+            // a blank does, and for DD * so does the next statement.
+            const isDelim = instreamDelim
+                ? rawLine.startsWith(instreamDelim)
+                : /^\/\*( |$)/.test(statementText(rawLine));
+            const endsAtStatement = !instreamDelim && instreamKind === 'star' && isJclLine(rawLine) && !isCommentLine(rawLine);
+            if (isDelim || endsAtStatement) {
                 if (isDelim) {
                     instreamOwner.instreamEndLine = lineNo;
                     inInstreamData = false;
@@ -209,7 +234,7 @@ function lex(source) {
                 }
 
                 // A new JCL statement appeared without an explicit delimiter - IBM
-                // allows this for */ terminated data; treat current line as end.
+                // allows this for DD * data; treat current line as end.
                 inInstreamData = false;
                 continue; // re-process this line as JCL
             } else {
@@ -411,15 +436,30 @@ function lex(source) {
         const upperOp = op.toUpperCase();
         if (upperOp === 'DD') {
             const opUpper = operand.toUpperCase();
-            if (/^\*/.test(opUpper.trim()) || /(^|,)DATA(\b|,|\()/.test(opUpper)) {
+            const isStar = /^\*/.test(opUpper.trim());
+            if (isStar || /(^|,)DATA(\b|,|\()/.test(opUpper)) {
                 inInstreamData = true;
-                const delimMatch = operand.match(/DLM=([A-Za-z0-9]{2})/i);
-                instreamDelim = delimMatch ? '//' + '' /*placeholder*/ : '/*';
-                instreamDelim = delimMatch ? delimMatch[1] : '/*';
+                instreamKind = isStar ? 'star' : 'data';
+                const dlmMatch = operand.match(/(?:^|,)DLM=('(?:[^']|'')*'|[^,\s]*)/i);
+                instreamDelim = dlmMatch ? parseDelimiter(dlmMatch[1]) : null;
                 instreamOwner = statements[statements.length - 1];
                 instreamOwner.instreamData = [];
             }
         }
+    }
+
+    // DD DATA and DLM= data need their delimiter; DD * may end with the input.
+    if (inInstreamData && (instreamDelim || instreamKind === 'data')) {
+        diagnostics.push(makeDiagnostic(
+            'JCLL006',
+            { delim: instreamDelim || '/*' },
+            {
+                line: instreamOwner.line,
+                column: 1,
+                severity: 'warning',
+                source: 'lexer'
+            }
+        ));
     }
 
     return { statements, diagnostics };
@@ -433,5 +473,6 @@ module.exports = {
     isCommentLine,
     isJclLine,
     statementText,
-    continuationMark
+    continuationMark,
+    parseDelimiter
 };

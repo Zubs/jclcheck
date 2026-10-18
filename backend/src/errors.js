@@ -51,6 +51,10 @@ const CATALOG = {
         message: (d) => `A continued quoted string must resume in column 16 (found column ${d.column}).`,
         suggestion: () => `Extend the string to column 71, then continue it on the next line with '//', blanks in columns 3-15, and the rest of the string starting in column 16.`
     },
+    JCLL006: {
+        message: (d) => `In-stream data reaches the end of the input without its delimiter '${d.delim}'.`,
+        suggestion: (d) => `Add a line starting in column 1 with '${d.delim}' where the data ends.`
+    },
     JCLL004: {
         message: () => `Column 72 is not blank, so the next line should continue this statement's comment, but it doesn't.`,
         suggestion: () => `Only columns 1-71 hold the statement. Clear column 72, or start the next line with '//' and a blank in column 3. If the statement runs past column 71, break it after a comma and continue on the next line.`
@@ -139,6 +143,10 @@ const CATALOG = {
         message: (d) => `Positional parameter '${d.value}' is not valid in this position.`,
         suggestion: () => `Positional parameters must appear before any keyword parameters.`
     },
+    JCLK006: {
+        message: () => `DLM= has no effect, because this DD statement has no in-stream data.`,
+        suggestion: () => `Remove DLM=, or use DD * or DD DATA if this DD should hold in-stream data.`
+    },
     // A known keyword or statement that doesn't exist at the chosen z/OS level,
     // because it arrived later (reason 'since') or was removed (reason 'until').
     JCLK005: {
@@ -184,6 +192,11 @@ const CATALOG = {
     JCLS008: {
         message: (d) => `DSN qualifier '${d.qual}' starts with an invalid character.`,
         suggestion: () => `Qualifiers must start with a letter or national character ($ # @).`
+    },
+
+    JCLS011: {
+        message: (d) => `Invalid DLM value '${d.value}'.`,
+        suggestion: () => `A delimiter is exactly two characters. Letters, digits and $ # @ can be written as they are (DLM=@@); quote anything else (DLM='%%').`
     },
 
     // Name field (JCLN0xx)

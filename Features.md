@@ -29,7 +29,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 3. z/OS level support
 - [x] 4. Columns 72–80 and comments on continued statements
 - [x] 5. Quoted strings continued onto the next line
-- [ ] 6. In-stream data delimiters
+- [x] 6. In-stream data delimiters
 - [ ] 7. JCL inside `DD DATA`
 - [ ] 8. JES2 control statements
 - [ ] 9. JES3 control statements
@@ -332,8 +332,9 @@ Today `DLM` gets `JCLK001` (unknown keyword). Only delimiters made of two letter
   - `/* comment` therefore ends the data, as it does on z/OS.
 - The unused `isDelimiterLine` helper in `lexer.js` is either used for this or removed.
 - New diagnostics:
-  - A `DLM=` value that isn't two valid characters gets a `JCLS` warning.
-  - Data that reaches the end of the file without its delimiter gets a warning naming the delimiter it was waiting for.
+  - A `DLM=` value that isn't two valid characters gets the warning `JCLS011`.
+  - Data that needs an explicit delimiter (`DD DATA`, or any `DLM=`) and reaches the end of the file without it gets the warning `JCLL006`, naming the delimiter it was waiting for. `DD *` without `DLM=` can end with the input.
+  - `DLM=` on a DD with no in-stream data gets the warning `JCLK006`.
 
 **Tests**
 - **Z** — `DD *` followed directly by `/*` gives an empty in-stream data block and no diagnostics.
@@ -1129,7 +1130,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLK004`, `JCLK005`, `JCLL004`, `JCLL005`, `JCLO005`–`JCLO007`, `JCLS009`, `JCLS010`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO007`, `JCLS009`–`JCLS011`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
