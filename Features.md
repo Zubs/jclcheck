@@ -25,7 +25,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 ## Progress
 
 - [x] 1. Regression test suite
-- [ ] 2. Analytics
+- [x] 2. Analytics
 - [ ] 3. z/OS level support
 - [ ] 4. Columns 72–80 and comments on continued statements
 - [ ] 5. Quoted strings continued onto the next line
