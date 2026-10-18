@@ -21,7 +21,7 @@ function checkRoute(stmt, diagnostics) {
     }
 }
 
-function checkJes2(stmt, sawJob, diagnostics) {
+function checkJes2(stmt, sawJob, beforeJob, diagnostics) {
     const entry = JES2_STATEMENTS.get(stmt.name);
     if (!entry) {
         diagnostics.push(makeDiagnostic(
@@ -38,7 +38,7 @@ function checkJes2(stmt, sawJob, diagnostics) {
     }
 
     const place = entry.place || 'after';
-    if ((place === 'before' && sawJob) || (place === 'after' && !sawJob)) {
+    if ((place === 'before' && !beforeJob) || (place === 'after' && !sawJob)) {
         diagnostics.push(makeDiagnostic(
             'JCLJ003',
             { name: stmt.name, before: place === 'before' },
@@ -47,7 +47,7 @@ function checkJes2(stmt, sawJob, diagnostics) {
     }
 }
 
-function checkJes3(stmt, sawJob, sawExec, diagnostics) {
+function checkJes3(stmt, sawJob, sawExec, beforeJob, diagnostics) {
     const entry = JES3_STATEMENTS.get(stmt.name);
     if (entry.keywords) {
         for (const p of tokenizeParams(stmt.operand, stmt.operandCol).params) {
@@ -62,7 +62,7 @@ function checkJes3(stmt, sawJob, sawExec, diagnostics) {
     }
 
     const place = entry.place || 'afterJob';
-    const misplaced = place === 'before' ? sawJob : !sawJob || (place === 'beforeExec' && sawExec);
+    const misplaced = place === 'before' ? !beforeJob : !sawJob || (place === 'beforeExec' && sawExec);
     if (misplaced) {
         diagnostics.push(makeDiagnostic('JCLJ303', { name: stmt.name, place }, { line: stmt.line, column: 1 }));
     }
@@ -93,25 +93,39 @@ function checkComment(stmt, jes, diagnostics) {
 }
 
 function checkJesStatements(statements, diagnostics, { jes = 'JES2' } = {}) {
-    let sawJob = false;
-    let sawExec = false;
-    for (const stmt of statements) {
+    const opOf = stmt => (stmt.op || '').toUpperCase();
+    let sawJob = false; // a JOB statement came earlier
+    let sawExec = false; // an EXEC came after the latest JOB statement
+    // "Before the JOB statement" means the next JCL statement is a JOB, so
+    // the rule holds for every job in a stream. Worked out back to front.
+    const nextIsJob = new Array(statements.length).fill(false);
+    for (let i = statements.length - 2; i >= 0; i--) {
+        const next = statements[i + 1];
+        nextIsJob[i] = next.type === 'STMT' ? opOf(next) === 'JOB' : nextIsJob[i + 1];
+    }
+
+    statements.forEach((stmt, i) => {
+        const beforeJob = nextIsJob[i];
         if (stmt.type === 'STMT') {
-            const op = (stmt.op || '').toUpperCase();
-            sawJob = sawJob || op === 'JOB';
-            sawExec = sawExec || (sawJob && op === 'EXEC');
+            const op = opOf(stmt);
+            if (op === 'JOB') {
+                sawJob = true;
+                sawExec = false;
+            } else if (sawJob && op === 'EXEC') {
+                sawExec = true;
+            }
         } else if (stmt.type === 'COMMENT') {
             checkComment(stmt, jes, diagnostics);
         } else if (stmt.type === 'JES2' && stmt.name !== '$') {
             if (jes === 'JES3' && stmt.name !== 'SIGNON' && stmt.name !== 'SIGNOFF') {
                 diagnostics.push(makeDiagnostic('JCLJ305', { name: stmt.name }, { line: stmt.line, column: 1 }));
             } else if (jes === 'JES2') {
-                checkJes2(stmt, sawJob, diagnostics);
+                checkJes2(stmt, sawJob, beforeJob, diagnostics);
             }
         } else if (stmt.type === 'JES3' && stmt.name !== '*') {
-            checkJes3(stmt, sawJob, sawExec, diagnostics);
+            checkJes3(stmt, sawJob, sawExec, beforeJob, diagnostics);
         }
-    }
+    });
 }
 
 module.exports = { checkJesStatements };

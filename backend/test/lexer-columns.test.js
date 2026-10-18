@@ -52,7 +52,7 @@ test('statement columns', async (t) => {
     await t.test('O: in-stream data keeps columns 73-80', () => {
         const data = '  DATA'.padEnd(72) + 'KEEPME00';
         const result = validate(`//J1 JOB\n//S1 EXEC PGM=X\n//IN DD *\n${data}\n/*\n`);
-        assert.equal(result.ast.job.steps[0].dds[0].instreamData[0], data);
+        assert.equal(result.ast.jobs[0].steps[0].dds[0].instreamData[0], data);
     });
 });
 

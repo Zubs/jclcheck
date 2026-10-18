@@ -9,7 +9,7 @@ const { validate } = require('../src/validator');
 
 const stmts = source => lex(source).statements.filter(s => s.type === 'STMT');
 const diags = source => validate(source).diagnostics.map(d => [d.code, d.line, d.column]);
-const parm = source => validate(source).ast.job.steps[0].params.find(p => p.key === 'PARM').value;
+const parm = source => validate(source).ast.jobs[0].steps[0].params.find(p => p.key === 'PARM').value;
 
 // A continuation line whose text starts in the given column.
 const resume = (text, column = 16) => '//' + ' '.repeat(column - 3) + text;
@@ -54,7 +54,7 @@ test('continued quoted strings', async (t) => {
         const source = `//J JOB\n//S EXEC PGM=X,PARM='ABC\n${resume("DEF',REGION=4M  A COMMENT")}\n`;
         const [, step] = stmts(source);
         assert.equal(step.comment, 'A COMMENT');
-        assert.ok(validate(source).ast.job.steps[0].params.some(p => p.key === 'REGION'));
+        assert.ok(validate(source).ast.jobs[0].steps[0].params.some(p => p.key === 'REGION'));
         assert.deepEqual(diags(source), []);
     });
 

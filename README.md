@@ -129,14 +129,20 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
 
 ## What's validated
 
-- **Lexing**: `//` record format, comment lines (`//*`), continuation lines
-  (trailing comma or open parenthesis), unterminated quotes, 80-column
-  overflow, in-stream data (`DD *` / `DD DATA` through the delimiter).
+- **Lexing**: `//` record format read as 80-column records (columns 1-71
+  hold the statement, column 72 continues a comment, 73-80 are ignored),
+  comment lines (`//*`), continuation lines (trailing comma, open
+  parenthesis, or a quoted string resuming in column 16), unterminated
+  quotes, 80-column overflow, in-stream data (`DD *` / `DD DATA`, with
+  `DLM=` delimiters).
+- **z/OS level and JES**: checks against z/OS 2.3-3.2 (default 3.2) and
+  JES2 or JES3 (JES3 only at 2.5 or earlier). JES2 (`/*ROUTE`, ...) and
+  JES3 (`//*MAIN`, ...) control statements are recognised and checked.
 - **Parsing / structure**: statement recognition (JOB, EXEC, DD, PROC, PEND,
   SET, IF/THEN/ELSE/ENDIF, INCLUDE), unmatched parentheses, IF/ENDIF and
   PROC/PEND balancing and nesting.
-- **Ordering**: JOB must come first; EXEC before its DDs; only one JOB per job
-  stream.
+- **Ordering**: JOB must come first; EXEC before its DDs. A job stream can
+  hold several jobs, each checked on its own; `//` ends a job.
 - **DD statements**: duplicate ddnames within a step; a DD must have exactly
   one data source (DSN / DUMMY / SYSOUT / instream data), not zero or several.
 - **Keywords**: every keyword on JOB/EXEC/DD is checked against tables
@@ -158,7 +164,12 @@ Every diagnostic carries `{ code, severity, line, column, message,
 suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
 `JCLLxxx` lexer, `JCLPxxx` parser, `JCLOxxx` ordering, `JCLDxxx` DD rules,
 `JCLKxxx` keyword rules, `JCLSxxx` value syntax, `JCLNxxx` name syntax,
-`JCLRxxx` procedure resolution).
+`JCLRxxx` procedure resolution, `JCLJxxx` JES control statements).
+
+`POST /api/validate` returns `{ diagnostics, ast, stats, zosLevel, jes }`.
+`ast.jobs` lists every job in the stream (it replaced the single `ast.job`
+when several jobs per stream were supported), and `stats.jobCount` counts
+them.
 
 ## Known limitations (by design, given no mainframe access)
 

@@ -43,8 +43,11 @@ function attachParams(
 
 function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     const diagnostics = [];
-    let job = null;
+    const jobs = [];
+    let job = null; // the current job
+    let ended = false; // a null statement (//) ended the last job
     const procs = [];
+    const preJobProcs = []; // PROCs written before the first JOB belong to it
     let procStack = null; // currently-open in-stream PROC
     let container = { steps: [] }; // root container before JOB or when JOB missing
     let currentStep = null;
@@ -52,12 +55,30 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     let sawAnyStatement = false;
 
     for (const stmt of statements) {
+        if (stmt.type === 'NULL' && job) {
+            job = null;
+            ended = true;
+            container = { steps: [] };
+            currentStep = null;
+            continue;
+        }
+
         if (stmt.type !== 'STMT') {
             continue;
         }
 
         sawAnyStatement = true;
         const op = (stmt.op || '').toUpperCase();
+
+        if (ended && op !== 'JOB') {
+            diagnostics.push(makeDiagnostic(
+                'JCLO007',
+                {},
+                { line: stmt.line, column: stmt.opCol || 1 }
+            ));
+
+            continue;
+        }
 
         if (!op) {
             diagnostics.push(makeDiagnostic(
@@ -103,17 +124,13 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
         switch (op) {
             case 'JOB': {
-                if (job) {
-                    diagnostics.push(makeDiagnostic(
-                        'JCLO004',
-                        {},
-                        { line: stmt.line, column: stmt.opCol }
-                    ));
-
-                    break;
+                job = JobNode(stmt.name, stmt.line);
+                if (jobs.length === 0) {
+                    job.procs.push(...preJobProcs);
                 }
 
-                job = JobNode(stmt.name, stmt.line);
+                jobs.push(job);
+                ended = false;
                 attachParams(
                     job,
                     stmt,
@@ -133,6 +150,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 );
 
                 procs.push(proc);
+                (job ? job.procs : preJobProcs).push(proc);
                 procStack = proc;
                 container = proc;
                 currentStep = null;
@@ -263,7 +281,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
         }
     }
 
-    if (!job && sawAnyStatement) {
+    if (jobs.length === 0 && sawAnyStatement) {
         diagnostics.push(makeDiagnostic(
             'JCLO001',
             {},
@@ -288,7 +306,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     }
 
     return {
-        job,
+        jobs,
         procs,
         diagnostics
     };

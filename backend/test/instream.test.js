@@ -9,7 +9,7 @@ const { validate } = require('../src/validator');
 
 const job = body => `//J JOB\n//S EXEC PGM=X\n${body}`;
 const diags = source => validate(source).diagnostics.map(d => [d.code, d.line, d.column]);
-const dds = source => validate(source).ast.job.steps[0].dds;
+const dds = source => validate(source).ast.jobs[0].steps[0].dds;
 
 test('in-stream data ends at its delimiter', async (t) => {
     await t.test('Z: DD * followed by /* is empty and clean', () => {

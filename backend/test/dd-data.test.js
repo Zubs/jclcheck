@@ -17,19 +17,20 @@ test('JCL inside DD DATA', async (t) => {
     await t.test('O: a // line in DD DATA is data, not a statement', () => {
         const result = validate(job('//IN DD DATA\n//X EXEC PGM=Y\n/*\n'));
         assert.deepEqual(result.diagnostics, []);
-        assert.equal(result.ast.job.steps.length, 1);
-        assert.deepEqual(result.ast.job.steps[0].dds[0].instreamData, ['//X EXEC PGM=Y']);
+        assert.equal(result.ast.jobs[0].steps.length, 1);
+        assert.deepEqual(result.ast.jobs[0].steps[0].dds[0].instreamData, ['//X EXEC PGM=Y']);
     });
 
     await t.test('M: Nick\'s item 14 has no errors, two DDs, and one internal reader note', () => {
         const result = validate(fs.readFileSync(path.join(__dirname, 'fixtures', 'nick', '14a-dd-data-jcl.jcl'), 'utf8'));
         assert.deepEqual(result.diagnostics.map(d => [d.code, d.severity, d.line]), [['JCLD004', 'info', 3]]);
-        assert.deepEqual(result.ast.job.steps[0].dds.map(d => d.name), ['SYSUT1', 'SYSUT2']);
+        assert.deepEqual(result.ast.jobs[0].steps[0].dds.map(d => d.name), ['SYSUT1', 'SYSUT2']);
     });
 
     await t.test('B: the same lines under DD * end the data at the first // line', () => {
         const result = validate(job('//IN DD *\n//NESTED JOB\n'));
-        assert.deepEqual(result.diagnostics.map(d => d.code), ['JCLO004']);
+        assert.deepEqual(result.ast.jobs[0].steps[0].dds[0].instreamData, []);
+        assert.equal(result.stats.jobCount, 2);
     });
 
     await t.test('I: no note without an INTRDR DD', () => {

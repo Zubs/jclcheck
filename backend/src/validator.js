@@ -2,7 +2,7 @@ const { lex } = require('./lexer');
 const { parse } = require('./parser');
 const { checkDDStatements } = require('./rules/ddRules');
 const { checkAllParams, checkStepsAndDDs } = require('./rules/paramRules');
-const { runProcRules } = require('./rules/procRules');
+const { resolveProcCalls, validateSymbolicParams, validateDDOverrides } = require('./rules/procRules');
 const { checkJesStatements } = require('./rules/jesRules');
 const { DEFAULT_ZOS_LEVEL, DEFAULT_JES, isZosLevel, isJes, jesAvailable } = require('./levels');
 
@@ -26,20 +26,21 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
     const context = { zosLevel, jes };
     const { statements, diagnostics: lexDiags } = lex(source || '', context);
     const {
-        job,
+        jobs,
         procs,
         diagnostics: parseDiags
     } = parse(statements, context);
     const ruleDiags = [];
-    runProcRules(
-        job,
-        procs,
-        ruleDiags
-    ); // resolve proc calls first so paramRules can see them
+    // Each job is checked on its own; a step only sees its own job's PROCs.
+    for (const job of jobs) {
+        resolveProcCalls(job, job.procs, ruleDiags); // first, so paramRules can see the PROCs
+        validateDDOverrides(job, ruleDiags);
+        checkAllParams(job, ruleDiags, context);
+        checkDDStatements(job, ruleDiags);
+    }
 
-    checkAllParams(job, ruleDiags, context);
+    validateSymbolicParams(procs, ruleDiags);
     checkJesStatements(statements, ruleDiags, context);
-    checkDDStatements(job, ruleDiags);
     // Also validate parameters inside in-stream PROC bodies themselves.
     for (const proc of procs) {
         checkStepsAndDDs(proc.steps, ruleDiags, context);
@@ -59,14 +60,15 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
         warnings: all.filter(d => d.severity === 'warning').length,
         info: all.filter(d => d.severity === 'info').length,
         statementCount: statements.filter(s => s.type === 'STMT').length,
-        stepCount: job ? job.steps.length : 0,
+        jobCount: jobs.length,
+        stepCount: jobs.reduce((n, job) => n + job.steps.length, 0),
         procCount: procs.length,
         valid: !all.some(d => d.severity === 'error')
     };
 
     return {
         diagnostics: all,
-        ast: { job, procs },
+        ast: { jobs, procs },
         stats,
         zosLevel,
         jes

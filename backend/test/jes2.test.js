@@ -40,7 +40,7 @@ test('JES2 statements are recognised', async (t) => {
 
     await t.test('B: /* followed by a blank still ends DD * data', () => {
         const source = JOB + STEP + '//IN DD *\nDATA\n/* END\n';
-        assert.deepEqual(validate(source).ast.job.steps[0].dds[0].instreamData, ['DATA']);
+        assert.deepEqual(validate(source).ast.jobs[0].steps[0].dds[0].instreamData, ['DATA']);
         assert.ok(lex(source).statements.every(s => s.type !== 'JES2'));
     });
 

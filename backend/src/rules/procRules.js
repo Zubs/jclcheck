@@ -172,23 +172,7 @@ function validateDDOverrides(job, diagnostics) {
     }
 }
 
-function runProcRules(
-    job,
-    procs,
-    diagnostics
-) {
-    resolveProcCalls(
-        job,
-        procs,
-        diagnostics
-    );
-
-    validateSymbolicParams(procs, diagnostics);
-    validateDDOverrides(job, diagnostics);
-}
-
 module.exports = {
-    runProcRules,
     resolveProcCalls,
     validateSymbolicParams,
     validateDDOverrides

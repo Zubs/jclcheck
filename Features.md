@@ -33,7 +33,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 7. JCL inside `DD DATA`
 - [x] 8. JES2 control statements
 - [x] 9. JES3 control statements
-- [ ] 10. Several jobs in one job stream
+- [x] 10. Several jobs in one job stream
 - [ ] 11. JCLLIB placement
 - [ ] 12. Positional parameter limits
 - [ ] 13. IF/THEN/ELSE conditions

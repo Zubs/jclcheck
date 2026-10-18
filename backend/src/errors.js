@@ -111,9 +111,9 @@ const CATALOG = {
         message: (d) => `DD statement '${d.name}' appears before any EXEC statement.`,
         suggestion: () => `DD statements belong to a step - add an EXEC statement first.`
     },
-    JCLO004: {
-        message: (d) => `Only one JOB statement is allowed per job.`,
-        suggestion: () => `Remove the extra JOB statement, or split into separate jobs.`
+    JCLO007: {
+        message: () => `Statement after the end of the job (//).`,
+        suggestion: () => `Start a new job with a JOB statement, or remove the null statement (//) if the job should continue.`
     },
 
     // JES2 control statements (JCLJ0xx)
