@@ -20,7 +20,7 @@ The site should load fast and be easy to find through search engines for searche
 
 - **Audience:** People learning JCL, mainframe trainees, and developers who want a quick check before they submit a job.
 - **Price:** Free. No sign-up, no accounts and no usage limits.
-- **Privacy:** JCL is sent to the API to be checked and is not stored. The site does not save user code between visits.
+- **Privacy:** JCL is sent to the API to be checked, and is never stored or counted. The site does not save user code between visits. Usage is counted anonymously with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. Nothing is counted when the browser sends Do Not Track or Global Privacy Control.
 - **Ownership:** Zubair owns the code and the product.
 
 ---

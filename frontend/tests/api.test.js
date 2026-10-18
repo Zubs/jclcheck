@@ -17,7 +17,7 @@ describe('validateJcl', () => {
         const [url, options] = fetchMock.mock.calls[0];
         expect(url).toBe('/api/validate');
         expect(options.method).toBe('POST');
-        expect(options.headers).toEqual({ 'Content-Type': 'application/json' });
+        expect(options.headers).toEqual({ 'Content-Type': 'application/json', 'X-JCLcheck-Client': 'workbench' });
         expect(options.body).toBe('{"source":"//J JOB"}');
     });
 
@@ -30,5 +30,15 @@ describe('validateJcl', () => {
     test('raises an error with the status and body when the response is not OK', async () => {
         fetchMock.mockResolvedValue(new Response('internal_error', { status: 500 }));
         await expect(validateJcl('//J JOB')).rejects.toThrow('Validation request failed (500): internal_error');
+    });
+
+    test('gives the error the HTTP status', async () => {
+        fetchMock.mockResolvedValue(new Response('internal_error', { status: 500 }));
+        await expect(validateJcl('//J JOB')).rejects.toMatchObject({ status: 500 });
+    });
+
+    test('gives status 0 when the API cannot be reached', async () => {
+        fetchMock.mockRejectedValue(new TypeError('Failed to fetch'));
+        await expect(validateJcl('//J JOB')).rejects.toMatchObject({ status: 0, message: 'Validation request failed: Failed to fetch' });
     });
 });

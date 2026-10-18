@@ -14,13 +14,13 @@
             required to get started.
           </p>
           <div class="hero-actions">
-            <router-link to="/app" class="btn btn-primary">Launch the workbench →</router-link>
-            <router-link to="/about" class="btn btn-ghost">Why I built this</router-link>
+            <router-link to="/app" class="btn btn-primary" @click="track('cta/launch', 'hero')">Launch the workbench →</router-link>
+            <router-link to="/about" class="btn btn-ghost" @click="track('cta/about', 'hero')">Why I built this</router-link>
           </div>
           <div class="hero-trust">
             <span>Built on the IBM JCL Reference</span>
             <span class="sep">·</span>
-            <span>Runs entirely in your browser + a Node API</span>
+            <span>Anonymous usage counts, no cookies</span>
           </div>
         </div>
         <div class="hero-visual">
@@ -101,7 +101,7 @@
         <h2>Questions people ask before their first JCL check online</h2>
       </div>
       <div class="faq-list">
-        <details v-for="(item, i) in faq" :key="i" class="faq-item">
+        <details v-for="(item, i) in faq" :key="i" class="faq-item" @toggle="onFaqToggle($event, i)">
           <summary>{{ item.q }}</summary>
           <p>{{ item.a }}</p>
         </details>
@@ -111,7 +111,7 @@
     <section class="cta">
       <div class="cta-inner">
         <h2>Paste some JCL. See what breaks. Learn why.</h2>
-        <router-link to="/app" class="btn btn-primary btn-lg">Open the workbench →</router-link>
+        <router-link to="/app" class="btn btn-primary btn-lg" @click="track('cta/launch', 'bottom')">Open the workbench →</router-link>
       </div>
     </section>
 
@@ -125,8 +125,15 @@ import Footer from '../components/marketing/Footer.vue';
 import FeatureCard from '../components/marketing/FeatureCard.vue';
 import CodePreview from '../components/marketing/CodePreview.vue';
 import { LANDING_FAQ } from '../faq';
+import { track } from '../analytics';
 
 const faq = LANDING_FAQ;
+
+function onFaqToggle(event, index) {
+  if (event.target.open) {
+    track('faq/open', index + 1);
+  }
+}
 </script>
 
 <style scoped>

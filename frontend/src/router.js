@@ -2,7 +2,9 @@ import { createRouter, createWebHistory } from 'vue-router';
 import Landing from './pages/Landing.vue';
 import About from './pages/About.vue';
 import Workbench from './pages/Workbench.vue';
+import NotFound from './pages/NotFound.vue';
 import { applyPageSeo } from './seo';
+import { pageview } from './analytics';
 import { LANDING_FAQ } from './faq';
 
 const faqStructuredData = {
@@ -43,6 +45,15 @@ const routes = [
             title: 'JCL Check Online — Validation Workbench',
             description: 'Paste your JCL and check it online instantly: statement ordering, DD rules, keyword validation, DISP/SPACE/DCB syntax, and PROC symbolics — with plain-English errors and fixes.'
         }
+    },
+    {
+        path: '/:pathMatch(.*)*',
+        name: 'not-found',
+        component: NotFound,
+        meta: {
+            title: 'Page not found',
+            description: "There's nothing at this address on JCLcheck."
+        }
     }
 ];
 
@@ -61,6 +72,7 @@ router.afterEach((to) => {
         path: to.path,
         structuredData: to.meta.structuredData
     });
+    pageview(to);
 });
 
 export default router;

@@ -8,24 +8,25 @@
       <div class="footer-links">
         <div class="footer-col">
           <span class="footer-col__title">Product</span>
-          <router-link to="/app">Workbench</router-link>
+          <router-link to="/app" @click="track('cta/launch', 'footer')">Workbench</router-link>
           <router-link to="/">Features</router-link>
         </div>
         <div class="footer-col">
           <span class="footer-col__title">Project</span>
           <router-link to="/about">About</router-link>
-          <a href="https://github.com/Zubs" target="_blank" rel="noopener">GitHub</a>
+          <a href="https://github.com/Zubs" target="_blank" rel="noopener" @click="track('outbound', 'github-profile')">GitHub</a>
         </div>
       </div>
     </div>
     <div class="footer-bottom">
-      <span>Built by <a href="https://zubs.github.io" target="_blank" rel="noopener">Zubair</a></span>
+      <span>Built by <a href="https://zubs.github.io" target="_blank" rel="noopener" @click="track('outbound', 'portfolio')">Zubair</a></span>
       <span>No mainframe required.</span>
     </div>
   </footer>
 </template>
 
 <script setup>
+import { track } from '../../analytics';
 </script>
 
 <style scoped>
