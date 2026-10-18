@@ -67,6 +67,16 @@
           </tr>
         </table>
 
+        <h3>Privacy</h3>
+        <p>
+          Your JCL is sent to the JCLcheck API to be checked, and is never stored or
+          counted. The site counts anonymous usage with GoatCounter, with no cookies
+          and no personal data: pages visited, where visits come from, browser, device
+          size and country, which features are used, and which error codes appear. If
+          your browser sends Do Not Track or Global Privacy Control, nothing is counted
+          at all.
+        </p>
+
         <h3>Limitations</h3>
         <p>
           This tool validates syntax and structure only. It cannot see cataloged

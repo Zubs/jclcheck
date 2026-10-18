@@ -19,6 +19,8 @@
             ref="editorRef"
             v-model="code"
             :diagnostics="diagnostics"
+            @update:modelValue="onUserEdit"
+            @paste="onPaste"
         />
       </section>
       <section class="pane pane-diag">
@@ -33,8 +35,8 @@
 
     <PfBar
         :keys="pfKeys"
-        @help="showHelp = true"
-        @validate="runValidation(true)"
+        @help="openHelp"
+        @validate="runValidation('button')"
         @sample="cycleSample"
         @clear="clearEditor"
     />
@@ -49,6 +51,7 @@ import {
   reactive,
   computed,
   onMounted,
+  onBeforeUnmount,
   watch
 } from 'vue';
 import Editor from '../components/Editor.vue';
@@ -57,6 +60,13 @@ import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
 import { validateJcl } from '../api';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
+import { track } from '../analytics';
+import {
+  sizeBucket,
+  checksBucket,
+  timeBucket,
+  latencyBucket
+} from '../analyticsEvents';
 
 const code = ref(SAMPLES.clean.code);
 const diagnostics = ref([]);
@@ -69,18 +79,115 @@ const sampleIdx = ref(0);
 
 let debounceTimer = null;
 
-async function runValidation() {
+// Analytics for this visit. Only codes, triggers and buckets are counted,
+// never the JCL itself.
+const visit = {
+  startedAt: Date.now(),
+  checks: 0,
+  maxLines: 0,
+  responseTimes: [],
+  lastResult: null,
+  summarySent: false
+};
+const seenCodes = new Set();
+const fixedCodes = new Set();
+let previousCodes = new Set();
+// True when the latest change came from typing, not Clear or a sample, so a
+// code that disappears counts as fixed.
+let lastChangeByUser = false;
+
+function lineCount(text) {
+  return text === '' ? 0 : text.split('\n').length;
+}
+
+function resultKind(resultStats) {
+  if (resultStats.errors > 0) {
+    return 'errors';
+  }
+
+  return resultStats.warnings > 0 ? 'warnings' : 'clean';
+}
+
+function trackDiagnostics(found) {
+  const codes = new Set(found.map(d => d.code));
+  for (const c of codes) {
+    if (!seenCodes.has(c)) {
+      seenCodes.add(c);
+      track('diag/seen', c);
+    }
+  }
+
+  if (lastChangeByUser) {
+    for (const c of previousCodes) {
+      if (!codes.has(c) && !fixedCodes.has(c)) {
+        fixedCodes.add(c);
+        track('diag/fixed', c);
+      }
+    }
+  }
+
+  previousCodes = codes;
+}
+
+function trackApiProblem(e) {
+  if (e.status === 0) {
+    track('api', 'unreachable');
+  } else if (e.status) {
+    track('api/error', e.status);
+  }
+}
+
+// `trigger` is set for explicit checks; automatic checks after typing only
+// count towards the visit summary.
+async function runValidation(trigger) {
+  if (trigger) {
+    track('check', trigger);
+  }
+
+  const source = code.value;
   loading.value = true;
   errored.value = false;
+  const startedAt = Date.now();
   try {
-    const result = await validateJcl(code.value);
+    const result = await validateJcl(source);
+    visit.responseTimes.push(Date.now() - startedAt);
+    visit.lastResult = resultKind(result.stats);
     diagnostics.value = result.diagnostics;
     stats.value = result.stats;
+    trackDiagnostics(result.diagnostics);
   } catch (e) {
     errored.value = true;
     console.error(e);
+    trackApiProblem(e);
   } finally {
+    // Counted once the check finishes, whatever its outcome.
+    visit.checks++;
+    visit.maxLines = Math.max(visit.maxLines, lineCount(source));
     loading.value = false;
+  }
+}
+
+function sendVisitSummary() {
+  if (visit.summarySent || visit.checks === 0) {
+    return;
+  }
+
+  visit.summarySent = true;
+  track('visit/checks', checksBucket(visit.checks));
+  track('visit/lines', sizeBucket(visit.maxLines));
+  track('visit/time', timeBucket(Date.now() - visit.startedAt));
+  if (visit.responseTimes.length) {
+    track('visit/latency', latencyBucket(visit.responseTimes));
+  }
+
+  if (visit.lastResult) {
+    track('visit/end', visit.lastResult);
+  }
+}
+
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') {
+    sendVisitSummary();
   }
 }
 
@@ -89,18 +196,47 @@ watch(code, () => {
   debounceTimer = setTimeout(runValidation, 450);
 });
 
-onMounted(runValidation);
+onMounted(() => {
+  document.addEventListener('visibilitychange', onVisibilityChange);
+  window.addEventListener('pagehide', sendVisitSummary);
+  runValidation();
+});
+
+onBeforeUnmount(() => {
+  document.removeEventListener('visibilitychange', onVisibilityChange);
+  window.removeEventListener('pagehide', sendVisitSummary);
+  sendVisitSummary();
+});
 
 function onSelectDiagnostic(d) {
+  track('diag/click', d.code);
   editorRef.value?.scrollToLine(d.line);
+}
+
+function onUserEdit() {
+  lastChangeByUser = true;
+}
+
+function onPaste(lines) {
+  track('editor/paste', sizeBucket(lines));
+}
+
+function openHelp() {
+  track('help/open', 'button');
+  showHelp.value = true;
 }
 
 function cycleSample() {
   sampleIdx.value = (sampleIdx.value + 1) % SAMPLE_ORDER.length;
-  code.value = SAMPLES[SAMPLE_ORDER[sampleIdx.value]].code;
+  const key = SAMPLE_ORDER[sampleIdx.value];
+  track('sample', key);
+  lastChangeByUser = false;
+  code.value = SAMPLES[key].code;
 }
 
 function clearEditor() {
+  track('clear', 'button');
+  lastChangeByUser = false;
   code.value = '';
 }
 

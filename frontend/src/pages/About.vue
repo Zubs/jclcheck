@@ -13,8 +13,8 @@
           something intimidating and make it click — JCLcheck is one of those.
         </p>
         <div class="links">
-          <a href="https://zubs.github.io" target="_blank" rel="noopener" class="btn btn-primary">Portfolio ↗</a>
-          <a href="https://github.com/Zubs" target="_blank" rel="noopener" class="btn btn-ghost">GitHub — @Zubs ↗</a>
+          <a href="https://zubs.github.io" target="_blank" rel="noopener" class="btn btn-primary" @click="track('outbound', 'portfolio')">Portfolio ↗</a>
+          <a href="https://github.com/Zubs" target="_blank" rel="noopener" class="btn btn-ghost" @click="track('outbound', 'github-profile')">GitHub — @Zubs ↗</a>
         </div>
       </div>
     </section>
@@ -41,7 +41,7 @@
     <section class="cta">
       <div class="cta-inner">
         <h2>Curious what I built? Go break some JCL.</h2>
-        <router-link to="/app" class="btn btn-primary btn-lg">Open the workbench →</router-link>
+        <router-link to="/app" class="btn btn-primary btn-lg" @click="track('cta/launch', 'about')">Open the workbench →</router-link>
       </div>
     </section>
 
@@ -52,6 +52,7 @@
 <script setup>
 import Navbar from '../components/marketing/Navbar.vue';
 import Footer from '../components/marketing/Footer.vue';
+import { track } from '../analytics';
 </script>
 
 <style scoped>

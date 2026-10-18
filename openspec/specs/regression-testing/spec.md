@@ -127,7 +127,7 @@ Developers SHALL still be able to print the validator's full output for the bund
 - **THEN** each bundled fixture's stats and diagnostics are printed, including messages and suggestions, and the command exits with status 0
 
 ### Requirement: Frontend test command and exit status
-Running `npm test` in the frontend SHALL run every component test once in a simulated browser and print how many tests passed and failed. It SHALL exit with a non-zero status when any test fails, and with zero otherwise. Tests SHALL make no network requests and SHALL NOT need the backend to be running.
+Running `npm test` in the frontend SHALL run every component test once in a simulated browser and print how many tests passed and failed. It SHALL exit with a non-zero status when any test fails, and with zero otherwise. Tests SHALL make no network requests, SHALL NOT load the real analytics script, and SHALL NOT need the backend to be running.
 
 #### Scenario: All frontend tests pass
 - **WHEN** every frontend test passes
@@ -140,6 +140,10 @@ Running `npm test` in the frontend SHALL run every component test once in a simu
 #### Scenario: Backend not running
 - **WHEN** the frontend tests run with no backend listening and no network access
 - **THEN** they all run and no test tries to reach the API
+
+#### Scenario: Analytics script never loaded
+- **WHEN** the frontend tests run
+- **THEN** no test adds GoatCounter's script to the page, and analytics tests use a fake GoatCounter instead
 
 ### Requirement: Editor behaviour is covered
 Frontend tests SHALL check that the editor shows one gutter row per line, marks a line with the highest severity among its diagnostics, shows that line's messages on hover, reports typed text to its parent, inserts two spaces when Tab is pressed, and selects a line when asked to go to it.

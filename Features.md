@@ -106,9 +106,9 @@ It comes straight after the test suite so that later features are measured from 
 **How it works**
 
 *Setup*
-- GoatCounter's script (`count.js`) is loaded in `index.html` with `async`, pointing at the site's GoatCounter code from `VITE_GOATCOUNTER_URL`. When the variable isn't set, no script loads.
+- GoatCounter's script (`count.js`, from `https://gc.zgo.at/count.js`) is loaded from `frontend/src/analytics.js`, not a static tag in `index.html`, so the checks below run first. It points at the count address in `VITE_GOATCOUNTER_URL` (`https://jclcheck.goatcounter.com/count`, set on Netlify). When the variable isn't set, no script loads.
 - It only counts on the production hostname (`jclcheck.xyz`), not on localhost or Netlify deploy previews. The owner can exclude their own visits with GoatCounter's `#toggle-goatcounter` link.
-- A small `frontend/src/analytics.js` wraps GoatCounter: `pageview(path)` and `track(name, title)`. Both do nothing, without errors, when the script is blocked or hasn't loaded yet.
+- `frontend/src/analytics.js` wraps GoatCounter with `pageview(route)` and `track(name, detail)`. Calls made before the script loads are queued, and both do nothing, without errors, when counting is off or the script is blocked. The allowed list of events lives in `frontend/src/analyticsEvents.js`.
 - Because the site is a single-page app, the script is told not to count on load (`no_onload`). `router.afterEach` in `router.js` counts each page view, so moving between `/`, `/about` and `/app` counts every page exactly once.
 - A catch-all route is added for unknown addresses. It shows a "page not found" page and counts it as `/404`, so broken links show up.
 - Do Not Track and Global Privacy Control are respected. When the browser has `navigator.doNotTrack` set to `"1"` or `navigator.globalPrivacyControl` set to `true`, the script isn't loaded and `pageview()` and `track()` do nothing. The workbench works exactly the same.
@@ -159,20 +159,12 @@ Events are named `area/action/detail` and have a readable title. A detail is onl
   - the z/OS level and JES asked for, as `api/level/<zos>` and `api/jes/<JES2|JES3>`
   - whether the request was valid, as `api/result/<ok|bad-request|error>`
 - Direct requests with a `DNT: 1` or `Sec-GPC: 1` header are not counted.
-- Hits are queued and sent in batches every 10 seconds. Failures are dropped and never slow down or break an API response. The token comes from `GOATCOUNTER_TOKEN`, and nothing is sent when it isn't set.
+- Hits are queued and sent in batches every 10 seconds, and when the host stops the service (Render spins idle free-tier services down). Failures are dropped and never slow down or break an API response. The token comes from `GOATCOUNTER_TOKEN`, and nothing is sent when it isn't set.
+- The API runs on Render (`https://jclcheck.onrender.com`) behind a proxy, so `TRUST_PROXY` (the number of proxies, `1` to start) tells the backend to read the client's real IP from `X-Forwarded-For`.
 
 *CLI use (opt-in)*
-- The CLI (feature 38) counts nothing unless the user opts in, with `JCLCHECK_TELEMETRY=1` or `--telemetry`. It never asks or nags.
-- `DO_NOT_TRACK=1` in the environment always wins over opting in, following the common convention for command-line tools.
-- When opted in, each run sends one small batch to a new backend endpoint, `POST /api/usage`. The backend forwards it to GoatCounter with its own token, so the CLI never holds a GoatCounter token and the IP is used for the country in the same way. The events are:
-  - `cli/run`, `cli/version/<version>`, `cli/node/<major version>` and `cli/os/<linux|darwin|win32>`
-  - `cli/files/<1|2-10|11-100|100+>` and `cli/result/<clean|warnings|errors>`
-  - `cli/format/<text|json|sarif>` and `cli/option/<zos|jes|library|profile|max-warnings>` for each option used
-  - `cli/ci/<github|gitlab|jenkins|other|none>`, from the CI system's own environment variables
-  - `cli/diag/<CODE>` once per code per run
-- `/api/usage` accepts only event names on the allowed list, at most 30 per request, and rejects anything else with a 400 response.
-- The request has a 1-second time limit. A failure is silent and never changes the output or the exit code.
-- `JCLCHECK_TELEMETRY=debug` prints the events that would be sent and sends nothing, so users can see exactly what is shared.
+- The backend's `POST /api/usage` endpoint is built here: it accepts up to 30 events from the CLI's allowed list (`cli/…`), rejects anything else with a 400 response, skips requests with `DNT: 1` or `Sec-GPC: 1`, and forwards the rest to GoatCounter.
+- The CLI's own opt-in counting is part of feature 38.
 
 *What is never sent*
 - JCL text or any part of it, including names, dataset names, PARM values, unknown keywords and in-stream data.
@@ -189,7 +181,7 @@ Events are named `area/action/detail` and have a readable title. A detail is onl
 - The landing page trust line, the FAQ, help and the Privacy line in Spec.md say that the site counts anonymous usage with GoatCounter, with no cookies and no personal data. They list what is counted, and they keep saying that JCL is never stored or counted. The FAQ's structured data in `router.js` is updated to match.
 
 **Tests**
-- **Z** — With no `VITE_GOATCOUNTER_URL`, no script loads, `track()` does nothing, and the site works as before. With no `GOATCOUNTER_TOKEN`, the API sends nothing.
+- **Z** — With no `VITE_GOATCOUNTER_URL`, or on a hostname other than `jclcheck.xyz`, no script loads, `track()` does nothing, and the site works as before. With no `GOATCOUNTER_TOKEN`, the API sends nothing.
 - **O** — Opening `/` on the production hostname counts one page view for `/`.
 - **M** — Moving from `/` to `/about` to `/app` inside the app counts three page views, and the first page isn't counted twice.
 - **M** — Typing for a minute with 30 automatic checks sends no `check/` events and one `visit/checks/21-100` in the visit summary.
@@ -197,17 +189,15 @@ Events are named `area/action/detail` and have a readable title. A detail is onl
 - **I** — Every `track()` call in the code uses a name from the event table, and a test compares the two. Each event has a readable title in the GoatCounter dashboard.
 - **E** — With GoatCounter blocked by an ad blocker, every workbench feature works and there are no console errors.
 - **E** — With GoatCounter's API down or slow, `/api/validate` responds in its normal time.
-- **E** — A scripted browser run checks JCL containing a unique marker string, shares it and formats it. The marker never appears in any request sent to GoatCounter. Neither does the `#jcl=` part of the address.
+- **E** — A test checks, edits and pastes JCL containing a unique marker string, and clicks its diagnostics. The marker never appears in anything sent to GoatCounter. Neither does the `#jcl=` part of the address. Features 29 and 39 extend this test to sharing and formatting.
 - **E** — A `track()` call with a detail that isn't on its allowed list sends nothing.
 - **E** — With Do Not Track or Global Privacy Control on, no request goes to GoatCounter from the browser, and the backend doesn't count that browser's checks.
 - **O** — One `curl` request to `/api/validate` is counted once by the backend as `api/validate/direct`. One check from the workbench is counted once, by the browser only.
 - **E** — A direct request with `Sec-GPC: 1` is not counted.
-- **Z** — The CLI with no opt-in sends nothing. With `JCLCHECK_TELEMETRY=1` and `DO_NOT_TRACK=1` together, it also sends nothing.
-- **I** — `JCLCHECK_TELEMETRY=debug` prints the events and sends nothing. `/api/usage` rejects an unknown event name with a 400 response.
-- **E** — With the backend unreachable, an opted-in CLI run finishes within its normal time plus 1 second, with the same output and exit code.
+- **I** — `/api/usage` rejects an unknown event name with a 400 response.
 - **S** — After a week, the owner opens the GoatCounter dashboard and sees visitors by country, top pages and referrers, which samples and features are used, and which diagnostic codes are seen most and fixed least.
 
-**Done when:** Page views, countries, referrers, browsers and every feature listed above are counted in GoatCounter, direct API use is counted once by the backend, opted-in CLI runs are counted, Do Not Track and Global Privacy Control are respected, no JCL or other personal data is ever sent, and the site's privacy copy says exactly what is collected.
+**Done when:** Page views, countries, referrers, browsers and today's features are counted in GoatCounter, direct API use is counted once by the backend, `/api/usage` accepts CLI reports, Do Not Track and Global Privacy Control are respected, no JCL or other personal data is ever sent, and the site's privacy copy says exactly what is collected. Later features send their own events from the table above when they are built.
 
 ### 3. z/OS level support
 
@@ -1439,7 +1429,17 @@ $ npx jclcheck jcl/*.jcl --format sarif > jclcheck.sarif
 - Exit codes: 0 when there are no errors, 1 when any file has an error (or too many warnings), and 2 when the tool itself fails, for example when a file can't be read.
 - Only Node's built-in modules are used, so no dependency is added.
 - The README gets a short GitHub Actions example.
-- Usage counting is off unless the user opts in, as described in feature 2.
+- Usage counting is opt-in:
+  - The CLI counts nothing unless the user opts in, with `JCLCHECK_TELEMETRY=1` or `--telemetry`. It never asks or nags.
+  - `DO_NOT_TRACK=1` in the environment always wins over opting in, following the common convention for command-line tools.
+  - When opted in, each run sends one small batch to the backend's `POST /api/usage` endpoint (built in feature 2). The backend forwards it to GoatCounter with its own token, so the CLI never holds a GoatCounter token and the IP is used for the country in the same way. The events are:
+    - `cli/run`, `cli/version/<version>`, `cli/node/<major version>` and `cli/os/<linux|darwin|win32>`
+    - `cli/files/<1|2-10|11-100|100+>` and `cli/result/<clean|warnings|errors>`
+    - `cli/format/<text|json|sarif>` and `cli/option/<zos|jes|library|profile|max-warnings>` for each option used
+    - `cli/ci/<github|gitlab|jenkins|other|none>`, from the CI system's own environment variables
+    - `cli/diag/<CODE>` once per code per run
+  - The request has a 1-second time limit. A failure is silent and never changes the output or the exit code.
+  - `JCLCHECK_TELEMETRY=debug` prints the events that would be sent and sends nothing, so users can see exactly what is shared.
 
 **Tests**
 - **Z** — `jclcheck` with no files prints its usage and exits with 2.
@@ -1450,7 +1450,11 @@ $ npx jclcheck jcl/*.jcl --format sarif > jclcheck.sarif
 - **E** — A missing file gives a clear message and exit code 2, and the other files are still checked.
 - **S** — A team adds the GitHub Actions example, opens a pull request with a misspelled DISP, and sees the warning on that line of the diff.
 
-**Done when:** `npx jclcheck` gives the same results as the API, writes text, JSON and SARIF, and its exit code can fail a CI build.
+- **Z** — The CLI with no opt-in sends nothing. With `JCLCHECK_TELEMETRY=1` and `DO_NOT_TRACK=1` together, it also sends nothing.
+- **I** — `JCLCHECK_TELEMETRY=debug` prints the events and sends nothing.
+- **E** — With the backend unreachable, an opted-in CLI run finishes within its normal time plus 1 second, with the same output and exit code.
+
+**Done when:** `npx jclcheck` gives the same results as the API, writes text, JSON and SARIF, its exit code can fail a CI build, and opted-in runs are counted through `/api/usage`.
 
 ### 39. Formatter
 

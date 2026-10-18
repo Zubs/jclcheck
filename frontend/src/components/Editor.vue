@@ -27,6 +27,7 @@
           :value="modelValue"
           @input="onInput"
           @scroll="onScroll"
+          @paste="onPaste"
           @keydown.tab.prevent="onTab"
       ></textarea>
     </div>
@@ -46,7 +47,7 @@ const props = defineProps({
   diagnostics: { type: Array, default: () => [] }
 });
 
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'paste']);
 const textareaEl = ref(null);
 const gutterEl = ref(null);
 const lineCount = computed(() => {
@@ -101,6 +102,14 @@ function gutterTitle(n) {
 
 function onInput(e) {
   emit('update:modelValue', e.target.value);
+}
+
+// Reports only how many lines were pasted; the text stays in the editor.
+function onPaste(e) {
+  const text = e.clipboardData?.getData('text') ?? '';
+  if (text) {
+    emit('paste', text.replace(/\r?\n$/, '').split(/\r?\n/).length);
+  }
 }
 
 function onScroll(e) {

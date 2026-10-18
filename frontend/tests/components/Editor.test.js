@@ -77,6 +77,21 @@ describe('Editor', () => {
         expect(document.activeElement).toBe(textarea);
     });
 
+    test('reports only the number of pasted lines', () => {
+        const w = mountEditor();
+        const paste = text => {
+            const event = new Event('paste', { bubbles: true, cancelable: true });
+            Object.defineProperty(event, 'clipboardData', { value: { getData: () => text } });
+            w.find('textarea').element.dispatchEvent(event);
+        };
+
+        paste('//A\n//B\n//C\n');
+        paste('//ONE');
+        paste('//X\r\n//Y');
+        paste('');
+        expect(w.emitted('paste')).toEqual([[3], [1], [2]]);
+    });
+
     test.fails('shows the cursor column (feature 24)', async () => {
         const w = mountEditor({}, { attachTo: document.body });
         const textarea = w.find('textarea');

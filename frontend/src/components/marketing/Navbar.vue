@@ -9,15 +9,16 @@
       <nav class="nav-links">
         <router-link to="/" class="nav-link" exact-active-class="is-active">Product</router-link>
         <router-link to="/about" class="nav-link" exact-active-class="is-active">About</router-link>
-        <a class="nav-link" href="https://github.com/Zubs/jclcheck" target="_blank" rel="noopener">GitHub</a>
+        <a class="nav-link" href="https://github.com/Zubs/jclcheck" target="_blank" rel="noopener" @click="track('outbound', 'github-repo')">GitHub</a>
       </nav>
 
-      <router-link to="/app" class="nav-cta">Launch Workbench →</router-link>
+      <router-link to="/app" class="nav-cta" @click="track('cta/launch', 'nav')">Launch Workbench →</router-link>
     </div>
   </header>
 </template>
 
 <script setup>
+import { track } from '../../analytics';
 </script>
 
 <style scoped>

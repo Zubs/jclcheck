@@ -66,6 +66,22 @@ npm install
 npm run dev         # http://localhost:5173 (proxies /api to :4000)
 ```
 
+## Analytics
+
+The site counts anonymous usage with [GoatCounter](https://www.goatcounter.com): page views, where visits come from, browser, device size, country, which features are used, and which error codes appear. It sets no cookies, keeps no personal data, and never sends anything from the JCL. Nothing is counted when the browser sends Do Not Track or Global Privacy Control. Every event and the details it may carry are listed in `frontend/src/analyticsEvents.js`.
+
+Counting is off unless these are set:
+
+| Variable | Where | What it does |
+|---|---|---|
+| `VITE_GOATCOUNTER_URL` | Frontend build (Netlify) | GoatCounter count address, `https://jclcheck.goatcounter.com/count`. When it isn't set, the script is never loaded. Even when it is set, the site only counts when served from `jclcheck.xyz`, so local runs and deploy previews are never counted. |
+| `GOATCOUNTER_TOKEN` | Backend (Render) | GoatCounter API token with the permission to record page views. The backend uses it to count requests to `/api/validate` that don't come from the workbench, and CLI reports sent to `POST /api/usage`. When it isn't set, the backend sends nothing. |
+| `TRUST_PROXY` | Backend (Render) | Number of proxies in front of the API, so the client's real IP (used only for the country) is read from `X-Forwarded-For`. Start with `1` on Render. Leave it unset for local runs. |
+
+To check `TRUST_PROXY` after a deploy, send a request with `curl` to `https://jclcheck.onrender.com/api/validate`. Then confirm the GoatCounter dashboard shows your own country for `api/validate/direct`, and that a request with a made-up `X-Forwarded-For: 1.2.3.4` header isn't counted as `1.2.3.4`. Adjust the number if either is wrong.
+
+Hits from the backend are sent in batches every 10 seconds, and when the service is stopped, for example when Render spins it down. GoatCounter being slow or down never delays an API response.
+
 ## Tests
 
 ### Backend
