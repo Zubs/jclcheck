@@ -74,7 +74,7 @@ test('counting direct API use', async (t) => {
         const request = await serve(t, { analytics });
         await request('/api/validate', { body: { source: '' }, headers: { 'User-Agent': 'curl/8.4.0' } });
         await settle();
-        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok']);
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/3.2']);
         assert.ok(analytics.hits.every(h => h.userAgent === 'curl/8.4.0' && h.ip === '127.0.0.1' && h.title));
     });
 
@@ -122,6 +122,48 @@ test('counting direct API use', async (t) => {
         const res = await request('/api/validate', { body: { source: '//J1 JOB\n' } });
         assert.equal(res.status, 200);
         assert.ok(performance.now() - started < 200, 'responded within 200 ms');
+    });
+});
+
+test('z/OS level in /api/validate', async (t) => {
+    const analytics = fakeAnalytics();
+    const request = await serve(t, { analytics });
+
+    await t.test('Z: with no level the response says 3.2, next to diagnostics, ast and stats', async () => {
+        const res = await request('/api/validate', { body: { source: '//J1 JOB\n//S1 EXEC PGM=IEFBR14\n' } });
+        const result = await res.json();
+        assert.equal(res.status, 200);
+        assert.equal(result.zosLevel, '3.2');
+        assert.ok(result.diagnostics && result.ast && result.stats);
+    });
+
+    await t.test('O: the level asked for is used', async () => {
+        const res = await request('/api/validate', { body: { source: '', zosLevel: '2.3' } });
+        assert.equal((await res.json()).zosLevel, '2.3');
+    });
+
+    for (const zosLevel of ['9.9', 'abc', 3.1, null]) {
+        await t.test(`E: zosLevel ${JSON.stringify(zosLevel)} gets 400 listing the supported levels`, async () => {
+            const res = await request('/api/validate', { body: { source: '//J1 JOB\n', zosLevel } });
+            const body = await res.json();
+            assert.equal(res.status, 400);
+            assert.match(body.message, /2\.3, 2\.4, 2\.5, 3\.1, 3\.2/);
+            assert.equal(body.diagnostics, undefined);
+        });
+    }
+
+    await t.test('O: a direct request at 2.5 records api/level/2.5', async () => {
+        analytics.hits.length = 0;
+        await request('/api/validate', { body: { source: '', zosLevel: '2.5' } });
+        await settle();
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/2.5']);
+    });
+
+    await t.test('E: a rejected level records bad-request and no level', async () => {
+        analytics.hits.length = 0;
+        await request('/api/validate', { body: { source: '', zosLevel: '9.9' } });
+        await settle();
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/bad-request']);
     });
 });
 

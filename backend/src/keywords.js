@@ -1,8 +1,17 @@
 // Reference tables distilled from IBM MVS JCL Reference (GC28-1757 family).
 // These are intentionally data-driven so the validator/rules stay simple.
+//
+// Statement types and keywords are tables (Map of name -> entry). An entry
+// can carry `since` and `until` z/OS levels (see levels.js); one without
+// either exists at every supported level.
+
+// Builds a table from a list of names, with level marks for some of them.
+function table(names, marks = {}) {
+    return new Map(names.map(name => [name, marks[name] || {}]));
+}
 
 // Statement types recognized after the "//" or "//name" field
-const STATEMENT_TYPES = new Set([
+const STATEMENT_TYPES = table([
     'JOB',
     'EXEC',
     'DD',
@@ -18,10 +27,13 @@ const STATEMENT_TYPES = new Set([
     'JCLLIB',
     'XMIT',
     'NOTIFY'
-]);
+], {
+    // z/OS 2.3 MVS JCL Reference, "Summary of changes": new NOTIFY statement.
+    NOTIFY: { since: '2.3' }
+});
 
 // Valid keyword parameters per statement type (keyword= form)
-const JOB_KEYWORDS = new Set([
+const JOB_KEYWORDS = table([
     'CLASS',
     'MSGCLASS',
     'MSGLEVEL',
@@ -47,10 +59,14 @@ const JOB_KEYWORDS = new Set([
     'SCHENV',
     'JOBRC',
     'RD',
-    'SECLABEL'
-]);
+    'SECLABEL',
+    'EMAIL'
+], {
+    // z/OS 2.3 MVS JCL Reference, "Summary of changes": EMAIL on the JOB statement.
+    EMAIL: { since: '2.3' }
+});
 
-const EXEC_KEYWORDS = new Set([
+const EXEC_KEYWORDS = table([
     'PGM',
     'PROC',
     'PARM',
@@ -68,7 +84,7 @@ const EXEC_KEYWORDS = new Set([
     'RUNRC'
 ]);
 
-const DD_KEYWORDS = new Set([
+const DD_KEYWORDS = table([
     'DSN',
     'DSNAME',
     'DISP',
@@ -115,9 +131,9 @@ const DD_KEYWORDS = new Set([
 ]);
 
 const ALL_KNOWN_KEYWORDS = new Set([
-    ...JOB_KEYWORDS,
-    ...EXEC_KEYWORDS,
-    ...DD_KEYWORDS
+    ...JOB_KEYWORDS.keys(),
+    ...EXEC_KEYWORDS.keys(),
+    ...DD_KEYWORDS.keys()
 ]);
 
 // Required parameter logic is expressed as functions in rules/paramRules.js,
@@ -168,6 +184,7 @@ const DSORG_CODES = new Set([
 const SPACE_UNITS = new Set(['TRK', 'CYL']); // or an integer block size
 
 module.exports = {
+    table,
     STATEMENT_TYPES,
     JOB_KEYWORDS,
     EXEC_KEYWORDS,

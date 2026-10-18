@@ -9,6 +9,7 @@ const {
     RECFM_CODES,
     DSORG_CODES
 } = require('../keywords');
+const { availability, DEFAULT_ZOS_LEVEL } = require('../levels');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
@@ -34,9 +35,9 @@ function levenshtein(a, b) {
     return dp[m][n];
 }
 
-function closestKeyword(word, keywordSet) {
+function closestKeyword(word, keywordTable) {
     let best = null, bestDist = Infinity;
-    for (const k of keywordSet) {
+    for (const k of keywordTable.keys()) {
         const d = levenshtein(word, k);
         if (d < bestDist) {
             bestDist = d;
@@ -73,17 +74,18 @@ function checkName(
 
 function checkKeywords(
     params,
-    allowedSet,
+    allowedTable,
     stmtLabel,
     line,
-    diagnostics
+    diagnostics,
+    zosLevel = DEFAULT_ZOS_LEVEL
 ) {
     let sawKeyword = false;
     for (const p of params) {
         if (p.kind === 'keyword') {
             sawKeyword = true;
-            if (!allowedSet.has(p.key)) {
-                const closest = closestKeyword(p.key, allowedSet);
+            if (!allowedTable.has(p.key)) {
+                const closest = closestKeyword(p.key, allowedTable);
                 diagnostics.push(makeDiagnostic(
                     'JCLK001',
                     {
@@ -94,6 +96,22 @@ function checkKeywords(
                         line,
                         column: p.col
                     }));
+            } else {
+                const missing = availability(allowedTable.get(p.key), zosLevel);
+                if (missing) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLK005',
+                        {
+                            kind: 'keyword',
+                            name: p.key,
+                            stmt: stmtLabel,
+                            level: zosLevel,
+                            ...missing
+                        }, {
+                            line,
+                            column: p.col
+                        }));
+                }
             }
         } else if (p.kind === 'positional') {
             if (sawKeyword) {
@@ -484,7 +502,7 @@ function checkParamValues(
     }
 }
 
-function checkStepsAndDDs(steps, diagnostics) {
+function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
     for (const step of steps) {
         checkName(
             step.name,
@@ -496,7 +514,7 @@ function checkStepsAndDDs(steps, diagnostics) {
         let execAllowed = EXEC_KEYWORDS;
         if (step.resolvedProc) {
             const symbolNames = new Set(step.resolvedProc.params.filter(p => p.kind === 'keyword').map(p => p.key));
-            execAllowed = new Set([...EXEC_KEYWORDS, ...symbolNames]);
+            execAllowed = new Map([...EXEC_KEYWORDS, ...[...symbolNames].map(name => [name, {}])]);
         }
 
         checkKeywords(
@@ -504,7 +522,8 @@ function checkStepsAndDDs(steps, diagnostics) {
             execAllowed,
             'EXEC',
             step.line,
-            diagnostics
+            diagnostics,
+            zosLevel
         );
 
         checkParamValues(
@@ -528,7 +547,8 @@ function checkStepsAndDDs(steps, diagnostics) {
                 DD_KEYWORDS,
                 'DD',
                 dd.line,
-                diagnostics
+                diagnostics,
+                zosLevel
             );
 
             checkParamValues(
@@ -540,7 +560,7 @@ function checkStepsAndDDs(steps, diagnostics) {
     }
 }
 
-function checkAllParams(job, diagnostics) {
+function checkAllParams(job, diagnostics, { zosLevel } = {}) {
     if (!job) {
         return;
     }
@@ -557,7 +577,8 @@ function checkAllParams(job, diagnostics) {
         JOB_KEYWORDS,
         'JOB',
         job.line,
-        diagnostics
+        diagnostics,
+        zosLevel
     );
 
     checkParamValues(
@@ -566,7 +587,7 @@ function checkAllParams(job, diagnostics) {
         diagnostics
     );
 
-    checkStepsAndDDs(job.steps, diagnostics);
+    checkStepsAndDDs(job.steps, diagnostics, { zosLevel });
 }
 
 module.exports = {

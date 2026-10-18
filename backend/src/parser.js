@@ -17,12 +17,7 @@ const {
 const { tokenizeParams } = require('./paramTokenizer');
 const { makeDiagnostic } = require('./errors');
 const { STATEMENT_TYPES } = require('./keywords');
-const PASSTHROUGH_OPS = new Set([
-    'JCLLIB',
-    'OUTPUT',
-    'XMIT',
-    'NOTIFY'
-]);
+const { availability, DEFAULT_ZOS_LEVEL } = require('./levels');
 
 function attachParams(
     node,
@@ -46,7 +41,7 @@ function attachParams(
     return params;
 }
 
-function parse(statements) {
+function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     const diagnostics = [];
     let job = null;
     const procs = [];
@@ -78,7 +73,7 @@ function parse(statements) {
             continue;
         }
 
-        if (!STATEMENT_TYPES.has(op) && !PASSTHROUGH_OPS.has(op)) {
+        if (!STATEMENT_TYPES.has(op)) {
             diagnostics.push(makeDiagnostic(
                 'JCLP002',
                 { found: op, hint: `Unknown operation '${op}'.` },
@@ -90,6 +85,20 @@ function parse(statements) {
             ));
 
             continue;
+        }
+
+        const missing = availability(STATEMENT_TYPES.get(op), zosLevel);
+        if (missing) {
+            diagnostics.push(makeDiagnostic(
+                'JCLK005',
+                {
+                    kind: 'statement',
+                    name: op,
+                    level: zosLevel,
+                    ...missing
+                },
+                { line: stmt.line, column: stmt.opCol }
+            ));
         }
 
         switch (op) {

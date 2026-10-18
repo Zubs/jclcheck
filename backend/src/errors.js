@@ -131,6 +131,18 @@ const CATALOG = {
         message: (d) => `Positional parameter '${d.value}' is not valid in this position.`,
         suggestion: () => `Positional parameters must appear before any keyword parameters.`
     },
+    // A known keyword or statement that doesn't exist at the chosen z/OS level,
+    // because it arrived later (reason 'since') or was removed (reason 'until').
+    JCLK005: {
+        message: (d) => {
+            const what = d.kind === 'statement' ? `The ${d.name} statement` : `'${d.name}' on the ${d.stmt} statement`;
+            const when = d.reason === 'until' ? `was removed after z/OS ${d.at}` : `is available from z/OS ${d.at}`;
+            return `${what} ${when}. You are checking against z/OS ${d.level}.`;
+        },
+        suggestion: (d) => d.reason === 'until'
+            ? `Choose z/OS ${d.at} or earlier, or remove '${d.name}'.`
+            : `Choose z/OS ${d.at} or later, or remove '${d.name}'.`
+    },
 
     // Validator: syntax of specific parameter values (JCLS0xx)
     JCLS001: {

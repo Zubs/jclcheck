@@ -1,9 +1,5 @@
 {
-  "source": "Nick's item 14, NOTIFY and EMAIL example (Features.md features 17 and 41). Provisional until TYPE=TSO is confirmed.",
-  "todo": {
-    "feature": 17,
-    "reason": "The NOTIFY statement and EMAIL= are not checked"
-  },
+  "source": "Nick's item 14, NOTIFY and EMAIL example (Features.md features 17 and 41). Provisional until TYPE=TSO is confirmed. Clean since feature 3 accepted EMAIL= on JOB; the NOTIFY statement's values are checked from feature 17, which must keep this clean.",
   "provisional": true,
   "diagnostics": []
 }

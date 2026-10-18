@@ -26,7 +26,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 
 - [x] 1. Regression test suite
 - [x] 2. Analytics
-- [ ] 3. z/OS level support
+- [x] 3. z/OS level support
 - [ ] 4. Columns 72–80 and comments on continued statements
 - [ ] 5. Quoted strings continued onto the next line
 - [ ] 6. In-stream data delimiters
@@ -1539,6 +1539,7 @@ after:
 - **In-stream PROC before the first JOB (feature 10).** The bundled "PROC + SYMBOLICS" sample defines `MYPROC` before the JOB statement. Confirm whether z/OS accepts this. If not, fix the sample and add a placement rule.
 - **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference.
 - **JES3plus (feature 9).** Phoenix Software's JES3plus keeps JES3 running on z/OS 3.1 and later. JES3 support here follows IBM and stops at 2.5. Decide whether JES3plus shops should be able to choose JES3 at 3.x.
+- **Level marks (feature 3).** Only `EMAIL=` on the JOB statement and the NOTIFY statement carry a `since` level so far (both z/OS 2.3, the oldest supported level), so `JCLK005` can't fire on today's real data. Fill in `since`/`until` for other keywords from each release's "Summary of changes" in the MVS JCL Reference, citing the source in a comment.
 - **Supported z/OS levels (feature 3).** The proposed list is 2.3, 2.4, 2.5, 3.1 and 3.2, with 3.2 as the default. Decide whether to keep releases that are out of support.
 - **Checking JCL sent to the internal reader (feature 7).** It is left unchecked for now. Checking it as a separate job stream could be added later.
 - **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).

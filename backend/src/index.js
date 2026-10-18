@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const validator = require('./validator');
+const { ZOS_LEVELS, isZosLevel } = require('./levels');
 const {
     GOATCOUNTER_SITE_URL,
     MAX_USAGE_EVENTS,
@@ -40,6 +41,10 @@ function countDirectUse(analytics, endpoint) {
                 const result = resultOf(res.statusCode);
                 analytics.record({ path: `api/${endpoint}/direct`, title: `Direct API use: ${endpoint}`, ...client });
                 analytics.record({ path: `api/result/${result}`, title: `Direct API result: ${result}`, ...client });
+                if (res.locals.zosLevel) {
+                    const level = res.locals.zosLevel;
+                    analytics.record({ path: `api/level/${level}`, title: `Direct API z/OS level: ${level}`, ...client });
+                }
             });
         }
 
@@ -57,9 +62,18 @@ function createApp({
     app.use(express.json({ limit: '2mb' }));
 
     app.post('/api/validate', countDirectUse(analytics, 'validate'), (req, res) => {
+        const zosLevel = req.body ? req.body.zosLevel : undefined;
+        if (zosLevel !== undefined && !isZosLevel(zosLevel)) {
+            return res.status(400).json({
+                error: 'bad_request',
+                message: `Unknown z/OS level. Supported levels: ${ZOS_LEVELS.join(', ')}.`
+            });
+        }
+
         try {
             const source = req.body && typeof req.body.source === 'string' ? req.body.source : '';
-            const result = validator.validate(source);
+            const result = validator.validate(source, { zosLevel });
+            res.locals.zosLevel = result.zosLevel;
             res.json(result);
         } catch (err) {
             console.error(err);

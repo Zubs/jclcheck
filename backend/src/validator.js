@@ -3,19 +3,28 @@ const { parse } = require('./parser');
 const { checkDDStatements } = require('./rules/ddRules');
 const { checkAllParams, checkStepsAndDDs } = require('./rules/paramRules');
 const { runProcRules } = require('./rules/procRules');
+const { DEFAULT_ZOS_LEVEL, isZosLevel } = require('./levels');
 
 /**
  * Runs the full pipeline over raw JCL source text.
  * @param {string} source
- * @returns {{ diagnostics: object[], ast: object, stats: object }}
+ * @param {{ zosLevel?: string }} [options] defaults to the newest z/OS level
+ * @returns {{ diagnostics: object[], ast: object, stats: object, zosLevel: string }}
  */
-function validate(source) {
+function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
+    // Callers check the level first (the API answers 400), so a bad one here
+    // is a bug rather than something to fall back from silently.
+    if (!isZosLevel(zosLevel)) {
+        throw new Error(`Unknown z/OS level: ${zosLevel}`);
+    }
+
+    const context = { zosLevel };
     const { statements, diagnostics: lexDiags } = lex(source || '');
     const {
         job,
         procs,
         diagnostics: parseDiags
-    } = parse(statements);
+    } = parse(statements, context);
     const ruleDiags = [];
     runProcRules(
         job,
@@ -23,11 +32,11 @@ function validate(source) {
         ruleDiags
     ); // resolve proc calls first so paramRules can see them
 
-    checkAllParams(job, ruleDiags);
+    checkAllParams(job, ruleDiags, context);
     checkDDStatements(job, ruleDiags);
     // Also validate parameters inside in-stream PROC bodies themselves.
     for (const proc of procs) {
-        checkStepsAndDDs(proc.steps, ruleDiags);
+        checkStepsAndDDs(proc.steps, ruleDiags, context);
         checkDDStatements({ steps: proc.steps }, ruleDiags);
     }
 
@@ -52,7 +61,8 @@ function validate(source) {
     return {
         diagnostics: all,
         ast: { job, procs },
-        stats
+        stats,
+        zosLevel
     };
 }
 
