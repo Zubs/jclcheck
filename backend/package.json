@@ -6,7 +6,11 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
-    "test": "node test/run.js"
+    "test": "node --test \"test/**/*.test.js\"",
+    "inspect": "node test/inspect.js"
+  },
+  "engines": {
+    "node": ">=22"
   },
   "dependencies": {
     "cors": "^2.8.5",

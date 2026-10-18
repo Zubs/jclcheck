@@ -21,7 +21,11 @@ jcl-checker/
 │   │   │   ├── paramRules.js  keyword legality, required params, DISP/SPACE/DCB/REGION/TIME/DSN syntax
 │   │   │   └── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
 │   │   └── index.js           Express API (POST /api/validate)
-│   └── test/run.js            fixture-based smoke tests
+│   └── test/                  regression suite (node:test): exact diagnostics for every fixture
+│       ├── fixtures/          .jcl fixtures + .expected.json results (fixtures/nick/: Nick's review examples)
+│       ├── samples/           expected results for the workbench samples
+│       ├── helpers/           comparison, fixture discovery and todo rules
+│       └── inspect.js         prints full validator output (npm run inspect)
 └── frontend/    Vue 3 + Vite SPA (Vue Router, 3 pages)
     └── src/
         ├── App.vue                 root shell (just <router-view/>)
@@ -39,6 +43,7 @@ jcl-checker/
         │   ├── PfBar.vue            3270-style PF-key action bar (F1 Help / F5 Validate / F9 Sample / F12 Clear)
         │   └── HelpModal.vue        in-app documentation for learners
         └── samples.js               bundled example JCL (clean / broken / proc+symbolics)
+    └── tests/                       component tests (Vitest + Vue Test Utils + jsdom), mirroring src/
 ```
 
 The site has three pages:
@@ -61,11 +66,48 @@ npm install
 npm run dev         # http://localhost:5173 (proxies /api to :4000)
 ```
 
-Backend tests (fixture-based, no test framework dependency):
+## Tests
+
+### Backend
+
+The backend tests use Node's built-in test runner (Node 22 or later) and need no extra packages.
 
 ```bash
-cd backend && npm test
+cd backend
+npm test           # exits non-zero if any test fails
+npm run inspect    # prints full validator output (with messages and fixes) for the bundled fixtures
 ```
+
+Each fixture is checked against its exact diagnostics: code, severity, line and column. A missing or extra diagnostic fails the test, and so does a diagnostic that moves by one column. Messages and fixes aren't compared, so their wording can change freely. The workbench samples are read straight from `frontend/src/samples.js` and checked the same way, against `test/samples/<name>.expected.json`.
+
+To add a fixture, put two files side by side anywhere under `backend/test/fixtures/`:
+
+- `my-case.jcl`: the JCL
+- `my-case.expected.json`: what the validator should report
+
+```json
+{
+  "source": "Where this example came from",
+  "valid": false,
+  "diagnostics": [
+    { "code": "JCLD002", "severity": "error", "line": 3, "column": 1 }
+  ]
+}
+```
+
+Only `diagnostics` is required. A fixture for behaviour that isn't built yet adds `"todo": { "feature": 12, "reason": "..." }`, using the feature number from `Features.md`. A todo fixture that still fails is reported as todo and doesn't fail the run. Once it passes, the run fails until the `todo` is removed, so the list of known gaps stays accurate. `"provisional": true` marks a result that waits on an open question in `Features.md`.
+
+### Frontend
+
+The frontend tests use Vitest with Vue Test Utils in jsdom. The API is mocked, so they don't need the backend, and any real network call fails the test.
+
+```bash
+cd frontend
+npm test           # runs once and exits non-zero if any test fails
+npx vitest         # watch mode
+```
+
+Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feature in `Features.md` will fix is written as `test.fails('... (feature N)', ...)`. The test describes the correct behaviour, so it fails today, and Vitest counts it as passing. Once the bug is fixed, the test passes and the run fails until `.fails` is removed.
 
 ## What's validated
 
@@ -117,7 +159,3 @@ suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
 - Add new diagnostic codes to the `CATALOG` in `errors.js` — message and
   suggestion are plain functions of the diagnostic's data, so every new rule
   gets a human-readable explanation for free.
-- This was scaffolded by hand rather than generated from an ANTLR grammar,
-  but the statement/keyword tables are structured so a real ANTLR-based JCL
-  grammar (several exist on GitHub) could replace `lexer.js`/`parser.js`
-  without touching the rule engine or frontend.

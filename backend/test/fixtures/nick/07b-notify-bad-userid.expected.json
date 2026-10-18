@@ -1,0 +1,15 @@
+{
+  "source": "Nick's item 7, second example (Features.md feature 16)",
+  "todo": {
+    "feature": 16,
+    "reason": "NOTIFY= values are not checked"
+  },
+  "diagnostics": [
+    {
+      "code": "JCLS009",
+      "severity": "warning",
+      "line": 1,
+      "column": 19
+    }
+  ]
+}

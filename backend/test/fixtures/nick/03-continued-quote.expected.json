@@ -1,0 +1,8 @@
+{
+  "source": "Nick's item 3 (Features.md feature 5)",
+  "todo": {
+    "feature": 5,
+    "reason": "Quoted strings continued onto the next line are not supported"
+  },
+  "diagnostics": []
+}

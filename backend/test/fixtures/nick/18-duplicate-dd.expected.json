@@ -1,0 +1,16 @@
+{
+  "source": "Nick's item 18 (Features.md feature 20), wrapped in a JOB and EXEC statement",
+  "todo": {
+    "feature": 20,
+    "reason": "Duplicate DD names are reported as an error"
+  },
+  "valid": true,
+  "diagnostics": [
+    {
+      "code": "JCLD001",
+      "severity": "warning",
+      "line": 4,
+      "column": 1
+    }
+  ]
+}
