@@ -45,7 +45,17 @@ const STATEMENT_TYPES = table([
     'OUTPUT',
     'JCLLIB',
     'XMIT',
-    'NOTIFY'
+    'NOTIFY',
+    'JOBGROUP',
+    'ENDGROUP',
+    'GJOB',
+    'JOBSET',
+    'SJOB',
+    'ENDSET',
+    'AFTER',
+    'BEFORE',
+    'CONCURRENT',
+    'SCHEDULE'
 ], {
     // z/OS 2.3 MVS JCL Reference, "Summary of changes": new NOTIFY statement.
     NOTIFY: { since: '2.3' }
@@ -206,6 +216,24 @@ const NOTIFY_KEYWORDS = table(['EMAIL', 'USER', 'TYPE', 'WHEN'], {
     TYPE: { value: oneOfValues('MSG', 'EMAIL') }
 });
 
+// JES2 job group statements and their keywords, from the job group section
+// of the MVS JCL Reference (as remembered; feature 41 asks to confirm them).
+// SCHEDULE is the ordinary-job statement that joins a group with JOBGROUP=.
+const DEPENDENCY_KEYWORDS = table(['NAME', 'WHEN', 'ACTION', 'OTHERWISE']);
+const GROUP_KEYWORDS = {
+    JOBGROUP: table(['ACCT', 'PGMR', 'OWNER', 'GROUP', 'PASSWORD', 'SECLABEL', 'HOLD', 'ERROR', 'ONERROR',
+        'SYSAFF', 'SYSTEM', 'SCHENV']),
+    ENDGROUP: table([]),
+    GJOB: table(['FLUSHTYP', 'ONERROR']),
+    JOBSET: table(['FLUSHTYP', 'ONERROR']),
+    SJOB: table(['FLUSHTYP', 'ONERROR']),
+    ENDSET: table([]),
+    AFTER: DEPENDENCY_KEYWORDS,
+    BEFORE: DEPENDENCY_KEYWORDS,
+    CONCURRENT: table(['NAME']),
+    SCHEDULE: table(['JOBGROUP', 'AFTER', 'BEFORE', 'DELAY', 'HOLDUNTL', 'STARTBY', 'WITH'])
+};
+
 // JES2 control statements ("/*NAME ..."), from the z/OS JES2 JCL statement
 // descriptions in the MVS JCL Reference. `place` says where each goes:
 // 'before' the JOB statement, 'anywhere', or (by default) after it.
@@ -342,6 +370,7 @@ module.exports = {
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
     NOTIFY_KEYWORDS,
+    GROUP_KEYWORDS,
     POSITIONAL_LIMITS,
     QUALIFIABLE_KEYWORDS,
     NOTIFY_USER,

@@ -68,6 +68,10 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     let job = null; // the current job
     let ended = false; // a null statement (//) ended the last job
     const procs = [];
+    const jobGroups = [];
+    let group = null; // the open JOBGROUP
+    let set = null; // the open JOBSET in it
+    let groupJob = null; // the last GJOB/SJOB, which AFTER/BEFORE/CONCURRENT belong to
     const preJobProcs = []; // PROCs written before the first JOB belong to it
     let procStack = null; // currently-open in-stream PROC
     let container = { steps: [] }; // root container before JOB or when JOB missing
@@ -355,6 +359,88 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
                 break;
             }
+            case 'JOBGROUP': {
+                if (group) {
+                    diagnostics.push(makeDiagnostic('JCLG002', { name: group.name }, { line: group.line, column: 1 }));
+                }
+
+                group = { type: 'JobGroup', name: stmt.name, line: stmt.line, params: [], jobs: [], sets: [], endLine: null };
+                attachParams(group, stmt, diagnostics);
+                jobGroups.push(group);
+                set = null;
+                groupJob = null;
+                // A group stands apart from the jobs around it.
+                job = null;
+                ended = false;
+                container = { steps: [] };
+                currentStep = null;
+                break;
+            }
+            case 'ENDGROUP': {
+                if (!group) {
+                    diagnostics.push(makeDiagnostic('JCLG003', {}, { line: stmt.line, column: stmt.opCol }));
+                    break;
+                }
+
+                if ((stmt.name || '').toUpperCase() !== (group.name || '').toUpperCase()) {
+                    diagnostics.push(makeDiagnostic('JCLG001', { name: stmt.name || '(none)', group: group.name }, { line: stmt.line, column: stmt.nameCol }));
+                }
+
+                if (set) {
+                    diagnostics.push(makeDiagnostic('JCLG005', { name: set.name }, { line: set.line, column: 1 }));
+                }
+
+                group.endLine = stmt.line;
+                group = null;
+                set = null;
+                break;
+            }
+            case 'JOBSET':
+            case 'ENDSET':
+            case 'GJOB':
+            case 'SJOB':
+            case 'AFTER':
+            case 'BEFORE':
+            case 'CONCURRENT': {
+                if (!group) {
+                    diagnostics.push(makeDiagnostic('JCLG010', { op }, { line: stmt.line, column: stmt.opCol }));
+                    break;
+                }
+
+                const node = { type: op, name: stmt.name, line: stmt.line, params: [] };
+                attachParams(node, stmt, diagnostics);
+                if (op === 'JOBSET') {
+                    set = node;
+                    group.sets.push(node);
+                } else if (op === 'ENDSET') {
+                    if (!set) {
+                        diagnostics.push(makeDiagnostic('JCLG005', { name: null }, { line: stmt.line, column: stmt.opCol }));
+                    }
+
+                    set = null;
+                } else if (op === 'GJOB' || op === 'SJOB') {
+                    if (op === 'SJOB' && !set) {
+                        diagnostics.push(makeDiagnostic('JCLG006', {}, { line: stmt.line, column: stmt.opCol }));
+                    }
+
+                    groupJob = { ...node, deps: [] };
+                    group.jobs.push(groupJob);
+                } else if (!groupJob) {
+                    diagnostics.push(makeDiagnostic('JCLG007', { op }, { line: stmt.line, column: stmt.opCol }));
+                } else {
+                    groupJob.deps.push(node);
+                }
+
+                break;
+            }
+            case 'SCHEDULE': {
+                if (job) {
+                    job.schedule = { type: 'Schedule', line: stmt.line, params: [] };
+                    attachParams(job.schedule, stmt, diagnostics);
+                }
+
+                break;
+            }
             case 'SET': {
                 break;
             }
@@ -366,7 +452,14 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
         }
     }
 
-    if (jobs.length === 0 && sawAnyStatement) {
+    if (group) {
+        diagnostics.push(makeDiagnostic('JCLG002', { name: group.name }, { line: group.line, column: 1 }));
+        if (set) {
+            diagnostics.push(makeDiagnostic('JCLG005', { name: set.name }, { line: set.line, column: 1 }));
+        }
+    }
+
+    if (jobs.length === 0 && jobGroups.length === 0 && sawAnyStatement) {
         diagnostics.push(makeDiagnostic(
             'JCLO001',
             {},
@@ -393,6 +486,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     return {
         jobs,
         procs,
+        jobGroups,
         diagnostics
     };
 }

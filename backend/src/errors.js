@@ -218,6 +218,48 @@ const CATALOG = {
         suggestion: () => `Simplify the conditions, or combine nested IFs with AND.`
     },
 
+    // Job groups (JCLG0xx)
+    JCLG001: {
+        message: (d) => `ENDGROUP '${d.name}' does not match JOBGROUP '${d.group}'.`,
+        suggestion: (d) => `Give the ENDGROUP statement the same name as its JOBGROUP: //${d.group} ENDGROUP.`
+    },
+    JCLG002: {
+        message: (d) => `JOBGROUP '${d.name}' has no ENDGROUP.`,
+        suggestion: (d) => `Add //${d.name} ENDGROUP after the group's last statement.`
+    },
+    JCLG003: {
+        message: () => `ENDGROUP without a JOBGROUP.`,
+        suggestion: () => `Remove this ENDGROUP, or start the group with a JOBGROUP statement.`
+    },
+    JCLG004: {
+        message: (d) => `Job '${d.name}' is defined more than once in job group '${d.group}'.`,
+        suggestion: () => `Give each GJOB and SJOB in a group its own name.`
+    },
+    JCLG005: {
+        message: (d) => d.name === null ? `ENDSET without a JOBSET.` : `JOBSET '${d.name}' has no ENDSET.`,
+        suggestion: () => `Every JOBSET must be closed by an ENDSET before the group ends.`
+    },
+    JCLG006: {
+        message: () => `SJOB must be inside a JOBSET.`,
+        suggestion: () => `Put SJOB statements between JOBSET and ENDSET, or use GJOB for a job on its own.`
+    },
+    JCLG007: {
+        message: (d) => `${d.op} must follow a GJOB or SJOB statement.`,
+        suggestion: () => `Put dependency statements straight after the job they belong to.`
+    },
+    JCLG008: {
+        message: (d) => `'${d.name}' is not a job in job group '${d.group}'.`,
+        suggestion: (d) => d.jobs.length ? `The group's jobs are: ${d.jobs.join(', ')}.` : `The group has no jobs yet.`
+    },
+    JCLG009: {
+        message: (d) => `Job group '${d.group}' has a dependency loop: ${d.cycle.join(' → ')}.`,
+        suggestion: () => `A job can't wait for itself. Remove or change one of the AFTER or BEFORE statements in the loop.`
+    },
+    JCLG010: {
+        message: (d) => `${d.op} can only appear inside a job group.`,
+        suggestion: () => `Start the group with a JOBGROUP statement, or remove this statement.`
+    },
+
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
         message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'. z/OS allocates both DD statements, but a program can reach only one of them by this name.`,

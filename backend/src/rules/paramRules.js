@@ -712,16 +712,24 @@ function checkNotify(notify, diagnostics, zosLevel) {
         diagnostics.push(makeDiagnostic('JCLK007', {}, { line: notify.line, column: user.col, severity: 'error' }));
     }
 
-    // WHEN=(condition) or WHEN='condition': the IF condition syntax, without THEN.
-    const when = findParam(notify.params, 'WHEN');
-    const inner = when && when.value.match(/^(\(|')(.*)(\)|')$/);
-    if (when && !inner) {
-        diagnostics.push(makeDiagnostic('JCLC001', { detail: 'WHEN must be a condition in brackets or quotes, for example WHEN=(RC>4).' }, { line: notify.line, column: when.valueCol }));
-    } else if (when) {
-        const chars = conditionChars(inner[2], notify.line, when.valueCol + 1);
-        for (const e of parseCondition(chars, { line: notify.line, col: when.valueCol }, { requireThen: false }).errors) {
-            diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
-        }
+    checkWhen(findParam(notify.params, 'WHEN'), notify.line, diagnostics);
+}
+
+// WHEN=(condition) or WHEN='condition': the IF condition syntax, without THEN.
+function checkWhen(when, line, diagnostics) {
+    if (!when) {
+        return;
+    }
+
+    const inner = when.value.match(/^(\(|')(.*)(\)|')$/);
+    if (!inner) {
+        diagnostics.push(makeDiagnostic('JCLC001', { detail: 'WHEN must be a condition in brackets or quotes, for example WHEN=(RC>4).' }, { line, column: when.valueCol }));
+        return;
+    }
+
+    const chars = conditionChars(inner[2], line, when.valueCol + 1);
+    for (const e of parseCondition(chars, { line, col: when.valueCol }, { requireThen: false }).errors) {
+        diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
     }
 }
 
@@ -773,5 +781,7 @@ module.exports = {
     checkKeywords,
     checkParamValues,
     checkRuleValue,
+    checkWhen,
+    checkName,
     closestKeyword
 };

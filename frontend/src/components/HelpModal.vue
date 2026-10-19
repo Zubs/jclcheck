@@ -87,6 +87,10 @@
             <td>IF/THEN/ELSE conditions</td>
           </tr>
           <tr>
+            <td>JCLGxxx</td>
+            <td>Job groups (JOBGROUP … ENDGROUP)</td>
+          </tr>
+          <tr>
             <td>JCLJxxx</td>
             <td>JES2 and JES3 control statements</td>
           </tr>

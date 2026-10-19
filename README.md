@@ -166,10 +166,10 @@ suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
 `JCLLxxx` lexer, `JCLPxxx` parser, `JCLOxxx` ordering, `JCLDxxx` DD rules,
 `JCLKxxx` keyword rules, `JCLSxxx` value syntax, `JCLNxxx` name syntax,
 `JCLRxxx` procedure resolution, `JCLJxxx` JES control statements, `JCLCxxx`
-IF conditions).
+IF conditions, `JCLGxxx` job groups).
 
 `POST /api/validate` returns `{ diagnostics, ast, stats, zosLevel, jes }`.
-`ast.jobs` lists every job in the stream (it replaced the single `ast.job`
+`ast.jobs` lists every job in the stream, `ast.jobGroups` every JES2 job group, (it replaced the single `ast.job`
 when several jobs per stream were supported), and `stats.jobCount` counts
 them.
 

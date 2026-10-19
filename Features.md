@@ -45,7 +45,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 19. Member names and other dataset name forms
 - [x] 20. Duplicate DD names
 - [x] 21. DD data sources, including PATH
-- [ ] 22. Job groups (JOBGROUP)
+- [x] 22. Job groups (JOBGROUP)
 - [ ] 23. Catalogued PROCs and INCLUDE members
 - [ ] 24. Cursor line and column
 - [ ] 25. Syntax highlighting
@@ -1549,6 +1549,7 @@ after:
 - **Checking JCL sent to the internal reader (feature 7).** It is left unchecked for now. Checking it as a separate job stream could be added later.
 - **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).
 - **NOT sign in IF conditions (feature 13).** Only `¬` and the word `NOT` are accepted. Some PC keyboards and code pages turn `¬` into `^` or `!`. Decide whether to accept those as aliases.
+- **Job group keywords (feature 22).** The keyword tables for JOBGROUP, GJOB, JOBSET, SJOB, AFTER, BEFORE, CONCURRENT and SCHEDULE in `keywords.js` (`GROUP_KEYWORDS`) were written from memory of the JES2 job group section. Confirm them against the reference, and add value rules (for example `ACTION`, `OTHERWISE`, `FLUSHTYP`).
 - **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain.
 - **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.

@@ -5,6 +5,7 @@ const { checkAllParams, checkStepsAndDDs } = require('./rules/paramRules');
 const { resolveProcCalls, validateSymbolicParams, validateDDOverrides } = require('./rules/procRules');
 const { checkJesStatements } = require('./rules/jesRules');
 const { checkIfReferences } = require('./rules/ifRules');
+const { checkJobGroups } = require('./rules/groupRules');
 const { DEFAULT_ZOS_LEVEL, DEFAULT_JES, isZosLevel, isJes, jesAvailable } = require('./levels');
 
 /**
@@ -29,6 +30,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
     const {
         jobs,
         procs,
+        jobGroups,
         diagnostics: parseDiags
     } = parse(statements, context);
     const ruleDiags = [];
@@ -41,6 +43,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
         checkIfReferences(job, 'job', ruleDiags);
     }
 
+    checkJobGroups(jobGroups, jobs, ruleDiags, context);
     validateSymbolicParams(procs, ruleDiags);
     checkJesStatements(statements, ruleDiags, context);
     // Also validate parameters inside in-stream PROC bodies themselves.
@@ -71,7 +74,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
 
     return {
         diagnostics: all,
-        ast: { jobs, procs },
+        ast: { jobs, procs, jobGroups },
         stats,
         zosLevel,
         jes
