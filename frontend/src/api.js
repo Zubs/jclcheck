@@ -51,6 +51,26 @@ export async function validateJcl(source, { library = [], zosLevel, jes, profile
     return res.json();
 }
 
+// The JCL laid out in the usual columns: { text, changed, notes, refused }.
+export async function formatJcl(source) {
+    let res;
+    try {
+        res = await fetch(`${API_BASE}/api/format`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-JCLcheck-Client': 'workbench' },
+            body: JSON.stringify({ source })
+        });
+    } catch (err) {
+        throw apiError(`Format request failed: ${err.message}`, 0);
+    }
+
+    if (!res.ok) {
+        throw apiError(`Format request failed (${res.status})`, res.status);
+    }
+
+    return res.json();
+}
+
 // The z/OS levels the API supports, for the workbench's level picker.
 export async function getLevels() {
     let res;

@@ -26,6 +26,7 @@ defineEmits([
   'clear',
   'help',
   'share',
+  'format',
   'download'
 ]);
 </script>

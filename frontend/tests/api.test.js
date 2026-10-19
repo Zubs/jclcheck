@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { validateJcl, getLevels } from '../src/api.js';
+import { validateJcl, getLevels, formatJcl } from '../src/api.js';
 
 let fetchMock;
 
@@ -27,6 +27,14 @@ describe('validateJcl', () => {
         expect(JSON.parse(fetchMock.mock.calls[0][1].body).profile).toEqual({ dsnPrefixes: ['AR'] });
         fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'bad_request', message: 'profile must be an object.' }), { status: 400 }));
         await expect(validateJcl('//J JOB', { profile: 5 })).rejects.toMatchObject({ status: 400, detail: 'profile must be an object.' });
+    });
+
+    test('formatJcl posts the source to /api/format', async () => {
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ text: 'X', changed: [], notes: [], refused: null }), { status: 200 }));
+        expect(await formatJcl('//J JOB')).toEqual({ text: 'X', changed: [], notes: [], refused: null });
+        const [url, options] = fetchMock.mock.calls[0];
+        expect(url).toBe('/api/format');
+        expect(JSON.parse(options.body)).toEqual({ source: '//J JOB' });
     });
 
     test('passes the abort signal to fetch', async () => {

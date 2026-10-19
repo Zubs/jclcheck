@@ -2,11 +2,11 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils';
 import Workbench from '../../src/pages/Workbench.vue';
 import HelpModal from '../../src/components/HelpModal.vue';
-import { validateJcl, getLevels } from '../../src/api.js';
+import { validateJcl, getLevels, formatJcl } from '../../src/api.js';
 import { track } from '../../src/analytics.js';
 import { SAMPLES } from '../../src/samples.js';
 
-vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn(), getLevels: vi.fn() }));
+vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn(), getLevels: vi.fn(), formatJcl: vi.fn() }));
 
 const LEVELS = {
     levels: [
@@ -1049,5 +1049,68 @@ describe('Workbench site profile and suppressions (feature 37)', () => {
         expect(w.findAll('.diag').map(d => d.find('.diag-sev').text())).toEqual(['HIDDEN', 'ERR']);
         expect(tracked('suppress')).toEqual(['JCLK001']);
         expect(tracked('diag/seen')).toEqual(['JCLD002']);
+    });
+});
+
+describe('Workbench formatter (feature 39)', () => {
+    const FORMATTED = { text: '//J        JOB\n//S        EXEC PGM=X', changed: [1, 2], notes: [], refused: null };
+
+    beforeEach(() => {
+        formatJcl.mockReset();
+        formatJcl.mockResolvedValue(FORMATTED);
+    });
+
+    test('F4 shows a preview marking the changed lines, and APPLY replaces the text with an undo', async () => {
+        const w = await mountWorkbench();
+        await edit(w, '//J JOB\n//S EXEC PGM=X');
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F4', cancelable: true }));
+        await flushPromises();
+        expect(formatJcl).toHaveBeenCalledWith('//J JOB\n//S EXEC PGM=X');
+        expect(w.findAll('.format-after .format-line.is-changed')).toHaveLength(2);
+        expect(w.find('textarea').element.value).toBe('//J JOB\n//S EXEC PGM=X');
+
+        await w.find('.format-apply').trigger('click');
+        expect(w.find('textarea').element.value).toBe(FORMATTED.text);
+        expect(w.find('.format').exists()).toBe(false);
+        expect(w.find('.undo-notice').text()).toContain('JCL formatted.');
+        await w.find('.undo-button').trigger('click');
+        expect(w.find('textarea').element.value).toBe('//J JOB\n//S EXEC PGM=X');
+        expect(tracked('format')).toEqual(['f4', 'applied']);
+        expect(tracked('undo')).toEqual(['f4']);
+    });
+
+    test('the button and Alt+R format too, and Escape cancels the preview', async () => {
+        const w = await mountWorkbench();
+        await pfButton(w, 'FORMAT').trigger('click');
+        await flushPromises();
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', cancelable: true }));
+        await flushPromises();
+        expect(w.find('.format').exists()).toBe(false);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'r', code: 'KeyR', altKey: true, cancelable: true }));
+        await flushPromises();
+        await w.find('.format-cancel').trigger('click');
+        expect(tracked('format')).toEqual(['button', 'cancelled', 'shortcut', 'cancelled']);
+    });
+
+    test('a refused result or formatted JCL says so instead of a preview', async () => {
+        const w = await mountWorkbench();
+        formatJcl.mockResolvedValueOnce({ text: SAMPLES.clean.code, changed: [], notes: [], refused: 'It would not mean the same.' });
+        await pfButton(w, 'FORMAT').trigger('click');
+        await flushPromises();
+        expect(w.find('.format-message').text()).toContain('It would not mean the same.');
+        expect(tracked('format')).toEqual(['button', 'refused']);
+        formatJcl.mockResolvedValueOnce({ text: SAMPLES.clean.code, changed: [], notes: [], refused: null });
+        await pfButton(w, 'FORMAT').trigger('click');
+        await flushPromises();
+        expect(w.find('.format-message').text()).toContain('already formatted');
+        expect(w.find('.format').exists()).toBe(false);
+    });
+
+    test('an unreachable API is reported', async () => {
+        const w = await mountWorkbench();
+        formatJcl.mockRejectedValueOnce(Object.assign(new Error('down'), { status: 0 }));
+        await pfButton(w, 'FORMAT').trigger('click');
+        await flushPromises();
+        expect(w.find('.format-message').text()).toContain("can't be formatted");
     });
 });

@@ -3,6 +3,7 @@ const cors = require('cors');
 const validator = require('./validator');
 const { checkDsn, MEMBER_RE } = require('./rules/paramRules');
 const { profileProblem } = require('./profile');
+const { format } = require('./formatter');
 
 const MAX_LIBRARY = 50;
 const {
@@ -148,6 +149,21 @@ function createApp({
             res.locals.zosLevel = result.zosLevel;
             res.locals.jes = result.jes;
             res.json(result);
+        } catch (err) {
+            console.error(err);
+            res.status(500).json({ error: 'internal_error', message: err.message });
+        }
+    });
+
+    // Lays the JCL out in the usual columns (feature 39); the text isn't kept.
+    app.post('/api/format', countDirectUse(analytics, 'format'), (req, res) => {
+        const source = req.body && req.body.source;
+        if (typeof source !== 'string') {
+            return res.status(400).json({ error: 'bad_request', message: 'Expected "source" to be the JCL text.' });
+        }
+
+        try {
+            res.json(format(source));
         } catch (err) {
             console.error(err);
             res.status(500).json({ error: 'internal_error', message: err.message });

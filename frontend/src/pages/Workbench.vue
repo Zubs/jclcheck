@@ -82,8 +82,12 @@
       <button class="share-dismiss" title="Dismiss" @click="shareMessage = null">✕</button>
     </div>
     <div v-if="undoState" class="undo-notice" role="status">
-      <span>{{ undoState.key === 'f12' ? 'Editor cleared.' : 'Sample loaded over your JCL.' }}</span>
+      <span>{{ UNDO_NOTICE[undoState.key] }}</span>
       <button class="undo-button" @click="undoReplace">UNDO</button>
+    </div>
+    <div v-if="formatMessage" class="share-notice format-message" role="status">
+      <span>{{ formatMessage }}</span>
+      <button class="share-dismiss" title="Dismiss" @click="formatMessage = ''">✕</button>
     </div>
 
     <PfBar
@@ -93,9 +97,19 @@
         @sample="cycleSample()"
         @clear="clearEditor()"
         @share="shareJob()"
+        @format="formatJob('button')"
     />
 
     <HelpModal v-if="showHelp" @close="showHelp = false"/>
+    <FormatPreview
+        v-if="formatPreview"
+        :before="formatPreview.before"
+        :after="formatPreview.text"
+        :changed="formatPreview.changed"
+        :notes="formatPreview.notes"
+        @apply="applyFormat"
+        @cancel="cancelFormat"
+    />
   </div>
 </template>
 
@@ -114,7 +128,8 @@ import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
 import ProfilePanel from '../components/ProfilePanel.vue';
-import { validateJcl, getLevels } from '../api';
+import FormatPreview from '../components/FormatPreview.vue';
+import { validateJcl, getLevels, formatJcl } from '../api';
 import { shareLink, decodeShare } from '../share';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
 import { track } from '../analytics';
@@ -207,6 +222,10 @@ let draftBeforeShare = null;
 
 // The user's text that F9 or F12 just replaced, offered back for a few seconds.
 const undoState = ref(null);
+const UNDO_NOTICE = { f4: 'JCL formatted.', f9: 'Sample loaded over your JCL.', f12: 'Editor cleared.' };
+// Formatting (feature 39) shows a preview before anything changes.
+const formatPreview = ref(null);
+const formatMessage = ref('');
 const UNDO_MS = 5000;
 let undoTimer = null;
 let nextMemberId = library.value.length + 1;
@@ -706,6 +725,52 @@ function rememberForUndo(key) {
   }
 }
 
+async function formatJob(trigger) {
+  track('format', trigger);
+  formatMessage.value = '';
+  const before = code.value;
+  let result;
+  try {
+    result = await formatJcl(before);
+  } catch {
+    formatMessage.value = 'The API can\'t be reached, so the JCL can\'t be formatted just now.';
+    return;
+  }
+
+  if (code.value !== before) {
+    return; // typed over while waiting; the user can press F4 again
+  }
+
+  if (result.refused) {
+    track('format', 'refused');
+    formatMessage.value = result.refused;
+  } else if (result.text === before) {
+    formatMessage.value = result.notes.length
+      ? `Nothing to change. ${result.notes.map(n => `Line ${n.line}: ${n.message}`).join(' ')}`
+      : 'The JCL is already formatted.';
+  } else {
+    formatPreview.value = { before, ...result };
+  }
+}
+
+function applyFormat() {
+  track('format', 'applied');
+  clearTimeout(undoTimer);
+  undoState.value = { text: code.value, key: 'f4' };
+  undoTimer = setTimeout(() => {
+    undoState.value = null;
+  }, UNDO_MS);
+  sharedView.value = false;
+  lastChangeByUser = true;
+  code.value = formatPreview.value.text;
+  formatPreview.value = null;
+}
+
+function cancelFormat() {
+  track('format', 'cancelled');
+  formatPreview.value = null;
+}
+
 function undoReplace() {
   track('undo', undoState.value.key);
   code.value = undoState.value.text;
@@ -737,6 +802,15 @@ function clearEditor(trigger = 'button') {
 // F keys, with fallbacks for browsers and Macs that keep them. Alt shortcuts
 // use the key's position (e.code), since Alt changes e.key on a Mac.
 function onKeydown(e) {
+  if (formatPreview.value) {
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelFormat();
+    }
+
+    return;
+  }
+
   if (showHelp.value) {
     if (e.key === 'Escape' || e.key === 'F1') {
       e.preventDefault();
@@ -749,6 +823,7 @@ function onKeydown(e) {
   const mod = e.ctrlKey || e.metaKey;
   const alt = e.altKey && !mod;
   const actions = {
+    F4: () => formatJob('f4'),
     F6: () => shareJob(),
     F1: () => openHelp('f1'),
     F5: () => runValidation('f5'),
@@ -763,7 +838,8 @@ function onKeydown(e) {
       KeyH: () => openHelp('shortcut'),
       KeyS: () => cycleSample(),
       KeyC: () => clearEditor('shortcut'),
-      KeyL: () => shareJob()
+      KeyL: () => shareJob(),
+      KeyR: () => formatJob('shortcut')
     }[e.code];
   }
 
@@ -816,6 +892,12 @@ const pfKeys = computed(() => ([
     label: 'HELP',
     shortcut: 'Alt+H',
     event: 'help'
+  },
+  {
+    key: 'F4',
+    label: 'FORMAT',
+    shortcut: 'Alt+R',
+    event: 'format'
   },
   {
     key: 'F5',

@@ -87,6 +87,8 @@ results are the same as the API's.
 cd backend
 node bin/jclcheck.js ../jcl/*.jcl                      # file:line:column  severity  code  message
 node bin/jclcheck.js jcl/*.jcl --format sarif > jclcheck.sarif
+node bin/jclcheck.js format jcl/payroll.jcl            # print it laid out in the usual columns
+node bin/jclcheck.js format --write jcl/*.jcl          # or rewrite the files
 ```
 
 | Option | What it does |
@@ -255,6 +257,7 @@ Help lists every code with its default severity, which each catalog entry sets.
 | Endpoint | What it does |
 |---|---|
 | `POST /api/validate` | Checks `source`. Optional: `zosLevel` (`2.3`-`3.2`, default `3.2`), `jes` (`JES2` or `JES3`; JES3 only at 2.5 and earlier) `library` (up to 50 `{ dsn, member, source }` entries) and `profile` (a site profile, below). Unknown levels, JES values, bad library entries or an invalid profile get a 400 response that says why. |
+| `POST /api/format` | Lays out `source` in the usual columns (name in 3, operation in 12, continuations in 16, nothing past 71). Returns `{ text, changed, notes, refused }`: the lines of `text` that changed, the statements left as they are and why, and why nothing was changed if the result wouldn't mean the same. |
 | `GET /api/levels` | The supported levels, oldest first, as `{ level, jes3 }`, with `defaultLevel` and `defaultJes`. |
 | `GET /api/health` | `{ "ok": true }` |
 | `POST /api/usage` | Opt-in CLI usage counts (see Analytics). |

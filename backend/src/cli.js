@@ -9,9 +9,11 @@ const { parseArgs } = require('node:util');
 const { validate } = require('./validator');
 const { profileProblem } = require('./profile');
 const { ZOS_LEVELS, isZosLevel, isJes, jesAvailable } = require('./levels');
+const { format } = require('./formatter');
 const { version } = require('../package.json');
 
 const USAGE = `Usage: jclcheck [options] <files or globs...>
+       jclcheck format [--write] <files or globs...>
 
 Options:
   --zos <level>          z/OS level: ${ZOS_LEVELS.join(', ')} (default ${ZOS_LEVELS[ZOS_LEVELS.length - 1]})
@@ -22,6 +24,7 @@ Options:
   --format <text|json|sarif>
   --max-warnings <n>     also fail when there are more warnings than this
   --telemetry            count this run anonymously (also JCLCHECK_TELEMETRY=1)
+  --write                (format) rewrite the files instead of printing one
   -h, --help             show this help
 
 Exit codes: 0 no errors, 1 errors or too many warnings, 2 the tool couldn't run.`;
@@ -227,6 +230,55 @@ async function sendUsage(events, env, fetchImpl) {
     }
 }
 
+// jclcheck format: prints one formatted file, or rewrites files with --write.
+function runFormat(argv, { cwd, stdout, stderr }) {
+    let parsed;
+    try {
+        parsed = parseArgs({ args: argv, allowPositionals: true, options: { write: { type: 'boolean' } } });
+    } catch (err) {
+        stderr(`jclcheck: ${err.message}\n\n${USAGE}\n`);
+        return 2;
+    }
+
+    const files = expand(parsed.positionals, cwd);
+    if (!files.length || (files.length > 1 && !parsed.values.write)) {
+        stderr(`jclcheck format: give one file, or use --write to format several in place.\n`);
+        return 2;
+    }
+
+    let code = 0;
+    for (const file of files) {
+        const full = path.resolve(cwd, file);
+        let source;
+        try {
+            source = fs.readFileSync(full, 'utf8');
+        } catch (err) {
+            stderr(`jclcheck: can't read ${file}: ${err.code === 'ENOENT' ? 'no such file' : err.message}\n`);
+            code = 2;
+            continue;
+        }
+
+        const result = format(source);
+        for (const note of result.notes) {
+            stderr(`${file}:${note.line}  ${note.message}\n`);
+        }
+
+        if (result.refused) {
+            stderr(`${file}: ${result.refused}\n`);
+            code = Math.max(code, 1);
+        }
+
+        if (!parsed.values.write) {
+            stdout(result.text);
+        } else if (result.text !== source) {
+            fs.writeFileSync(full, result.text);
+            stderr(`formatted ${file}\n`);
+        }
+    }
+
+    return code;
+}
+
 /**
  * Runs the command. Returns the exit code; output goes to `stdout`/`stderr`.
  * @param {string[]} argv the arguments after the command name
@@ -238,6 +290,10 @@ async function run(argv, {
     stderr = text => process.stderr.write(text),
     fetchImpl = globalThis.fetch
 } = {}) {
+    if (argv[0] === 'format') {
+        return runFormat(argv.slice(1), { cwd, stdout, stderr });
+    }
+
     let options;
     try {
         options = readOptions(argv);

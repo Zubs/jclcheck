@@ -26,7 +26,7 @@ export const EVENTS = {
     'clear': { details: ['f12', 'button', 'shortcut'], title: d => `Clear editor (${d})` },
     'help/open': { details: ['f1', 'button', 'shortcut'], title: d => `Open help (${d})` },
     'editor/paste': { details: SIZE_BUCKETS, title: d => `Paste JCL (${d} lines)` },
-    'undo': { details: ['f9', 'f12'], title: d => `Undo after ${d}` },
+    'undo': { details: ['f4', 'f9', 'f12'], title: d => `Undo after ${d}` },
     'library': { details: ['add', 'remove'], title: d => `Library member ${d}` },
 
     // Results
@@ -54,7 +54,7 @@ export const EVENTS = {
     'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}` },
     'profile': { details: ['edit'], title: () => 'Profile edited' },
     'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}` },
-    'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}`, feature: 39 },
+    'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}` },
     // Keyword names come from the API's keyword list once feature 40 is built.
     'hover': { details: ['shortcut'], title: d => `Keyword explanation: ${d}`, feature: 40 }
 };
