@@ -177,6 +177,9 @@ const DD_KEYWORDS = table([
 // *, DATA, DUMMY or DYNAM.
 const POSITIONAL_LIMITS = { JOB: 2, EXEC: 1, DD: 1 };
 
+// EXEC keywords that can name one step of a called procedure (COND.S1=).
+const QUALIFIABLE_KEYWORDS = new Set(['COND', 'REGION', 'TIME', 'PARM', 'ACCT', 'ADDRSPC', 'DPRTY', 'PERFORM', 'RD']);
+
 const JCLLIB_KEYWORDS = table(['ORDER']);
 
 // The NOTIFY statement (z/OS 2.3). WHEN is a condition, checked separately.
@@ -323,6 +326,7 @@ module.exports = {
     JCLLIB_KEYWORDS,
     NOTIFY_KEYWORDS,
     POSITIONAL_LIMITS,
+    QUALIFIABLE_KEYWORDS,
     NOTIFY_USER,
     JES2_STATEMENTS,
     JES3_STATEMENTS,

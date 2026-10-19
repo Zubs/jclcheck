@@ -258,6 +258,14 @@ const CATALOG = {
         message: () => `A NOTIFY statement can have EMAIL or USER, but not both.`,
         suggestion: () => `Keep one of them, and use a second NOTIFY statement for the other recipient.`
     },
+    JCLK008: {
+        message: (d) => `${d.keyword} can't be qualified with a procedure step.`,
+        suggestion: () => `Only COND, REGION, TIME, PARM, ACCT, ADDRSPC, DPRTY, PERFORM and RD can name a procedure step (for example REGION.STEP1=4M).`
+    },
+    JCLK009: {
+        message: (d) => `${d.keyword}.${d.procstep} names a procedure step, but this step runs a program, not a procedure.`,
+        suggestion: (d) => `Write ${d.keyword}= without the step name, or call a procedure with PROC= instead of PGM=.`
+    },
     JCLK004: {
         message: (d) => `The ${d.stmt} statement allows at most ${d.limit} positional parameter${d.limit === 1 ? '' : 's'}${d.what ? ` (${d.what})` : ''}; found ${d.found}.`,
         suggestion: () => `Remove the extra positional parameters. Check for stray commas: each comma before the first keyword starts another positional parameter.`
@@ -343,6 +351,10 @@ const CATALOG = {
     JCLR002: {
         message: (d) => `Symbolic parameter '${d.sym}' is not defined in procedure '${d.proc}'.`,
         suggestion: (d) => `Add &${d.sym}= as a default on the PROC statement, or supply it on the EXEC statement.`
+    },
+    JCLR004: {
+        message: (d) => `PROC ${d.proc} has no step '${d.procstep}'.`,
+        suggestion: (d) => d.steps.length ? `Its steps are: ${d.steps.join(', ')}.` : `The procedure has no named steps.`
     },
     JCLR003: {
         message: (d) => `Overriding DD '${d.name}' does not match any DD in procedure step '${d.step}'.`,

@@ -41,7 +41,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 15. MSGLEVEL values
 - [x] 16. NOTIFY= on the JOB statement
 - [x] 17. NOTIFY statement and EMAIL
-- [ ] 18. Keywords qualified with a procedure step
+- [x] 18. Keywords qualified with a procedure step
 - [ ] 19. Member names and other dataset name forms
 - [ ] 20. Duplicate DD names
 - [ ] 21. DD data sources, including PATH
@@ -1133,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`–`JCLK007`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS013`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`–`JCLK009`, `JCLR004`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS013`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.

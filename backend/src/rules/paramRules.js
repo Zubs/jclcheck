@@ -6,6 +6,7 @@ const {
     JCLLIB_KEYWORDS,
     NOTIFY_KEYWORDS,
     POSITIONAL_LIMITS,
+    QUALIFIABLE_KEYWORDS,
     DISP_STATUS,
     DISP_NORMAL,
     DISP_ABNORMAL,
@@ -556,6 +557,32 @@ function checkParamValues(
     }
 }
 
+function checkProcstepKeywords(step, params, diagnostics) {
+    for (const p of params.filter(q => q.procstep !== undefined)) {
+        const at = { line: step.line, column: p.col };
+        if (step.pgm) {
+            diagnostics.push(makeDiagnostic('JCLK009', { keyword: p.key, procstep: p.procstep }, { ...at, severity: 'error' }));
+            continue;
+        }
+
+        if (EXEC_KEYWORDS.has(p.key) && !QUALIFIABLE_KEYWORDS.has(p.key)) {
+            diagnostics.push(makeDiagnostic('JCLK008', { keyword: p.key }, at));
+            continue;
+        }
+
+        if (!NAME_RE.test(p.procstep)) {
+            diagnostics.push(makeDiagnostic('JCLN001', { name: p.procstep, stmt: 'procedure step' }, at));
+            continue;
+        }
+
+        const proc = step.resolvedProc;
+        if (proc && !proc.steps.some(s => (s.name || '').toUpperCase() === p.procstep.toUpperCase())) {
+            const steps = proc.steps.map(s => s.name).filter(Boolean);
+            diagnostics.push(makeDiagnostic('JCLR004', { proc: proc.name, procstep: p.procstep, steps }, at));
+        }
+    }
+}
+
 function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
     for (const step of steps) {
         checkName(
@@ -571,8 +598,12 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
             execAllowed = new Map([...EXEC_KEYWORDS, ...[...symbolNames].map(name => [name, {}])]);
         }
 
+        // keyword.procstep=value is checked as keyword=value.
+        const params = step.params.map(p => (p.kind === 'keyword' && p.key.includes('.')
+            ? { ...p, key: p.key.slice(0, p.key.indexOf('.')), procstep: p.key.slice(p.key.indexOf('.') + 1) }
+            : p));
         checkKeywords(
-            step.params,
+            params,
             execAllowed,
             'EXEC',
             step.line,
@@ -581,11 +612,13 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
         );
 
         checkParamValues(
-            step.params,
+            params,
             step.line,
             diagnostics,
             EXEC_KEYWORDS
         );
+
+        checkProcstepKeywords(step, params, diagnostics);
 
         checkExecRequired(step, diagnostics);
         checkPositionalLimit(step.params, 'EXEC', step.line, diagnostics);
