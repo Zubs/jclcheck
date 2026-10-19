@@ -34,7 +34,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 8. JES2 control statements
 - [x] 9. JES3 control statements
 - [x] 10. Several jobs in one job stream
-- [ ] 11. JCLLIB placement
+- [x] 11. JCLLIB placement
 - [ ] 12. Positional parameter limits
 - [ ] 13. IF/THEN/ELSE conditions
 - [ ] 14. Keyword value rules
@@ -507,8 +507,9 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
 - New ordering errors:
   - `JCLO005`: "JCLLIB must come after the JOB statement and before the first EXEC statement."
   - `JCLO006`: "Only one JCLLIB statement is allowed per job."
+  - `JCLO008`: "JCLLIB is not allowed inside a procedure."
 - `ORDER=` is required, and each library in it is checked with the DSN rules from feature 19.
-- A JCLLIB inside an in-stream PROC is an error.
+- A JCLLIB inside an in-stream PROC is an error (`JCLO008`).
 - A PROC call that can't be resolved in-stream (`JCLR001`) mentions the JCLLIB libraries in its message when the job has them, for example "…may be found in CAMPBEL.PROCS.JCL or 3 other libraries". The call stays a warning.
 
 **Tests**
@@ -1132,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO007`, `JCLS009`–`JCLS011`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO008`, `JCLS009`–`JCLS011`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.

@@ -9,6 +9,11 @@ function buildProcMap(procs) {
     return map;
 }
 
+function procLibraries(jcllib) {
+    const order = jcllib.params.find(p => p.kind === 'keyword' && p.key === 'ORDER');
+    return order ? order.subvalues || [order.value] : [];
+}
+
 /** Resolves EXEC ... PROC=xxx (or positional proc-name) against in-stream PROCs. */
 function resolveProcCalls(
     job,
@@ -29,7 +34,7 @@ function resolveProcCalls(
         if (!resolved) {
             diagnostics.push(makeDiagnostic(
                 'JCLR001',
-                { name: step.calledProc },
+                { name: step.calledProc, libraries: job.jcllib && procLibraries(job.jcllib) },
                 {
                     line: step.line,
                     column: 1,

@@ -1,9 +1,5 @@
 {
-  "source": "Nick's item 17 (Features.md feature 11). JCLR001 stays because the catalogued PROC MYPROC2 can't be seen. JCLO005 column is a best estimate.",
-  "todo": {
-    "feature": 11,
-    "reason": "JCLLIB placement is not checked"
-  },
+  "source": "Nick's item 17 (Features.md feature 11). JCLR001 stays because the catalogued PROC MYPROC2 can't be seen. JCLO005 points at the JCLLIB operation (column 12).",
   "diagnostics": [
     {
       "code": "JCLR001",

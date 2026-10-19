@@ -111,6 +111,18 @@ const CATALOG = {
         message: (d) => `DD statement '${d.name}' appears before any EXEC statement.`,
         suggestion: () => `DD statements belong to a step - add an EXEC statement first.`
     },
+    JCLO005: {
+        message: () => `JCLLIB must come after the JOB statement and before the first EXEC statement.`,
+        suggestion: () => `Move the JCLLIB statement so it sits between the JOB statement and the first EXEC statement.`
+    },
+    JCLO006: {
+        message: () => `Only one JCLLIB statement is allowed per job.`,
+        suggestion: () => `Merge the libraries into the first JCLLIB's ORDER= list and remove this one.`
+    },
+    JCLO008: {
+        message: () => `JCLLIB is not allowed inside a procedure.`,
+        suggestion: () => `Move the JCLLIB statement into the job, between the JOB statement and the first EXEC statement.`
+    },
     JCLO007: {
         message: () => `Statement after the end of the job (//).`,
         suggestion: () => `Start a new job with a JOB statement, or remove the null statement (//) if the job should continue.`
@@ -260,7 +272,9 @@ const CATALOG = {
 
     // PROC (JCLR0xx)
     JCLR001: {
-        message: (d) => `Referenced procedure '${d.name}' is not defined in this job stream.`,
+        message: (d) => `Referenced procedure '${d.name}' is not defined in this job stream.` + (d.libraries && d.libraries.length
+            ? ` It may be found in ${d.libraries[0]}${d.libraries.length > 1 ? ` or ${d.libraries.length - 1} other ${d.libraries.length === 2 ? 'library' : 'libraries'}` : ''}.`
+            : ''),
         suggestion: (d) => `Add an in-stream PROC named '${d.name}', reference a cataloged procedure, or check for a typo.`
     },
     JCLR002: {

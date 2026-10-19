@@ -270,6 +270,29 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
                 break;
             }
+            case 'JCLLIB': {
+                if (procStack) {
+                    diagnostics.push(makeDiagnostic('JCLO008', {}, { line: stmt.line, column: stmt.opCol }));
+                    break;
+                }
+
+                if (job && job.jcllib) {
+                    diagnostics.push(makeDiagnostic('JCLO006', {}, { line: stmt.line, column: stmt.opCol }));
+                    break;
+                }
+
+                if (!job || job.steps.length > 0) {
+                    diagnostics.push(makeDiagnostic('JCLO005', {}, { line: stmt.line, column: stmt.opCol }));
+                }
+
+                // Kept even when misplaced, so its libraries can still explain JCLR001.
+                if (job) {
+                    job.jcllib = { type: 'Jcllib', line: stmt.line, params: [] };
+                    attachParams(job.jcllib, stmt, diagnostics);
+                }
+
+                break;
+            }
             case 'SET': {
                 break;
             }
@@ -277,7 +300,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 break;
             }
             default:
-                break; // passthrough ops (JCLLIB, OUTPUT, XMIT, NOTIFY)
+                break; // passthrough ops (OUTPUT, XMIT, NOTIFY)
         }
     }
 

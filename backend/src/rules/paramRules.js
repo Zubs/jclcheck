@@ -3,6 +3,7 @@ const {
     JOB_KEYWORDS,
     EXEC_KEYWORDS,
     DD_KEYWORDS,
+    JCLLIB_KEYWORDS,
     DISP_STATUS,
     DISP_NORMAL,
     DISP_ABNORMAL,
@@ -560,6 +561,24 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
     }
 }
 
+function checkJcllib(jcllib, diagnostics, zosLevel) {
+    checkKeywords(jcllib.params, JCLLIB_KEYWORDS, 'JCLLIB', jcllib.line, diagnostics, zosLevel);
+    const order = findParam(jcllib.params, 'ORDER');
+    if (!order) {
+        diagnostics.push(makeDiagnostic(
+            'JCLK002',
+            { stmt: 'JCLLIB', param: 'ORDER', hint: `Add ORDER=(library,...) listing the libraries to search for procedures and INCLUDE members.` },
+            { line: jcllib.line, column: 1 }
+        ));
+
+        return;
+    }
+
+    for (const library of order.subvalues || [order.value]) {
+        checkDsn(library, jcllib.line, order.valueCol, diagnostics);
+    }
+}
+
 function checkAllParams(job, diagnostics, { zosLevel } = {}) {
     if (!job) {
         return;
@@ -586,6 +605,10 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
         job.line,
         diagnostics
     );
+
+    if (job.jcllib) {
+        checkJcllib(job.jcllib, diagnostics, zosLevel);
+    }
 
     checkStepsAndDDs(job.steps, diagnostics, { zosLevel });
 }

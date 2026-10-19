@@ -133,6 +133,8 @@ const DD_KEYWORDS = table([
     'DLM'
 ]);
 
+const JCLLIB_KEYWORDS = table(['ORDER']);
+
 // JES2 control statements ("/*NAME ..."), from the z/OS JES2 JCL statement
 // descriptions in the MVS JCL Reference. `place` says where each goes:
 // 'before' the JOB statement, 'anywhere', or (by default) after it.
@@ -264,6 +266,7 @@ module.exports = {
     JOB_KEYWORDS,
     EXEC_KEYWORDS,
     DD_KEYWORDS,
+    JCLLIB_KEYWORDS,
     JES2_STATEMENTS,
     JES3_STATEMENTS,
     ALL_KNOWN_KEYWORDS,
