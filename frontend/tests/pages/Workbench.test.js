@@ -715,3 +715,132 @@ describe('Workbench drafts', () => {
         expect(track).toHaveBeenCalledWith('draft', 'corrupt');
     });
 });
+
+describe('Workbench sharing', () => {
+    afterEach(() => {
+        window.history.replaceState(null, '', '/');
+        vi.unstubAllGlobals();
+    });
+
+    const shareButton = w => w.findAll('.pfkey').find(b => b.text().includes('SHARE'));
+
+    async function shareAndCapture(w) {
+        const writeText = vi.fn(async () => {});
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+        await shareButton(w).trigger('click');
+        await vi.waitFor(() => expect(writeText).toHaveBeenCalled());
+        return writeText.mock.calls[0][0];
+    }
+
+    async function openLink(link) {
+        const url = new URL(link);
+        window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+        validateJcl.mockClear();
+        const w = await mountWorkbench();
+        await vi.waitFor(() => expect(validateJcl).toHaveBeenCalled());
+        await flushPromises();
+        return w;
+    }
+
+    test('an empty editor is refused', async () => {
+        const w = await mountWorkbench();
+        await w.findAll('.pfkey').find(b => b.text().includes('CLEAR')).trigger('click');
+        await shareButton(w).trigger('click');
+        await flushPromises();
+        expect(w.find('.share-message').text()).toContain('nothing to share');
+        expect(track).not.toHaveBeenCalledWith('share', 'create');
+    });
+
+    test('a link is copied and counted', async () => {
+        const w = await mountWorkbench();
+        const link = await shareAndCapture(w);
+        expect(link).toMatch(/\/app\?zos=3\.2&jes=JES2#jcl=/);
+        expect(track).toHaveBeenCalledWith('share', 'create');
+        expect(w.find('.share-message').text()).toContain('Link copied');
+    });
+
+    test('with the clipboard blocked the link is shown to copy by hand', async () => {
+        const w = await mountWorkbench();
+        const writeText = async () => {
+            throw new Error('blocked');
+        };
+
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+        await shareButton(w).trigger('click');
+        await vi.waitFor(() => expect(w.find('.share-link').exists()).toBe(true));
+        expect(w.find('.share-link').element.value).toMatch(/#jcl=/);
+        expect(track).toHaveBeenCalledWith('share', 'clipboard-blocked');
+    });
+
+    test('a job, two members, 2.5 and JES3 round-trip, checked once, without touching the draft', async () => {
+        let w = await mountWorkbench();
+        await w.find('.level-picker').setValue('2.5');
+        await w.find('.jes-picker').setValue('JES3');
+        await edit(w, '//SHARED JOB');
+        await w.find('.header-library').trigger('click');
+        for (const member of ['P1', 'P2']) {
+            await w.find('.library-add').trigger('click');
+            const entry = w.findAll('.library-entry').at(-1);
+            await entry.find('.library-member').setValue(member);
+            await entry.find('textarea').setValue(`//${member} PROC`);
+        }
+
+        const link = await shareAndCapture(w);
+        w.unmount();
+        localStorage.clear();
+        localStorage.setItem('jclcheck.draft', JSON.stringify({ code: '//MY DRAFT', library: [] }));
+
+        w = await openLink(link);
+        expect(w.find('textarea').element.value).toBe('//SHARED JOB');
+        expect(validateJcl).toHaveBeenCalledTimes(1);
+        const [source, options] = validateJcl.mock.calls[0];
+        expect(source).toBe('//SHARED JOB');
+        expect(options).toMatchObject({ zosLevel: '2.5', jes: 'JES3' });
+        expect(options.library.map(e => e.member)).toEqual(['P1', 'P2']);
+        expect(track).toHaveBeenCalledWith('share', 'open');
+        await vi.advanceTimersByTimeAsync(1000);
+        expect(JSON.parse(localStorage.getItem('jclcheck.draft')).code).toBe('//MY DRAFT');
+    });
+
+    test('Back to my draft restores the draft exactly', async () => {
+        let w = await mountWorkbench();
+        await edit(w, '//SHARED JOB');
+        const link = await shareAndCapture(w);
+        w.unmount();
+        localStorage.setItem('jclcheck.draft', JSON.stringify({ code: '//MY DRAFT  \n//S EXEC PGM=X', library: [] }));
+        w = await openLink(link);
+        await w.find('.back-to-draft').trigger('click');
+        expect(w.find('textarea').element.value).toBe('//MY DRAFT  \n//S EXEC PGM=X');
+        expect(track).toHaveBeenCalledWith('share', 'back-to-draft');
+        expect(window.location.hash).toBe('');
+    });
+
+    test('editing a shared job makes it the draft', async () => {
+        let w = await mountWorkbench();
+        await edit(w, '//SHARED JOB');
+        const link = await shareAndCapture(w);
+        w.unmount();
+        w = await openLink(link);
+        await edit(w, '//SHARED JOB EDITED');
+        await vi.advanceTimersByTimeAsync(500);
+        expect(JSON.parse(localStorage.getItem('jclcheck.draft')).code).toBe('//SHARED JOB EDITED');
+        expect(w.find('.back-to-draft').exists()).toBe(false);
+    });
+
+    test('a damaged link says so and loads the draft', async () => {
+        localStorage.setItem('jclcheck.draft', JSON.stringify({ code: '//MY DRAFT', library: [] }));
+        const w = await openLink('https://jclcheck.xyz/app#jcl=H4sIAAAAAAAAA-broken');
+        expect(w.find('.share-message').text()).toContain('This link is incomplete or damaged');
+        expect(w.find('textarea').element.value).toBe('//MY DRAFT');
+    });
+
+    test('F6 and Alt+L share too', async () => {
+        const w = await mountWorkbench();
+        const writeText = vi.fn(async () => {});
+        vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F6', cancelable: true }));
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: '¬', code: 'KeyL', altKey: true, cancelable: true }));
+        await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
+        expect(w.find('.share-message').exists()).toBe(true);
+    });
+});

@@ -42,10 +42,13 @@
 
         <h3>Keys</h3>
         <table>
-          <tr><td>F1 · Alt+H</td><td>Open this help (Escape or F1 closes it)</td></tr>
-          <tr><td>F5 · Ctrl/⌘+Enter</td><td>Check the JCL now</td></tr>
-          <tr><td>F9 · Alt+S</td><td>Load the next sample</td></tr>
-          <tr><td>F12 · Alt+C</td><td>Clear the editor</td></tr>
+          <tbody>
+            <tr><td>F1 · Alt+H</td><td>Open this help (Escape or F1 closes it)</td></tr>
+            <tr><td>F5 · Ctrl/⌘+Enter</td><td>Check the JCL now</td></tr>
+            <tr><td>F6 · Alt+L</td><td>Share the job as a link (nothing is stored on a server)</td></tr>
+            <tr><td>F9 · Alt+S</td><td>Load the next sample</td></tr>
+            <tr><td>F12 · Alt+C</td><td>Clear the editor</td></tr>
+          </tbody>
         </table>
         <p>
           Some browsers keep F keys for themselves, and Macs need Fn, so each key has a fallback.
@@ -71,50 +74,52 @@
 
         <h3>Error codes</h3>
         <table>
-          <tr>
-            <td>JCLLxxx</td>
-            <td>Lexer — raw line/record issues</td>
-          </tr>
-          <tr>
-            <td>JCLPxxx</td>
-            <td>Parser — statement structure</td>
-          </tr>
-          <tr>
-            <td>JCLOxxx</td>
-            <td>Ordering — JOB/EXEC/DD sequence</td>
-          </tr>
-          <tr>
-            <td>JCLDxxx</td>
-            <td>DD statement rules</td>
-          </tr>
-          <tr>
-            <td>JCLKxxx</td>
-            <td>Keyword / required parameter rules</td>
-          </tr>
-          <tr>
-            <td>JCLSxxx</td>
-            <td>Parameter value syntax</td>
-          </tr>
-          <tr>
-            <td>JCLNxxx</td>
-            <td>Name field syntax</td>
-          </tr>
-          <tr>
-            <td>JCLRxxx</td>
-            <td>PROC resolution / symbolics</td>
-          </tr>
-          <tr>
-            <td>JCLCxxx</td>
-            <td>IF/THEN/ELSE conditions</td>
-          </tr>
-          <tr>
-            <td>JCLGxxx</td>
-            <td>Job groups (JOBGROUP … ENDGROUP)</td>
-          </tr>
-          <tr>
-            <td>JCLJxxx</td>
-            <td>JES2 and JES3 control statements</td>
-          </tr>
+          <tbody>
+            <tr>
+              <td>JCLLxxx</td>
+              <td>Lexer — raw line/record issues</td>
+            </tr>
+            <tr>
+              <td>JCLPxxx</td>
+              <td>Parser — statement structure</td>
+            </tr>
+            <tr>
+              <td>JCLOxxx</td>
+              <td>Ordering — JOB/EXEC/DD sequence</td>
+            </tr>
+            <tr>
+              <td>JCLDxxx</td>
+              <td>DD statement rules</td>
+            </tr>
+            <tr>
+              <td>JCLKxxx</td>
+              <td>Keyword / required parameter rules</td>
+            </tr>
+            <tr>
+              <td>JCLSxxx</td>
+              <td>Parameter value syntax</td>
+            </tr>
+            <tr>
+              <td>JCLNxxx</td>
+              <td>Name field syntax</td>
+            </tr>
+            <tr>
+              <td>JCLRxxx</td>
+              <td>PROC resolution / symbolics</td>
+            </tr>
+            <tr>
+              <td>JCLCxxx</td>
+              <td>IF/THEN/ELSE conditions</td>
+            </tr>
+            <tr>
+              <td>JCLGxxx</td>
+              <td>Job groups (JOBGROUP … ENDGROUP)</td>
+            </tr>
+            <tr>
+              <td>JCLJxxx</td>
+              <td>JES2 and JES3 control statements</td>
+            </tr>
+          </tbody>
         </table>
 
         <h3>Privacy</h3>

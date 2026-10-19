@@ -60,6 +60,15 @@
       </section>
     </main>
 
+    <div v-if="sharedView" class="share-notice" role="status">
+      <span>You're looking at a shared link. Your own draft is kept until you edit this one.</span>
+      <button class="back-to-draft" @click="backToDraft">BACK TO MY DRAFT</button>
+    </div>
+    <div v-if="shareMessage" class="share-notice share-message" role="status">
+      <span>{{ shareMessage.text }}</span>
+      <input v-if="shareMessage.link" class="share-link" readonly :value="shareMessage.link" @focus="$event.target.select()">
+      <button class="share-dismiss" title="Dismiss" @click="shareMessage = null">✕</button>
+    </div>
     <div v-if="undoState" class="undo-notice" role="status">
       <span>{{ undoState.key === 'f12' ? 'Editor cleared.' : 'Sample loaded over your JCL.' }}</span>
       <button class="undo-button" @click="undoReplace">UNDO</button>
@@ -71,6 +80,7 @@
         @validate="runValidation('button')"
         @sample="cycleSample()"
         @clear="clearEditor()"
+        @share="shareJob()"
     />
 
     <HelpModal v-if="showHelp" @close="showHelp = false"/>
@@ -92,6 +102,7 @@ import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
 import { validateJcl, getLevels } from '../api';
+import { shareLink, decodeShare } from '../share';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
 import { track } from '../analytics';
 import {
@@ -164,6 +175,12 @@ const jes = ref(null);
 const pickerNotice = ref('');
 const checkedAgainst = ref('');
 const PICKER_KEY = 'jclcheck.picker';
+
+// Sharing: a link opened from someone else shows their job without replacing
+// the user's draft until they edit it.
+const sharedView = ref(false);
+const shareMessage = ref(null);
+let draftBeforeShare = null;
 
 // The user's text that F9 or F12 just replaced, offered back for a few seconds.
 const undoState = ref(null);
@@ -315,6 +332,10 @@ function saveDraft() {
 }
 
 watch([code, library], () => {
+  if (sharedView.value) {
+    return; // a shared job only becomes the draft once the user edits it
+  }
+
   clearTimeout(saveTimer);
   saveTimer = setTimeout(saveDraft, SAVE_DELAY_MS);
 }, { deep: true });
@@ -338,16 +359,19 @@ function toggleLibrary() {
 }
 
 function addMember() {
+  sharedView.value = false;
   library.value.push({ id: nextMemberId++, dsn: '', member: '', source: '' });
   track('library', 'add');
 }
 
 function removeMember(id) {
+  sharedView.value = false;
   library.value = library.value.filter(e => e.id !== id);
   track('library', 'remove');
 }
 
 function updateMember(id, field, value) {
+  sharedView.value = false;
   const entry = library.value.find(e => e.id === id);
   if (entry) {
     entry[field] = value;
@@ -450,6 +474,10 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', sendVisitSummary);
   await loadLevels();
+  await openSharedLink();
+  // Loading a shared job schedules a check; the one below replaces it.
+  await nextTick();
+  clearTimeout(debounceTimer);
   runValidation();
 });
 
@@ -476,6 +504,64 @@ async function onSelectDiagnostic(d) {
 
 function onUserEdit() {
   lastChangeByUser = true;
+  sharedView.value = false;
+}
+
+function memberCopies() {
+  return library.value.map(({ dsn, member, source }) => ({ dsn, member, source }));
+}
+
+async function shareJob() {
+  if (!code.value.trim()) {
+    shareMessage.value = { text: 'There is nothing to share yet.' };
+    return;
+  }
+
+  const link = await shareLink(window.location.origin, { jcl: code.value, library: memberCopies(), zosLevel: zosLevel.value, jes: jes.value });
+  if (!link) {
+    shareMessage.value = { text: 'This job is too long to share as a link (over 32 KB).' };
+    return;
+  }
+
+  track('share', 'create');
+  try {
+    await navigator.clipboard.writeText(link);
+    shareMessage.value = { text: 'Link copied. Anyone who opens it sees this job, checked the same way.' };
+  } catch {
+    track('share', 'clipboard-blocked');
+    shareMessage.value = { text: 'Copy this link:', link };
+  }
+}
+
+async function openSharedLink() {
+  const fragment = window.location.hash.match(/^#jcl=(.*)$/);
+  if (!fragment) {
+    return;
+  }
+
+  let shared;
+  try {
+    shared = await decodeShare(fragment[1]);
+  } catch {
+    shareMessage.value = { text: 'This link is incomplete or damaged.' };
+    return;
+  }
+
+  draftBeforeShare = { code: code.value, library: memberCopies() };
+  sharedView.value = true;
+  code.value = shared.jcl;
+  library.value = shared.library.map(e => ({ id: nextMemberId++, ...e }));
+  lastChangeByUser = false;
+  track('share', 'open');
+}
+
+function backToDraft() {
+  track('share', 'back-to-draft');
+  sharedView.value = false;
+  code.value = draftBeforeShare.code;
+  library.value = draftBeforeShare.library.map(e => ({ id: nextMemberId++, ...e }));
+  lastChangeByUser = true;
+  window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
 }
 
 function onPaste(lines) {
@@ -541,6 +627,7 @@ function onKeydown(e) {
   const mod = e.ctrlKey || e.metaKey;
   const alt = e.altKey && !mod;
   const actions = {
+    F6: () => shareJob(),
     F1: () => openHelp('f1'),
     F5: () => runValidation('f5'),
     F9: () => cycleSample(),
@@ -550,7 +637,12 @@ function onKeydown(e) {
   if (!action && mod && e.key === 'Enter') {
     action = () => runValidation('shortcut');
   } else if (!action && alt) {
-    action = { KeyH: () => openHelp('shortcut'), KeyS: () => cycleSample(), KeyC: () => clearEditor('shortcut') }[e.code];
+    action = {
+      KeyH: () => openHelp('shortcut'),
+      KeyS: () => cycleSample(),
+      KeyC: () => clearEditor('shortcut'),
+      KeyL: () => shareJob()
+    }[e.code];
   }
 
   if (action) {
@@ -605,6 +697,12 @@ const pfKeys = computed(() => ([
     shortcut: 'Ctrl/⌘+Enter',
     event: 'validate',
     primary: true
+  },
+  {
+    key: 'F6',
+    label: 'SHARE',
+    shortcut: 'Alt+L',
+    event: 'share'
   },
   {
     key: 'F9',
@@ -720,6 +818,42 @@ const pfKeys = computed(() => ([
 
 .header-status__text {
   color: var(--text-dim);
+}
+
+.share-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-cond);
+  font-size: 12px;
+  color: var(--text-bright);
+  background: var(--surface-raised);
+  border: 1px solid var(--grid-line-strong);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+}
+
+.share-link {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  color: var(--text-primary);
+  background: var(--surface);
+  border: 1px solid var(--grid-line);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+.back-to-draft,
+.share-dismiss {
+  font: inherit;
+  color: var(--text-bright);
+  background: transparent;
+  border: 1px solid var(--grid-line-strong);
+  border-radius: var(--radius);
+  padding: 2px 10px;
+  cursor: pointer;
 }
 
 .undo-notice {

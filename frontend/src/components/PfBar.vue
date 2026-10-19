@@ -25,6 +25,7 @@ defineEmits([
   'sample',
   'clear',
   'help',
+  'share',
   'download'
 ]);
 </script>

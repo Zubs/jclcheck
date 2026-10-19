@@ -74,4 +74,9 @@ describe('router', () => {
         expect(pageview).toHaveBeenLastCalledWith(expect.objectContaining({ name: 'not-found', path: '/no-such-page' }));
         wrapper.unmount();
     });
+
+    test('a shared link keeps the workbench canonical address', async () => {
+        await router.push('/app?zos=2.5&jes=JES3#jcl=abc');
+        expect(canonical()).toBe('https://jclcheck.xyz/app');
+    });
 });
