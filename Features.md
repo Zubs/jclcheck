@@ -54,7 +54,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 28. Remembering JCL between visits
 - [x] 29. Shareable links
 - [x] 30. Accurate copy, help and docs
-- [ ] 31. DSN with LIKE
+- [x] 31. DSN with LIKE
 - [ ] 32. Symbols in in-stream PROCs
 - [ ] 33. Positions on continued statements
 - [ ] 34. Severity of real JCL errors
@@ -1551,7 +1551,7 @@ after:
 - **NOT sign in IF conditions (feature 13).** Only `¬` and the word `NOT` are accepted. Some PC keyboards and code pages turn `¬` into `^` or `!`. Decide whether to accept those as aliases.
 - **Job group keywords (feature 22).** The keyword tables for JOBGROUP, GJOB, JOBSET, SJOB, AFTER, BEFORE, CONCURRENT and SCHEDULE in `keywords.js` (`GROUP_KEYWORDS`) were written from memory of the JES2 job group section. Confirm them against the reference, and add value rules (for example `ACTION`, `OTHERWISE`, `FLUSHTYP`).
 - **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain. *For now:* nesting up to 15 levels (`MAX_INCLUDE_DEPTH` in `library.js`), and JOB, PROC, PEND and JCLLIB are refused in a member (`NOT_IN_INCLUDE`).
-- **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
+- **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it. *For now:* feature 31 reports it as `JCLD003`, an error.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.
 - **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.

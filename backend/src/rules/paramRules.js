@@ -547,6 +547,18 @@ function checkParamValues(
                 );
 
                 break;
+            case 'LIKE':
+                if (/\)$/.test(p.value.trim())) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLS006',
+                        { value: p.value, hint: `LIKE names a model dataset, without a member or generation.` },
+                        { line, column: p.valueCol }
+                    ));
+                } else {
+                    checkDsn(p.value, line, p.valueCol, diagnostics);
+                }
+
+                break;
             case 'DSN':
             case 'DSNAME':
                 checkDsn(

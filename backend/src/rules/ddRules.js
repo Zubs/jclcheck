@@ -47,7 +47,8 @@ function checkDataSource(dd, step, diagnostics) {
     const hasPath = params.some(p => p.kind === 'keyword' && p.key === 'PATH');
     // These name where the data comes from without conflicting with the rest:
     // a subsystem, a DD defined later (DDNAME=), or a new temporary dataset.
-    const hasOtherSource = params.some(p => p.kind === 'keyword' && ['SUBSYS', 'DDNAME', 'SPACE'].includes(p.key));
+    // LIKE only copies a model's attributes, so with no DSN it is a new temporary dataset.
+    const hasOtherSource = params.some(p => p.kind === 'keyword' && ['SUBSYS', 'DDNAME', 'SPACE', 'LIKE'].includes(p.key));
 
     const sources = [];
     if (hasDSN) {
@@ -66,12 +67,17 @@ function checkDataSource(dd, step, diagnostics) {
         sources.push('instream data');
     }
 
-    if (hasLike) {
-        sources.push('LIKE');
-    }
-
     if (hasPath) {
         sources.push('PATH');
+    }
+
+    // A model's attributes can't apply to SYSOUT or in-stream data.
+    if (hasLike && (hasSysout || hasStar || hasData)) {
+        diagnostics.push(makeDiagnostic(
+            'JCLD003',
+            { a: 'LIKE', b: hasSysout ? 'SYSOUT' : 'instream data' },
+            { line: dd.line, column: 1 }
+        ));
     }
 
     if (sources.length === 0 && !dd.instreamData && !hasOtherSource) {
