@@ -22,6 +22,7 @@ const { parseCondition, conditionChars } = require('./conditions');
 const { statementText } = require('./lexer');
 
 const MAX_IF_DEPTH = 15;
+const MAX_NOTIFY = 8;
 
 // The IF condition as written, from after "IF" on its first line and from
 // column 3 on continuation lines, keeping each character's line and column.
@@ -338,6 +339,22 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
                 break;
             }
+            case 'NOTIFY': {
+                if (!job || job.steps.length > 0 || procStack) {
+                    diagnostics.push(makeDiagnostic('JCLO009', {}, { line: stmt.line, column: stmt.opCol }));
+                } else if (job.notifies.length >= MAX_NOTIFY) {
+                    diagnostics.push(makeDiagnostic('JCLO010', { max: MAX_NOTIFY }, { line: stmt.line, column: stmt.opCol }));
+                }
+
+                // Kept even when misplaced, so its values are still checked.
+                if (job) {
+                    const notify = { type: 'Notify', name: stmt.name, line: stmt.line, params: [] };
+                    attachParams(notify, stmt, diagnostics);
+                    job.notifies.push(notify);
+                }
+
+                break;
+            }
             case 'SET': {
                 break;
             }
@@ -345,7 +362,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 break;
             }
             default:
-                break; // passthrough ops (OUTPUT, XMIT, NOTIFY)
+                break; // passthrough ops (OUTPUT, XMIT)
         }
     }
 

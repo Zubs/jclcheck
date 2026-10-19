@@ -6,7 +6,7 @@
 // either exists at every supported level.
 
 const { JES3_LAST_LEVEL } = require('./levels');
-const { oneOfValues, integer, char, name, list, oneOf, described } = require('./valueRules');
+const { oneOfValues, integer, char, name, list, oneOf, email, described } = require('./valueRules');
 
 // Value rules shared by several statements (see valueRules.js).
 const CLASS_CHAR = char(/^[A-Za-z0-9]$/, 'one character A-Z or 0-9');
@@ -17,6 +17,8 @@ const RD_VALUES = oneOfValues('R', 'RNC', 'NR', 'NC');
 // upper case). node.userid is accepted until feature 41 confirms it.
 const USER_ID = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 const NODE_USER_ID = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}\.[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
+const EMAIL_ADDRESS = email(246);
+
 const NOTIFY_USER = described(
     oneOf(oneOfValues('&SYSUID'), name(USER_ID), name(NODE_USER_ID)),
     '&SYSUID or a TSO user ID of 1-8 letters, digits or $#@ that starts with a letter or $#@ (or node.userid)'
@@ -80,7 +82,7 @@ const JOB_KEYWORDS = table([
     'EMAIL'
 ], {
     // z/OS 2.3 MVS JCL Reference, "Summary of changes": EMAIL on the JOB statement.
-    EMAIL: { since: '2.3' },
+    EMAIL: { since: '2.3', value: EMAIL_ADDRESS },
     CLASS: { value: CLASS_CHAR },
     MSGCLASS: { value: CLASS_CHAR },
     TYPRUN: { value: oneOfValues('SCAN', 'HOLD', 'JCLHOLD', 'COPY') },
@@ -176,6 +178,13 @@ const DD_KEYWORDS = table([
 const POSITIONAL_LIMITS = { JOB: 2, EXEC: 1, DD: 1 };
 
 const JCLLIB_KEYWORDS = table(['ORDER']);
+
+// The NOTIFY statement (z/OS 2.3). WHEN is a condition, checked separately.
+const NOTIFY_KEYWORDS = table(['EMAIL', 'USER', 'TYPE', 'WHEN'], {
+    EMAIL: { value: EMAIL_ADDRESS },
+    USER: { value: NOTIFY_USER, checkSymbols: true },
+    TYPE: { value: oneOfValues('MSG', 'EMAIL') }
+});
 
 // JES2 control statements ("/*NAME ..."), from the z/OS JES2 JCL statement
 // descriptions in the MVS JCL Reference. `place` says where each goes:
@@ -312,6 +321,7 @@ module.exports = {
     EXEC_KEYWORDS,
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
+    NOTIFY_KEYWORDS,
     POSITIONAL_LIMITS,
     NOTIFY_USER,
     JES2_STATEMENTS,

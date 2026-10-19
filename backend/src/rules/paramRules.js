@@ -4,6 +4,7 @@ const {
     EXEC_KEYWORDS,
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
+    NOTIFY_KEYWORDS,
     POSITIONAL_LIMITS,
     DISP_STATUS,
     DISP_NORMAL,
@@ -13,6 +14,7 @@ const {
 } = require('../keywords');
 const { availability, DEFAULT_ZOS_LEVEL } = require('../levels');
 const { closest, checkValue } = require('../valueRules');
+const { parseCondition, conditionChars } = require('../conditions');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
@@ -635,6 +637,34 @@ function checkJcllib(jcllib, diagnostics, zosLevel) {
     }
 }
 
+function checkNotify(notify, diagnostics, zosLevel) {
+    checkKeywords(notify.params, NOTIFY_KEYWORDS, 'NOTIFY', notify.line, diagnostics, zosLevel);
+    checkParamValues(notify.params, notify.line, diagnostics, NOTIFY_KEYWORDS);
+    const email = findParam(notify.params, 'EMAIL');
+    const user = findParam(notify.params, 'USER');
+    if (!email && !user) {
+        diagnostics.push(makeDiagnostic(
+            'JCLK002',
+            { stmt: 'NOTIFY', param: 'EMAIL or USER', hint: `Add EMAIL='address' or USER=userid to say who is notified.` },
+            { line: notify.line, column: 1 }
+        ));
+    } else if (email && user) {
+        diagnostics.push(makeDiagnostic('JCLK007', {}, { line: notify.line, column: user.col, severity: 'error' }));
+    }
+
+    // WHEN=(condition) or WHEN='condition': the IF condition syntax, without THEN.
+    const when = findParam(notify.params, 'WHEN');
+    const inner = when && when.value.match(/^(\(|')(.*)(\)|')$/);
+    if (when && !inner) {
+        diagnostics.push(makeDiagnostic('JCLC001', { detail: 'WHEN must be a condition in brackets or quotes, for example WHEN=(RC>4).' }, { line: notify.line, column: when.valueCol }));
+    } else if (when) {
+        const chars = conditionChars(inner[2], notify.line, when.valueCol + 1);
+        for (const e of parseCondition(chars, { line: notify.line, col: when.valueCol }, { requireThen: false }).errors) {
+            diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
+        }
+    }
+}
+
 function checkAllParams(job, diagnostics, { zosLevel } = {}) {
     if (!job) {
         return;
@@ -668,6 +698,10 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
 
     if (job.jcllib) {
         checkJcllib(job.jcllib, diagnostics, zosLevel);
+    }
+
+    for (const notify of job.notifies) {
+        checkNotify(notify, diagnostics, zosLevel);
     }
 
     checkStepsAndDDs(job.steps, diagnostics, { zosLevel });

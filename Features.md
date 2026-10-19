@@ -40,7 +40,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 14. Keyword value rules
 - [x] 15. MSGLEVEL values
 - [x] 16. NOTIFY= on the JOB statement
-- [ ] 17. NOTIFY statement and EMAIL
+- [x] 17. NOTIFY statement and EMAIL
 - [ ] 18. Keywords qualified with a procedure step
 - [ ] 19. Member names and other dataset name forms
 - [ ] 20. Duplicate DD names
@@ -708,7 +708,7 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - One of `EMAIL` or `USER` is required.
 - The exact `TYPE` values are confirmed against the reference in feature 41, because Nick's item 14 uses `TYPE=TSO` and the item 12 example is invalid.
 - `EMAIL=` is added to the JOB keyword table (`since: '2.3'`), using the same address rule.
-- NOTIFY placement: after the JOB statement and before the first EXEC, with the limit on how many are allowed taken from the reference. A misplaced NOTIFY gets an ordering error.
+- NOTIFY placement: after the JOB statement and before the first EXEC, with the limit on how many are allowed taken from the reference. A misplaced NOTIFY gets an ordering error (`JCLO009`); more than 8 in a job gets `JCLO010`. Both EMAIL and USER on one statement gets `JCLK007`.
 
 **Tests**
 - **Z** — A NOTIFY statement with no parameters gets `JCLK002`, asking for EMAIL or USER.
@@ -1133,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO008`, `JCLS009`–`JCLS013`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`–`JCLK007`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS013`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
@@ -1537,8 +1537,8 @@ after:
 **Questions to confirm**
 - **NOTIFY= user ID length (feature 16).** Nick says 1–8 characters. Some editions of the JCL reference describe TSO/E user IDs as 1–7. Check the current reference and use whatever it says.
 - **NOTIFY=node.userid (feature 16).** Is `NOTIFY=N1.IBMUSER` valid on the JOB statement, or only as `USER=` on the NOTIFY statement? Nick lists it without saying. *For now:* feature 16 accepts `node.userid` on the JOB statement, so this never gives a false warning, and the provisional fixture `nick/07c-notify-node` pins that. If the reference says it isn't valid, remove the `node.userid` form from `NOTIFY_USER` in `keywords.js` and update the fixture.
-- **NOTIFY statement TYPE values (feature 17).** Nick's item 14 uses `TYPE=TSO`. Confirm the allowed values, so his example isn't wrongly flagged or wrongly accepted.
-- **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have.
+- **NOTIFY statement TYPE values (feature 17).** Nick's item 14 uses `TYPE=TSO`. Confirm the allowed values, so his example isn't wrongly flagged or wrongly accepted. *For now:* feature 17 allows `MSG` and `EMAIL` (the values in feature 14's example message, and the reference as remembered), so `TYPE=TSO` gets a `JCLS009` warning. The provisional fixture `nick/14b-notify-email` pins that. If `TSO` is valid, add it to `NOTIFY_KEYWORDS` in `keywords.js` and remove the warning from the fixture.
+- **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have. *For now:* after the JOB statement and before the first EXEC, at most 8 per job (`MAX_NOTIFY` in `parser.js`).
 - **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message.
 - **In-stream PROC before the first JOB (feature 10).** The bundled "PROC + SYMBOLICS" sample defines `MYPROC` before the JOB statement. Confirm whether z/OS accepts this. If not, fix the sample and add a placement rule.
 - **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference. The keyword tables for `MAIN`, `FORMAT`, `NET`, `NETACCT` and `DATASET` in `keywords.js`, and which statements must come before the first EXEC (`MAIN`, `NET`, `NETACCT`, `PROCESS`, `ENDPROCESS`) or before the JOB statement (`PAUSE`), were written from memory of the reference and need checking.

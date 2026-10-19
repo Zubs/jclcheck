@@ -1,5 +1,12 @@
 {
-  "source": "Nick's item 14, NOTIFY and EMAIL example (Features.md features 17 and 41). Provisional until TYPE=TSO is confirmed. Clean since feature 3 accepted EMAIL= on JOB; the NOTIFY statement's values are checked from feature 17, which must keep this clean.",
+  "source": "Nick's item 14, NOTIFY and EMAIL example (Features.md features 17 and 41). Provisional: feature 17 follows the reference as remembered (TYPE is MSG or EMAIL), so TYPE=TSO gets a warning until feature 41 confirms the allowed values.",
   "provisional": true,
-  "diagnostics": []
+  "diagnostics": [
+    {
+      "code": "JCLS009",
+      "severity": "warning",
+      "line": 2,
+      "column": 62
+    }
+  ]
 }

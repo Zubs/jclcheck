@@ -68,7 +68,9 @@ function tokenize(chars) {
     return tokens;
 }
 
-function parseCondition(chars, start) {
+// `requireThen` is false for conditions that stand alone, such as WHEN= on
+// the NOTIFY statement.
+function parseCondition(chars, start, { requireThen = true } = {}) {
     const refs = [];
     const errors = [];
     let tokens;
@@ -163,6 +165,10 @@ function parseCondition(chars, start) {
     try {
         parseExpr();
         const next = peek();
+        if (!next && !requireThen) {
+            return { refs, errors };
+        }
+
         if (!next) {
             throw new ConditionError('JCLC006', {}, end());
         }

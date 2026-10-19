@@ -1,9 +1,5 @@
 {
-  "source": "Nick's item 12 (Features.md features 14 and 17), wrapped in a JOB statement. Column is a best estimate.",
-  "todo": {
-    "feature": 17,
-    "reason": "NOTIFY statement values are not checked"
-  },
+  "source": "Nick's item 12 (Features.md features 14 and 17), wrapped in a JOB statement. JCLS009 points at the TYPE value (column 33).",
   "diagnostics": [
     {
       "code": "JCLS009",

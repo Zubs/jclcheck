@@ -123,6 +123,14 @@ const CATALOG = {
         message: () => `JCLLIB is not allowed inside a procedure.`,
         suggestion: () => `Move the JCLLIB statement into the job, between the JOB statement and the first EXEC statement.`
     },
+    JCLO009: {
+        message: () => `A NOTIFY statement must come after the JOB statement and before the first EXEC statement.`,
+        suggestion: () => `Move the NOTIFY statement so it sits between the JOB statement and the first EXEC statement.`
+    },
+    JCLO010: {
+        message: (d) => `A job can have at most ${d.max} NOTIFY statements.`,
+        suggestion: () => `Remove the extra NOTIFY statements.`
+    },
     JCLO007: {
         message: () => `Statement after the end of the job (//).`,
         suggestion: () => `Start a new job with a JOB statement, or remove the null statement (//) if the job should continue.`
@@ -245,6 +253,10 @@ const CATALOG = {
     JCLK006: {
         message: () => `DLM= has no effect, because this DD statement has no in-stream data.`,
         suggestion: () => `Remove DLM=, or use DD * or DD DATA if this DD should hold in-stream data.`
+    },
+    JCLK007: {
+        message: () => `A NOTIFY statement can have EMAIL or USER, but not both.`,
+        suggestion: () => `Keep one of them, and use a second NOTIFY statement for the other recipient.`
     },
     JCLK004: {
         message: (d) => `The ${d.stmt} statement allows at most ${d.limit} positional parameter${d.limit === 1 ? '' : 's'}${d.what ? ` (${d.what})` : ''}; found ${d.found}.`,

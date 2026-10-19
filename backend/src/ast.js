@@ -10,6 +10,7 @@ function JobNode(name, line) {
         steps: [],
         procs: [],
         ifs: [],
+        notifies: [],
         statements: []
     };
 }
