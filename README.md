@@ -77,6 +77,65 @@ npm install
 npm run dev         # http://localhost:5173 (proxies /api to :4000)
 ```
 
+## Command line and CI
+
+`backend/bin/jclcheck.js` checks JCL files from a terminal or a pipeline. It
+uses only Node's built-in modules and the validator (never Express), so its
+results are the same as the API's.
+
+```bash
+cd backend
+node bin/jclcheck.js ../jcl/*.jcl                      # file:line:column  severity  code  message
+node bin/jclcheck.js jcl/*.jcl --format sarif > jclcheck.sarif
+```
+
+| Option | What it does |
+|---|---|
+| `--zos <level>`, `--jes <JES2\|JES3>` | The z/OS level and JES to check against. |
+| `--library <dir>` | Catalogued PROCs and INCLUDE members, one file per member (`MYPROC.jcl`). A subdirectory named like a library (`MY.PROCS.JCL/`) is that library. |
+| `--profile <file>` | A site profile, as JSON (see the API section). |
+| `--format text\|json\|sarif` | Text (the default), JSON (`{ files: [{ file, diagnostics, stats }] }`) or SARIF 2.1.0. |
+| `--max-warnings <n>` | Also fail when there are more warnings than this. |
+
+It exits with 0 when there are no errors, 1 when a file has an error or there
+are too many warnings, and 2 when it can't run (a bad option, or a file it
+can't read; the other files are still checked). Suppressed diagnostics aren't
+printed in text and are marked `inSource` in SARIF.
+
+GitHub Actions, showing each diagnostic on its line of the pull request:
+
+```yaml
+name: JCL
+on: [pull_request]
+jobs:
+  jclcheck:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/checkout@v4
+        with:
+          repository: Zubs/jclcheck
+          path: .jclcheck
+      - run: node .jclcheck/backend/bin/jclcheck.js "jcl/**/*.jcl" --format sarif > jclcheck.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: jclcheck.sarif
+```
+
+Usage counting is off unless you opt in with `JCLCHECK_TELEMETRY=1` or
+`--telemetry`, and `DO_NOT_TRACK=1` always turns it off. An opted-in run sends
+one small list of events (the version, Node major version, OS, CI system,
+number of files, result, format, options used and diagnostic codes, never any
+JCL or file names) to `POST /api/usage`, with a 1-second limit; a failure
+changes nothing. `JCLCHECK_TELEMETRY=debug` prints that list and sends nothing.
+`JCLCHECK_API` points it at another API.
+
 ## Analytics
 
 The site counts anonymous usage with [GoatCounter](https://www.goatcounter.com): page views, where visits come from, browser, device size, country, which features are used, and which error codes appear. It sets no cookies, keeps no personal data, and never sends anything from the JCL. Nothing is counted when the browser sends Do Not Track or Global Privacy Control. Every event and the details it may carry are listed in `frontend/src/analyticsEvents.js`.

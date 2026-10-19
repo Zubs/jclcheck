@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "SaaS-grade JCL validation engine (lexer, parser, AST, rules) with an HTTP API.",
   "main": "src/index.js",
+  "bin": {
+    "jclcheck": "bin/jclcheck.js"
+  },
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",

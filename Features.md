@@ -61,7 +61,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 35. Stale results in the workbench
 - [x] 36. Dataset flow checks
 - [x] 37. Inline suppressions and site profile
-- [ ] 38. Command-line tool and CI output
+- [x] 38. Command-line tool and CI output
 - [ ] 39. Formatter
 - [ ] 40. Keyword explanations on hover
 - [ ] 41. Questions and final checks
@@ -1560,7 +1560,9 @@ after:
 - **Dataset flow details (feature 36).** Choices to confirm: a `NEW` dataset with no normal disposition counts as deleted when its step ends, so reading it later gets `JCLF004`; DD overrides without a procedure step name (`//OUT DD ...` on a step calling a PROC) aren't applied to the flow, only `PROCSTEP.DD` ones; after a step that calls a PROC that wasn't supplied, `JCLF001` and `JCLF002` are not reported, since that PROC may create or read the dataset; and a grid cell joins a step's actions (`NP` for `DISP=(NEW,PASS)`). `DCB=*.STEP.DD` referbacks aren't checked yet.
 - **Suppression and profile details (feature 37).** Choices to confirm: an `OFF` written before the JOB statement covers that job, and the next JOB statement or a `//` null statement ends an `OFF` block; an `ON` for a code that isn't off is ignored; suppressions only apply to the job's own lines, not to diagnostics inside library members; a code the profile switches `off` isn't returned at all (unlike a suppressed one); `dsnPrefixes` applies to DDs whose DISP status is NEW, or that have no DISP; `allowed` applies to that keyword on every JOB, EXEC and DD; and a profile's `names.dd` isn't applied to `PROCSTEP.DD` overrides. The workbench edits the profile as JSON text; a form could come later.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
-- **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.
+- **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name. Feature 38 built the CLI as `backend/bin/jclcheck.js` (with a `bin` entry in `backend/package.json`) and did not split the validator into its own package, so installing the backend package today also installs Express. Before publishing, move the validator files into their own package (no dependencies) that both the CLI and the API use, and decide whether the API uses it from npm or from the repository. The GitHub Actions example in the README checks out this repository for now, until the package is published.
+- **SARIF schema check (feature 38).** The SARIF output is tested for the fields SARIF 2.1.0 requires (version, tool driver, rules, results with locations), but not against the full JSON schema, which would need the schema file and a validator dependency. Decide whether to add it as a dev dependency, or check a sample by hand with GitHub code scanning or the SARIF validator.
+- **Globs on Node 22 (feature 38).** The CLI expands quoted globs with `fs.globSync`, which is experimental on Node 22 and prints a warning there. Shells expand unquoted globs themselves, so this only matters for patterns like `"jcl/**/*.jcl"`.
 
 **Final checks**
 - Every fixture from Nick's notes passes `npm test`, and none is still `todo`.
