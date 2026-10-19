@@ -12,42 +12,12 @@ const {
     DSORG_CODES
 } = require('../keywords');
 const { availability, DEFAULT_ZOS_LEVEL } = require('../levels');
+const { closest, checkValue } = require('../valueRules');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
-function levenshtein(a, b) {
-    const m = a.length, n = b.length;
-    const dp = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
-    for (let i = 0; i <= m; i++) {
-        dp[i][0] = i;
-    }
-
-    for (let j = 0; j <= n; j++) {
-        dp[0][j] = j;
-    }
-
-    for (let i = 1; i <= m; i++) {
-        for (let j = 1; j <= n; j++) {
-            dp[i][j] = a[i - 1] === b[j - 1]
-                ? dp[i - 1][j - 1]
-                : 1 + Math.min(dp[i - 1][j - 1], dp[i - 1][j], dp[i][j - 1]);
-        }
-    }
-
-    return dp[m][n];
-}
-
 function closestKeyword(word, keywordTable) {
-    let best = null, bestDist = Infinity;
-    for (const k of keywordTable.keys()) {
-        const d = levenshtein(word, k);
-        if (d < bestDist) {
-            bestDist = d;
-            best = k;
-        }
-    }
-
-    return bestDist <= 2 ? best : null;
+    return closest(word, keywordTable.keys());
 }
 
 function checkName(
@@ -471,10 +441,29 @@ function checkDsn(
     }
 }
 
+// Reports a value that breaks the rule its keyword carries in `keywordTable`.
+// Symbolic values and referbacks can't be known until the job runs.
+function checkRuleValue(p, keywordTable, line, diagnostics) {
+    const entry = keywordTable && keywordTable.get(p.key);
+    if (!entry || !entry.value || p.value.includes('&') || p.value.startsWith('*.')) {
+        return;
+    }
+
+    const problem = checkValue(entry.value, p.value);
+    if (problem) {
+        diagnostics.push(makeDiagnostic(
+            'JCLS009',
+            { keyword: p.key, ...problem },
+            { line, column: p.valueCol }
+        ));
+    }
+}
+
 function checkParamValues(
     params,
     line,
-    diagnostics
+    diagnostics,
+    keywordTable
 ) {
     for (const p of params) {
         if (p.kind !== 'keyword') {
@@ -558,6 +547,7 @@ function checkParamValues(
 
                 break;
             default:
+                checkRuleValue(p, keywordTable, line, diagnostics);
                 break;
         }
     }
@@ -590,7 +580,8 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
         checkParamValues(
             step.params,
             step.line,
-            diagnostics
+            diagnostics,
+            EXEC_KEYWORDS
         );
 
         checkExecRequired(step, diagnostics);
@@ -616,7 +607,8 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
             checkParamValues(
                 dd.params,
                 dd.line,
-                diagnostics
+                diagnostics,
+                DD_KEYWORDS
             );
 
             checkPositionalLimit(dd.params, 'DD', dd.line, diagnostics);
@@ -666,7 +658,8 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
     checkParamValues(
         job.params,
         job.line,
-        diagnostics
+        diagnostics,
+        JOB_KEYWORDS
     );
 
     checkPositionalLimit(job.params, 'JOB', job.line, diagnostics);
@@ -684,5 +677,6 @@ module.exports = {
     checkStepsAndDDs,
     checkKeywords,
     checkParamValues,
+    checkRuleValue,
     closestKeyword
 };

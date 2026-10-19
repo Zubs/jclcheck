@@ -5,7 +5,7 @@
 
 const { makeDiagnostic } = require('../errors');
 const { JES2_STATEMENTS, JES3_STATEMENTS } = require('../keywords');
-const { closestKeyword } = require('./paramRules');
+const { closestKeyword, checkRuleValue } = require('./paramRules');
 const { tokenizeParams } = require('../paramTokenizer');
 
 const ROUTE_TYPES = new Set(['PRINT', 'PUNCH', 'XEQ']);
@@ -57,6 +57,8 @@ function checkJes3(stmt, sawJob, sawExec, beforeJob, diagnostics) {
                     { keyword: p.key, name: stmt.name, closest: closestKeyword(p.key, entry.keywords) },
                     { line: stmt.line, column: p.col }
                 ));
+            } else if (p.kind === 'keyword') {
+                checkRuleValue(p, entry.keywords, stmt.line, diagnostics);
             }
         }
     }

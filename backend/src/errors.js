@@ -297,6 +297,10 @@ const CATALOG = {
         suggestion: () => `Qualifiers must start with a letter or national character ($ # @).`
     },
 
+    JCLS009: {
+        message: (d) => `${d.keyword} ${d.detail}; found '${d.found}'.`,
+        suggestion: (d) => d.closest ? `Did you mean '${d.closest}'?` : `Change the value of ${d.keyword} to one that is allowed.`
+    },
     JCLS011: {
         message: (d) => `Invalid DLM value '${d.value}'.`,
         suggestion: () => `A delimiter is exactly two characters. Letters, digits and $ # @ can be written as they are (DLM=@@); quote anything else (DLM='%%').`

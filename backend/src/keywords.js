@@ -6,6 +6,12 @@
 // either exists at every supported level.
 
 const { JES3_LAST_LEVEL } = require('./levels');
+const { oneOfValues, integer, char } = require('./valueRules');
+
+// Value rules shared by several statements (see valueRules.js).
+const CLASS_CHAR = char(/^[A-Za-z0-9]$/, 'one character A-Z or 0-9');
+const ADDRSPC_VALUES = oneOfValues('VIRT', 'REAL');
+const RD_VALUES = oneOfValues('R', 'RNC', 'NR', 'NC');
 
 // Builds a table from a list of names, with level marks for some of them.
 function table(names, marks = {}) {
@@ -65,7 +71,13 @@ const JOB_KEYWORDS = table([
     'EMAIL'
 ], {
     // z/OS 2.3 MVS JCL Reference, "Summary of changes": EMAIL on the JOB statement.
-    EMAIL: { since: '2.3' }
+    EMAIL: { since: '2.3' },
+    CLASS: { value: CLASS_CHAR },
+    MSGCLASS: { value: CLASS_CHAR },
+    TYPRUN: { value: oneOfValues('SCAN', 'HOLD', 'JCLHOLD', 'COPY') },
+    PRTY: { value: integer(0, 15) },
+    ADDRSPC: { value: ADDRSPC_VALUES },
+    RD: { value: RD_VALUES }
 });
 
 const EXEC_KEYWORDS = table([
@@ -84,7 +96,10 @@ const EXEC_KEYWORDS = table([
     'SYSAFF',
     'RESTART',
     'RUNRC'
-]);
+], {
+    ADDRSPC: { value: ADDRSPC_VALUES },
+    RD: { value: RD_VALUES }
+});
 
 const DD_KEYWORDS = table([
     'DSN',
@@ -131,7 +146,11 @@ const DD_KEYWORDS = table([
     'QNAME',
     'CHKPT',
     'DLM'
-]);
+], {
+    FREE: { value: oneOfValues('END', 'CLOSE') },
+    AVGREC: { value: oneOfValues('U', 'K', 'M') },
+    RETPD: { value: integer(0, 93000) }
+});
 
 // How many positional parameters each statement takes: JOB has accounting
 // information and the programmer's name, EXEC a procedure name, and DD one of
@@ -194,7 +213,10 @@ const JES3_STATEMENTS = table([
         place: 'beforeExec',
         keywords: table(['ACMAIN', 'BYTES', 'CARDS', 'CLASS', 'DEADLINE', 'EXPDTCHK', 'FAILURE', 'FETCH', 'HOLD',
             'IORATE', 'JOURNAL', 'LINES', 'LREGION', 'MSS', 'ORG', 'PAGES', 'PROC', 'RINGCHK', 'SETUP', 'SPART',
-            'SYSTEM', 'THWSSEP', 'TRKGRPS', 'TYPE', 'UPDATE', 'USER'])
+            'SYSTEM', 'THWSSEP', 'TRKGRPS', 'TYPE', 'UPDATE', 'USER'], {
+            HOLD: { value: oneOfValues('YES', 'NO') },
+            FAILURE: { value: oneOfValues('RESTART', 'CANCEL', 'HOLD', 'PRINT') }
+        })
     },
     NET: {
         until: JES3_UNTIL,

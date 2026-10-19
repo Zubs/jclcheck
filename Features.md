@@ -37,7 +37,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 11. JCLLIB placement
 - [x] 12. Positional parameter limits
 - [x] 13. IF/THEN/ELSE conditions
-- [ ] 14. Keyword value rules
+- [x] 14. Keyword value rules
 - [ ] 15. MSGLEVEL values
 - [ ] 16. NOTIFY= on the JOB statement
 - [ ] 17. NOTIFY statement and EMAIL
@@ -615,7 +615,7 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - `quoted` (a length)
   - `list` (rules for each position and a count)
   - `oneOf` (any of several rules)
-- One function, `checkValue(rule, value)`, applies a rule and returns what went wrong. The existing hand-written checks (DISP, SPACE, DCB, REGION, TIME, DSN) keep working and are moved onto it where that is simple.
+- One function, `checkValue(rule, value)`, applies a rule and returns what went wrong. The existing hand-written checks (DISP, SPACE, DCB, REGION, TIME, DSN, RECFM, DSORG) keep working with their own codes (`JCLS001`–`JCLS008`). Moving them onto the rules would have changed those codes in existing results for no gain, so they were left as they are.
 - A new warning, `JCLS009`, covers any value that breaks its rule. The message is built from the rule, for example "TYPE must be one of MSG, EMAIL; found 'EMAILAASDASD'." A "did you mean" suggestion is added for `enum` values.
 - Values that are symbolic (`&SYM`) or that come from a referback are skipped, as the DSN check already does.
 - A first set of rules: `CLASS` and `MSGCLASS` (one character A–Z or 0–9), `TYPRUN` (SCAN, HOLD, JCLHOLD, COPY), `PRTY` (0–15), `ADDRSPC` (VIRT, REAL), `RD` (R, RNC, NR, NC), `FREE` (END, CLOSE), `AVGREC` (U, K, M) and `RETPD` (0–93000). Features 15–17 add MSGLEVEL and NOTIFY.
