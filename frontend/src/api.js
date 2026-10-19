@@ -10,7 +10,8 @@ function apiError(message, status) {
 // `library` holds { dsn, member, source } entries for catalogued procedures
 // and INCLUDE members; it's only sent when there is something in it.
 // `zosLevel` and `jes` are sent when chosen; otherwise the API's defaults apply.
-export async function validateJcl(source, { library = [], zosLevel, jes } = {}) {
+// `signal` lets the workbench abort a check that a newer one replaces.
+export async function validateJcl(source, { library = [], zosLevel, jes, signal } = {}) {
     let res;
     try {
         res = await fetch(`${API_BASE}/api/validate`, {
@@ -25,7 +26,8 @@ export async function validateJcl(source, { library = [], zosLevel, jes } = {}) 
                 ...(library.length ? { library } : {}),
                 ...(zosLevel ? { zosLevel } : {}),
                 ...(jes ? { jes } : {})
-            })
+            }),
+            signal
         });
     } catch (err) {
         throw apiError(`Validation request failed: ${err.message}`, 0);

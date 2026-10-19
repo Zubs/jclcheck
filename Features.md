@@ -58,7 +58,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 32. Symbols in in-stream PROCs
 - [x] 33. Positions on continued statements
 - [x] 34. Severity of real JCL errors
-- [ ] 35. Stale results in the workbench
+- [x] 35. Stale results in the workbench
 - [ ] 36. Dataset flow checks
 - [ ] 37. Inline suppressions and site profile
 - [ ] 38. Command-line tool and CI output

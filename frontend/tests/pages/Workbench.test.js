@@ -19,8 +19,9 @@ const LEVELS = {
     defaultLevel: '3.2',
     defaultJes: 'JES2'
 };
-// What every check sends at the default level and JES.
-const DEFAULTS = { zosLevel: '3.2', jes: 'JES2' };
+// What every check sends at the default level and JES, with the signal that
+// aborts it when a newer check starts (feature 35).
+const DEFAULTS = { zosLevel: '3.2', jes: 'JES2', signal: expect.any(AbortSignal) };
 vi.mock('../../src/analytics.js', () => ({ track: vi.fn(), pageview: vi.fn() }));
 
 const CLEAN = {
@@ -185,7 +186,7 @@ describe('Workbench', () => {
         expect(event.defaultPrevented).toBe(true);
     });
 
-    test.fails('ignores a reply that arrives after a newer one (feature 35)', async () => {
+    test('ignores a reply that arrives after a newer one (feature 35)', async () => {
         const w = await mountWorkbench();
         let resolveSlow;
         validateJcl
@@ -203,6 +204,115 @@ describe('Workbench', () => {
         resolveSlow(errorsResult(3));
         await flushPromises();
         expect(w.findAll('.diag')).toHaveLength(1);
+    });
+
+    test('aborts the check in flight when a newer one starts (feature 35)', async () => {
+        const w = await mountWorkbench();
+        validateJcl.mockReturnValueOnce(new Promise(() => {}));
+        await edit(w, '//OLD');
+        await vi.advanceTimersByTimeAsync(450);
+        const { signal } = validateJcl.mock.calls.at(-1)[1];
+        expect(signal.aborted).toBe(false);
+
+        await pfButton(w, 'VALIDATE').trigger('click');
+        expect(signal.aborted).toBe(true);
+    });
+
+    test('shows only the last of five quick edits when replies come back out of order (feature 35)', async () => {
+        const w = await mountWorkbench();
+        const pending = [];
+        validateJcl.mockImplementation(source => new Promise(resolve => {
+            pending.push(() => resolve(errorsResult(Number(source.slice(3)))));
+        }));
+        for (let n = 1; n <= 5; n++) {
+            await edit(w, `//E${n}`);
+            await vi.advanceTimersByTimeAsync(450);
+        }
+
+        const counts = [];
+        for (const index of [4, 0, 2, 1, 3]) {
+            pending[index]();
+            await flushPromises();
+            counts.push(w.findAll('.diag').length);
+        }
+
+        expect(counts).toEqual([5, 5, 5, 5, 5]);
+        expect(statusText(w)).toBe('5 ERRORS');
+    });
+
+    test('ends with the newest result when an edit is made as a reply arrives (feature 35)', async () => {
+        const w = await mountWorkbench();
+        let resolveFirst;
+        validateJcl
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolveFirst = resolve;
+            }))
+            .mockResolvedValueOnce(errorsResult(2));
+        await edit(w, '//A');
+        await vi.advanceTimersByTimeAsync(450);
+        await edit(w, '//AB');
+        resolveFirst(errorsResult(1));
+        await flushPromises();
+        await vi.advanceTimersByTimeAsync(450);
+        expect(statusText(w)).toBe('2 ERRORS');
+    });
+
+    test('keeps VALIDATING until the newest reply arrives (feature 35)', async () => {
+        const w = await mountWorkbench();
+        let resolveOld, resolveNew;
+        validateJcl
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolveOld = resolve;
+            }))
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolveNew = resolve;
+            }));
+        await edit(w, '//OLD');
+        await vi.advanceTimersByTimeAsync(450);
+        expect(statusText(w)).toBe('VALIDATING');
+        await edit(w, '//NEW');
+        await vi.advanceTimersByTimeAsync(450);
+        resolveOld(CLEAN);
+        await flushPromises();
+        expect(statusText(w)).toBe('VALIDATING');
+        resolveNew(errorsResult(1));
+        await flushPromises();
+        expect(statusText(w)).toBe('1 ERROR');
+    });
+
+    test('shows API UNREACHABLE when the newest check fails, even if an older one succeeds later (feature 35)', async () => {
+        const w = await mountWorkbench();
+        let resolveOld;
+        validateJcl
+            .mockReturnValueOnce(new Promise(resolve => {
+                resolveOld = resolve;
+            }))
+            .mockRejectedValueOnce(Object.assign(new Error('down'), { status: 0 }));
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        await edit(w, '//OLD');
+        await vi.advanceTimersByTimeAsync(450);
+        await edit(w, '//NEW');
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+        expect(statusText(w)).toBe('API UNREACHABLE');
+        resolveOld(CLEAN);
+        await flushPromises();
+        expect(statusText(w)).toBe('API UNREACHABLE');
+    });
+
+    test('does not report an aborted check as unreachable (feature 35)', async () => {
+        const w = await mountWorkbench();
+        validateJcl
+            .mockImplementationOnce((source, { signal }) => new Promise((resolve, reject) => {
+                signal.addEventListener('abort', () => reject(Object.assign(new Error('aborted'), { status: 0 })));
+            }))
+            .mockResolvedValueOnce(CLEAN);
+        await edit(w, '//OLD');
+        await vi.advanceTimersByTimeAsync(450);
+        await edit(w, '//NEW');
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+        expect(statusText(w)).toBe('CLEAN — 0 ERRORS');
     });
 });
 
@@ -553,7 +663,7 @@ describe('Workbench level and JES picker', () => {
         const w = await mountWorkbench();
         expect(w.find('.level-picker').element.value).toBe('3.2');
         expect(w.find('.jes-picker').element.value).toBe('JES2');
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '3.2', jes: 'JES2' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '3.2', jes: 'JES2', signal: expect.any(AbortSignal) });
     });
 
     test('O: choosing 2.3 checks again at 2.3, counts it and keeps it in the address', async () => {
@@ -562,7 +672,7 @@ describe('Workbench level and JES picker', () => {
         track.mockClear();
         await pick(w, '.level-picker', '2.3');
         expect(validateJcl).toHaveBeenCalledTimes(1);
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.3', jes: 'JES2' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.3', jes: 'JES2', signal: expect.any(AbortSignal) });
         expect(track).toHaveBeenCalledWith('level', '2.3');
         expect(window.location.search).toBe('?zos=2.3&jes=JES2');
         expect(JSON.parse(localStorage.getItem('jclcheck.picker'))).toEqual({ zosLevel: '2.3', jes: 'JES2' });
@@ -579,7 +689,7 @@ describe('Workbench level and JES picker', () => {
         const w = await mountWorkbench();
         await pick(w, '.level-picker', '2.5');
         await pick(w, '.jes-picker', 'JES3');
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3', signal: expect.any(AbortSignal) });
         await pick(w, '.level-picker', '3.1');
         expect(w.find('.jes-picker').element.value).toBe('JES2');
         expect(w.find('.picker-notice').text()).toContain('IBM removed JES3 in z/OS 3.1');
@@ -589,7 +699,7 @@ describe('Workbench level and JES picker', () => {
     test('a shared address chooses the level and JES', async () => {
         window.history.replaceState(null, '', '/app?zos=2.5&jes=JES3');
         await mountWorkbench();
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3', signal: expect.any(AbortSignal) });
     });
 
     test('E: an unknown level in the address falls back with a notice', async () => {
@@ -609,7 +719,7 @@ describe('Workbench level and JES picker', () => {
     test('a remembered choice is used on the next visit', async () => {
         localStorage.setItem('jclcheck.picker', JSON.stringify({ zosLevel: '2.4', jes: 'JES3' }));
         await mountWorkbench();
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES3' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES3', signal: expect.any(AbortSignal) });
     });
 
     test('E: blocked storage leaves the picker working', async () => {
@@ -621,7 +731,7 @@ describe('Workbench level and JES picker', () => {
         });
         const w = await mountWorkbench();
         await pick(w, '.level-picker', '2.4');
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES2' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES2', signal: expect.any(AbortSignal) });
     });
 
     test('I: the panel shows what the result was checked against', async () => {
@@ -634,7 +744,7 @@ describe('Workbench level and JES picker', () => {
         getLevels.mockRejectedValue(new Error('down'));
         const w = await mountWorkbench();
         expect(w.find('.level-picker').exists()).toBe(false);
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: null, jes: null });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: null, jes: null, signal: expect.any(AbortSignal) });
     });
 });
 

@@ -21,6 +21,13 @@ describe('validateJcl', () => {
         expect(options.body).toBe('{"source":"//J JOB"}');
     });
 
+    test('passes the abort signal to fetch', async () => {
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
+        const controller = new AbortController();
+        await validateJcl('//J JOB', { signal: controller.signal });
+        expect(fetchMock.mock.calls[0][1].signal).toBe(controller.signal);
+    });
+
     test('sends the library only when it has members', async () => {
         fetchMock.mockImplementation(async () => new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
         await validateJcl('//J JOB', { library: [] });

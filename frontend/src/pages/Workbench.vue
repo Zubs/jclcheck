@@ -254,17 +254,30 @@ function trackApiProblem(e) {
 
 // `trigger` is set for explicit checks; automatic checks after typing only
 // count towards the visit summary.
+// Only the newest check's reply is used: starting a check aborts the one in
+// flight, and the number catches replies from servers that ignore the abort.
+let checkNumber = 0;
+let inFlight = null;
+
 async function runValidation(trigger) {
   if (trigger) {
     track('check', trigger);
   }
 
   const source = code.value;
+  const number = ++checkNumber;
+  inFlight?.abort();
+  const controller = new AbortController();
+  inFlight = controller;
   loading.value = true;
   errored.value = false;
   const startedAt = Date.now();
   try {
-    const result = await validateJcl(source, { library: libraryForApi(), zosLevel: zosLevel.value, jes: jes.value });
+    const result = await validateJcl(source, { library: libraryForApi(), zosLevel: zosLevel.value, jes: jes.value, signal: controller.signal });
+    if (number !== checkNumber) {
+      return;
+    }
+
     checkedAgainst.value = result.zosLevel ? `Z/OS ${result.zosLevel} · ${result.jes}` : '';
     visit.responseTimes.push(Date.now() - startedAt);
     visit.lastResult = resultKind(result.stats);
@@ -272,6 +285,10 @@ async function runValidation(trigger) {
     stats.value = result.stats;
     trackDiagnostics(result.diagnostics);
   } catch (e) {
+    if (number !== checkNumber) {
+      return;
+    }
+
     errored.value = true;
     errorStatus.value = e.status;
     console.error(e);
@@ -280,7 +297,10 @@ async function runValidation(trigger) {
     // Counted once the check finishes, whatever its outcome.
     visit.checks++;
     visit.maxLines = Math.max(visit.maxLines, lineCount(source));
-    loading.value = false;
+    if (number === checkNumber) {
+      loading.value = false;
+      inFlight = null;
+    }
   }
 }
 
