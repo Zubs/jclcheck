@@ -53,7 +53,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 27. z/OS level and JES picker
 - [x] 28. Remembering JCL between visits
 - [x] 29. Shareable links
-- [ ] 30. Accurate copy, help and docs
+- [x] 30. Accurate copy, help and docs
 - [ ] 31. DSN with LIKE
 - [ ] 32. Symbols in in-stream PROCs
 - [ ] 33. Positions on continued statements
@@ -1554,6 +1554,7 @@ after:
 - **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.
+- **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
 - **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.
 

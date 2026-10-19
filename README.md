@@ -9,18 +9,25 @@ a Vue 3 frontend.
 jcl-checker/
 ├── backend/     Node.js/Express validation engine + HTTP API
 │   ├── src/
-│   │   ├── lexer.js           physical lines → logical statements (continuations, comments)
+│   │   ├── lexer.js           physical lines → logical statements (columns, continuations, in-stream data, JES)
 │   │   ├── paramTokenizer.js  operand string → positional/keyword params (paren/quote aware)
-│   │   ├── parser.js          statements → AST (Job/Step/DD/Proc/If), ordering + structural checks
+│   │   ├── parser.js          statements → AST (jobs, steps, DDs, PROCs, IFs, job groups) + order checks
+│   │   ├── conditions.js      IF/WHEN condition parser
 │   │   ├── ast.js             AST node factories
-│   │   ├── keywords.js        keyword/value tables distilled from the IBM JCL Reference
+│   │   ├── keywords.js        keyword, statement and value tables from the IBM JCL Reference
+│   │   ├── valueRules.js      reusable value rules (enum, integer, list, ...) and their checker
+│   │   ├── levels.js          supported z/OS levels and JES choice
+│   │   ├── library.js         catalogued PROCs and INCLUDE members supplied by the user
 │   │   ├── errors.js          central diagnostic catalog (code, message, suggestion)
 │   │   ├── validator.js       pipeline orchestrator
 │   │   ├── rules/
-│   │   │   ├── ddRules.js     duplicate DD names, data-source conflicts
-│   │   │   ├── paramRules.js  keyword legality, required params, DISP/SPACE/DCB/REGION/TIME/DSN syntax
-│   │   │   └── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
-│   │   └── index.js           Express API (POST /api/validate)
+│   │   │   ├── ddRules.js     DD data sources, duplicates, delimiters, PATH
+│   │   │   ├── paramRules.js  keywords, values, positionals, JCLLIB, NOTIFY, dataset names
+│   │   │   ├── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
+│   │   │   ├── ifRules.js     step references in IF conditions
+│   │   │   ├── jesRules.js    JES2 and JES3 control statements
+│   │   │   └── groupRules.js  JES2 job groups
+│   │   └── index.js           Express API (POST /api/validate, GET /api/levels, POST /api/usage)
 │   └── test/                  regression suite (node:test): exact diagnostics for every fixture
 │       ├── fixtures/          .jcl fixtures + .expected.json results (fixtures/nick/: Nick's review examples)
 │       ├── samples/           expected results for the workbench samples
@@ -38,10 +45,14 @@ jcl-checker/
         │   └── Workbench.vue        the actual JCLCHECK validation workbench
         ├── components/
         │   ├── marketing/           Navbar, Footer, FeatureCard, CodePreview (hero visual)
-        │   ├── Editor.vue           line-numbered source editor w/ diagnostic gutter markers
+        │   ├── Editor.vue           source editor: highlighting, underlines, gutter markers, cursor position
+        │   ├── LibraryPanel.vue     catalogued PROCs and INCLUDE members pasted by the user
         │   ├── ErrorPanel.vue       diagnostics list (code, message, plain-English fix)
-        │   ├── PfBar.vue            3270-style PF-key action bar (F1 Help / F5 Validate / F9 Sample / F12 Clear)
+        │   ├── PfBar.vue            3270-style PF-key bar (F1 Help, F5 Validate, F6 Share, F9 Sample, F12 Clear)
         │   └── HelpModal.vue        in-app documentation for learners
+        ├── highlight.js             JCL syntax highlighting for the editor
+        ├── share.js                 shareable links (compressed JCL after #jcl=)
+        ├── diagnosticCodes.js       every diagnostic code, explained in Help
         └── samples.js               bundled example JCL (clean / broken / proc+symbolics)
     └── tests/                       component tests (Vitest + Vue Test Utils + jsdom), mirroring src/
 ```
@@ -129,61 +140,108 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
 
 ## What's validated
 
-- **Lexing**: `//` record format read as 80-column records (columns 1-71
-  hold the statement, column 72 continues a comment, 73-80 are ignored),
-  comment lines (`//*`), continuation lines (trailing comma, open
-  parenthesis, or a quoted string resuming in column 16), unterminated
-  quotes, 80-column overflow, in-stream data (`DD *` / `DD DATA`, with
-  `DLM=` delimiters).
-- **z/OS level and JES**: checks against z/OS 2.3-3.2 (default 3.2) and
-  JES2 or JES3 (JES3 only at 2.5 or earlier). JES2 (`/*ROUTE`, ...) and
-  JES3 (`//*MAIN`, ...) control statements are recognised and checked.
-- **Parsing / structure**: statement recognition (JOB, EXEC, DD, PROC, PEND,
-  SET, IF/THEN/ELSE/ENDIF, INCLUDE), unmatched parentheses, IF/ENDIF and
-  PROC/PEND balancing and nesting. IF conditions are parsed and their step
-  references checked; each IF records the steps in its THEN and ELSE branches.
-- **Ordering**: JOB must come first; EXEC before its DDs. A job stream can
-  hold several jobs, each checked on its own; `//` ends a job.
-- **DD statements**: duplicate ddnames within a step; a DD must have exactly
-  one data source (DSN / DUMMY / SYSOUT / instream data), not zero or several.
-- **Keywords**: every keyword on JOB/EXEC/DD is checked against tables
-  distilled from the IBM JCL Reference, with Levenshtein-distance "did you
-  mean…" suggestions for typos. EXEC also checks for a required PGM or PROC.
-- **Parameter value syntax**: DISP status/normal/abnormal dispositions, SPACE
-  unit/quantities, DCB sub-parameters (RECFM/DSORG/LRECL/BLKSIZE), REGION
-  (nnnnK/nnnnM), TIME, and DSN qualifier rules (≤8 chars/qualifier, ≤22
-  qualifiers, ≤44 chars total, valid starting characters).
-- **Procedures**: in-stream PROC/PEND bodies are parsed and validated the same
-  way as the main job stream; EXEC PROC= calls are resolved against in-stream
-  PROCs (unresolved calls are a *warning*, since they may be valid cataloged
-  procedures this tool can't see); symbolic parameters (`&SYM`) referenced in
-  a PROC body are checked against the PROC's declared defaults; DD overrides
-  on a calling EXEC (bare `ddname` or `stepname.ddname`) are matched against
-  the procedure's actual DDs.
+- **Reading lines**: 80-column records as z/OS reads them (columns 1-71 hold
+  the statement, a mark in column 72 continues a comment, 73-80 are ignored),
+  `//*` comments, continuations (trailing comma, open parenthesis, or a
+  quoted string resuming in column 16), unterminated quotes, overlong lines,
+  and in-stream data (`DD *` and `DD DATA`, with `DLM=` delimiters).
+- **z/OS level and JES**: every check is made against a z/OS release (2.3 to
+  3.2, default 3.2) and JES2 or JES3 (JES3 only at 2.5 and earlier). JES2
+  (`/*ROUTE`, `/*JOBPARM`, ...) and JES3 (`//*MAIN`, `//*FORMAT`, ...)
+  control statements are recognised and checked.
+- **Structure**: several jobs per stream, each checked on its own (`//`
+  ends a job); JOB, EXEC and DD order; JCLLIB and NOTIFY placement; balanced
+  IF/ENDIF and PROC/PEND; IF conditions parsed, with their step references
+  checked and their THEN/ELSE steps recorded; JES2 job groups (JOBGROUP to
+  ENDGROUP), with dependency loops reported.
+- **DD statements**: one data source per DD (DSN, DUMMY, SYSOUT, in-stream
+  data, PATH, or a SUBSYS/DDNAME/new temporary dataset), z/OS UNIX file
+  keywords, duplicate DD names (a warning), and a note for JCL sent to the
+  internal reader.
+- **Keywords and values**: JOB, EXEC, DD, JCLLIB and NOTIFY keywords against
+  tables from the IBM JCL Reference, with "did you mean" suggestions;
+  positional parameter limits; keywords qualified with a procedure step
+  (`COND.STEP1=`); value rules (CLASS, TYPRUN, PRTY, MSGLEVEL, NOTIFY, EMAIL
+  and more) alongside the DISP, SPACE, DCB, REGION, TIME and dataset name
+  checks, which understand members, generations, temporary and quoted names.
+- **Procedures and INCLUDE**: in-stream PROCs are resolved and checked
+  (symbolic parameters, DD overrides, procedure steps). Catalogued procedures
+  and INCLUDE members are found and checked when supplied in the `library`
+  (the workbench's Library panel), in the job's JCLLIB order.
 
-Every diagnostic carries `{ code, severity, line, column, message,
-suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
-`JCLLxxx` lexer, `JCLPxxx` parser, `JCLOxxx` ordering, `JCLDxxx` DD rules,
-`JCLKxxx` keyword rules, `JCLSxxx` value syntax, `JCLNxxx` name syntax,
-`JCLRxxx` procedure resolution, `JCLJxxx` JES control statements, `JCLCxxx`
-IF conditions, `JCLGxxx` job groups).
+Every diagnostic carries `{ code, severity, line, column, length, message,
+suggestion, source }`, plus `member` when it was found inside a library
+member. See `backend/src/errors.js` for the full catalog: `JCLL` reading
+lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
+keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
+JES statements, `JCLC` IF conditions, `JCLG` job groups. The workbench's
+Help lists every code.
 
-`POST /api/validate` returns `{ diagnostics, ast, stats, zosLevel, jes }`.
-`ast.jobs` lists every job in the stream, `ast.jobGroups` every JES2 job group, (it replaced the single `ast.job`
-when several jobs per stream were supported), and `stats.jobCount` counts
-them.
+## API
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/validate` | Checks `source`. Optional: `zosLevel` (`2.3`-`3.2`, default `3.2`), `jes` (`JES2` or `JES3`; JES3 only at 2.5 and earlier) and `library` (up to 50 `{ dsn, member, source }` entries). Unknown levels, JES values or bad library entries get a 400 response that says why. |
+| `GET /api/levels` | The supported levels, oldest first, as `{ level, jes3 }`, with `defaultLevel` and `defaultJes`. |
+| `GET /api/health` | `{ "ok": true }` |
+| `POST /api/usage` | Opt-in CLI usage counts (see Analytics). |
+
+The response from `/api/validate` is `{ diagnostics, ast, stats, zosLevel,
+jes }`. `ast.jobs` lists every job in the stream (it replaced the single
+`ast.job` when several jobs per stream were supported), `ast.procs` the
+procedures and `ast.jobGroups` the JES2 job groups. `stats` has `errors`,
+`warnings`, `info`, `statementCount`, `jobCount`, `stepCount` (across all
+jobs), `procCount` and `valid` (no errors).
+
+Example request (`test/readme.test.js` checks it against the real validator):
+
+```json readme-request
+{
+  "source": "//PAYROLL JOB (ACCT),'J SMITH',CLASS=A\n//STEP1 EXEC PGM=IEFBR14,REGON=4M\n",
+  "zosLevel": "2.5"
+}
+```
+
+Response, without `ast`:
+
+```json readme-response
+{
+  "diagnostics": [
+    {
+      "code": "JCLK001",
+      "severity": "warning",
+      "line": 2,
+      "column": 26,
+      "length": 1,
+      "message": "'REGON' is not a recognized keyword for a EXEC statement.",
+      "suggestion": "Did you mean 'REGION'?",
+      "source": "validator"
+    }
+  ],
+  "stats": {
+    "errors": 0,
+    "warnings": 1,
+    "info": 0,
+    "statementCount": 2,
+    "jobCount": 1,
+    "stepCount": 1,
+    "procCount": 0,
+    "valid": true
+  },
+  "zosLevel": "2.5",
+  "jes": "JES2"
+}
+```
 
 ## Known limitations (by design, given no mainframe access)
 
-- Datasets can't be verified to exist. Catalogued procedures and INCLUDE
-  members are checked only when the user pastes them into the Library panel
-  (the API's `library` field); otherwise a call to a PROC not defined
-  in-stream is a warning, not a hard error.
-- IF/THEN/ELSE conditional blocks are validated for balance/nesting but their
-  bodies are not conditionally excluded from the AST (this is a static
-  validator, not a JCL interpreter with a live symbol table).
-- Continuation-column conventions (classic cols 4-16) are accepted loosely
-  rather than strictly enforced, matching how most modern shops write JCL.
+- Datasets can't be verified to exist, and catalogued procedures and INCLUDE
+  members are checked only when they are pasted into the Library panel;
+  otherwise a call to a PROC that isn't in-stream is a warning.
+- IF/THEN/ELSE conditions are checked and their branches recorded, but no
+  return codes are simulated, so every step is checked whichever branch it is in.
+- Symbols are only resolved for in-stream and supplied procedures; values that
+  depend on them can't be checked.
 
 ## Extending it
 

@@ -20,6 +20,8 @@
           <div class="hero-trust">
             <span>Built on the IBM JCL Reference</span>
             <span class="sep">·</span>
+            <span>Checked by our API, never stored</span>
+            <span class="sep">·</span>
             <span>Anonymous usage counts, no cookies</span>
           </div>
         </div>

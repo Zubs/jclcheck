@@ -72,60 +72,33 @@
           numbers and are ignored. In-stream data lines are kept whole.
         </p>
 
-        <h3>Error codes</h3>
-        <table>
-          <tbody>
-            <tr>
-              <td>JCLLxxx</td>
-              <td>Lexer — raw line/record issues</td>
-            </tr>
-            <tr>
-              <td>JCLPxxx</td>
-              <td>Parser — statement structure</td>
-            </tr>
-            <tr>
-              <td>JCLOxxx</td>
-              <td>Ordering — JOB/EXEC/DD sequence</td>
-            </tr>
-            <tr>
-              <td>JCLDxxx</td>
-              <td>DD statement rules</td>
-            </tr>
-            <tr>
-              <td>JCLKxxx</td>
-              <td>Keyword / required parameter rules</td>
-            </tr>
-            <tr>
-              <td>JCLSxxx</td>
-              <td>Parameter value syntax</td>
-            </tr>
-            <tr>
-              <td>JCLNxxx</td>
-              <td>Name field syntax</td>
-            </tr>
-            <tr>
-              <td>JCLRxxx</td>
-              <td>PROC resolution / symbolics</td>
-            </tr>
-            <tr>
-              <td>JCLCxxx</td>
-              <td>IF/THEN/ELSE conditions</td>
-            </tr>
-            <tr>
-              <td>JCLGxxx</td>
-              <td>Job groups (JOBGROUP … ENDGROUP)</td>
-            </tr>
-            <tr>
-              <td>JCLJxxx</td>
-              <td>JES2 and JES3 control statements</td>
-            </tr>
-          </tbody>
-        </table>
+        <h3>z/OS level and JES</h3>
+        <p>
+          Choose the z/OS release at the top of the workbench: z/OS 2.3, 2.4, 2.5, 3.1 or 3.2.
+          The default is <strong>z/OS 3.2</strong>, and JES2. JES3 can only be chosen at z/OS 2.5
+          and earlier, because IBM removed it in z/OS 3.1. A keyword your release doesn't have gets
+          <code>JCLK005</code>.
+        </p>
+
+        <h3>Diagnostic codes</h3>
+        <div v-for="group in CODE_GROUPS" :key="group.prefix" class="help-codes">
+          <h4>{{ group.prefix }} — {{ group.name }}</h4>
+          <table>
+            <tbody>
+              <tr v-for="(text, code) in group.codes" :key="code">
+                <td>{{ code }}</td>
+                <td>{{ text }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <h3>Privacy</h3>
         <p>
           Your JCL is sent to the JCLcheck API to be checked, and is never stored or
-          counted. The site counts anonymous usage with GoatCounter, with no cookies
+          counted there. Your draft and library stay in your own browser, and a shared
+          link carries the JCL inside the link itself, after the #, which never reaches a
+          server. The site counts anonymous usage with GoatCounter, with no cookies
           and no personal data: pages visited, where visits come from, browser, device
           size and country, which features are used, and which error codes appear. If
           your browser sends Do Not Track or Global Privacy Control, nothing is counted
@@ -145,6 +118,8 @@
 </template>
 
 <script setup>
+import { CODE_GROUPS } from '../diagnosticCodes';
+
 defineEmits(['close']);
 </script>
 

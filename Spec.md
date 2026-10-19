@@ -20,7 +20,7 @@ The site should load fast and be easy to find through search engines for searche
 
 - **Audience:** People learning JCL, mainframe trainees, and developers who want a quick check before they submit a job.
 - **Price:** Free. No sign-up, no accounts and no usage limits.
-- **Privacy:** JCL is sent to the API to be checked, and is never stored or counted. The site does not save user code between visits. Usage is counted anonymously with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. Nothing is counted when the browser sends Do Not Track or Global Privacy Control.
+- **Privacy:** JCL is sent to the API to be checked, and is never stored or counted there. The user's draft and library are kept only in their own browser, and a shared link carries the JCL inside the link itself, after the `#`, which is never sent to a server. Usage is counted anonymously with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. Nothing is counted when the browser sends Do Not Track or Global Privacy Control.
 - **Ownership:** Zubair owns the code and the product.
 
 ---
@@ -45,44 +45,46 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 
 ### 4.2 Validation workbench (`/app`)
 
-- **Editor:** A text editor with line numbers. Lines that have problems get a coloured dot in the gutter (error or warning), and hovering over the dot shows the messages. Tab inserts spaces, and spellcheck and autocorrect are turned off.
-- **Live checking:** The JCL is checked automatically about half a second after the user stops typing, and once when the page loads.
-- **Diagnostics panel:** Lists every problem in line order. Each one shows its severity, its line and column (`L12:5`), its code (`JCLK001`), a message and a "FIX ›" suggestion. Clicking an entry scrolls the editor to that line. When there are no problems, the panel shows a summary of the statements, steps and procedures that were checked.
-- **Status indicator:** The header shows READY, VALIDATING, CLEAN — 0 ERRORS, the number of errors, or API UNREACHABLE.
-- **PF-key action bar:** A button bar styled like 3270 terminal PF keys:
-  - **F1 Help:** opens in-app help that explains what is checked, the error code groups and the tool's limits.
-  - **F5 Validate:** checks the JCL right away.
-  - **F9 Sample:** cycles through the bundled examples.
-  - **F12 Clear:** empties the editor.
-- **Samples:** Three built-in examples: a clean job, a broken job with many typical mistakes, and a job that uses an in-stream PROC with symbolic parameters and DD overrides.
+- **Editor:** Line numbers, syntax highlighting (name, operation, keywords, values, strings, comments, in-stream data, JES statements, column 72 and columns 73–80), a faint ruler at columns 72 and 80, and an underline under the exact text of each diagnostic, with its message on hover. The bar shows the cursor's line and column (column 72 and beyond stand out) and the selection length.
+- **Live checking:** The JCL is checked about half a second after the user stops typing, once when the page loads, and straight away when the level or JES changes.
+- **Diagnostics panel:** Lists every problem in line order, with severity, location (`L12:5`, or `MYPROC2 L3:5` inside a library member), code, message and a "FIX ›" suggestion. Clicking an entry jumps to it. The panel shows the z/OS level and JES the result was checked against.
+- **Level and JES picker:** The header chooses the z/OS level (from `GET /api/levels`) and JES2 or JES3 (JES3 only at 2.5 and earlier). The choice is remembered and kept in the address (`?zos=&jes=`).
+- **Library panel:** Holds catalogued procedures and INCLUDE members pasted by the user, each with its library and member name; they are found in the job's JCLLIB order and checked with the job.
+- **Status indicator:** READY, VALIDATING, CLEAN — 0 ERRORS, the number of errors, API UNREACHABLE, or a note about a rejected library member name.
+- **PF-key action bar and keys:** F1 Help (Alt+H), F5 Validate (Ctrl/⌘+Enter), F6 Share (Alt+L), F9 Sample (Alt+S), F12 Clear (Alt+C). Escape closes help. When F9 or F12 replaces typed text, an Undo notice brings it back for 5 seconds.
+- **Drafts:** The JCL and library are saved in the user's browser and come back on the next visit. If storage is blocked, a one-line notice says so.
+- **Sharing:** Share puts the JCL, library, level and JES in a link (compressed, after `#jcl=`), copied to the clipboard. Opening it shows the job without replacing the user's draft until they edit it, with "Back to my draft".
+- **Samples:** A clean job, a broken job with many typical mistakes, and a job with an in-stream PROC, symbolic parameters and DD overrides.
 
 ### 4.3 What is checked
 
 | Area | Checks |
 |---|---|
-| **Lexing** | `//` record format, `//*` comments, continuation lines (trailing comma or open parenthesis), unterminated quotes, lines over 80 columns, in-stream data (`DD *` / `DD DATA` up to the delimiter) |
-| **Structure** | Recognises JOB, EXEC, DD, PROC, PEND, SET, IF/THEN/ELSE/ENDIF and INCLUDE. Checks unmatched parentheses and that IF/ENDIF and PROC/PEND are balanced and nested correctly |
-| **Ordering** | JOB comes first, EXEC comes before its DDs, and there is only one JOB per job stream |
-| **DD statements** | Duplicate ddnames within a step. Each DD must have exactly one data source (DSN, DUMMY, SYSOUT or in-stream data) |
-| **Keywords** | Every JOB, EXEC and DD keyword is checked against IBM reference tables, with "Did you mean…?" suggestions for typos. EXEC must have PGM or PROC |
-| **Parameter values** | DISP, SPACE, DCB (RECFM/DSORG/LRECL/BLKSIZE), REGION, TIME and DSN qualifier rules (up to 8 characters per qualifier, up to 22 qualifiers, up to 44 characters in total, valid first character) |
-| **Names** | Step, DD and job names are 1–8 characters and start with a letter or a national character (`$ # @`) |
-| **Procedures** | In-stream PROC bodies are checked like the main job. `EXEC PROC=` calls are resolved, and calls to unknown PROCs are warnings because they may be catalogued. `&SYM` references are checked against the PROC defaults, and DD overrides (`ddname` or `step.ddname`) are matched to the procedure's DDs |
+| **Reading lines** | 80-column records (columns 1–71 hold the statement, column 72 continues a comment, 73–80 are ignored), `//*` comments, continuations (including quoted strings resuming in column 16), unterminated quotes, overlong lines, in-stream data with `DLM=` |
+| **Level and JES** | Keywords and statements available at the chosen z/OS level; JES2 and JES3 control statements |
+| **Structure** | Several jobs per stream, JOB/EXEC/DD order, JCLLIB and NOTIFY placement, balanced IF/ENDIF and PROC/PEND, IF conditions and their step references, JES2 job groups |
+| **DD statements** | One data source per DD (including PATH, SUBSYS, DDNAME and new temporary datasets), z/OS UNIX file keywords, duplicate DD names (a warning), in-stream JCL sent to the internal reader |
+| **Keywords and values** | JOB, EXEC, DD, JCLLIB and NOTIFY keywords with "Did you mean…?", positional limits, keywords qualified with a procedure step, value rules (CLASS, TYPRUN, PRTY, MSGLEVEL, NOTIFY, EMAIL, …), DISP, SPACE, DCB, REGION, TIME and dataset names (members, generations, temporary and quoted names) |
+| **Names** | Job, step, DD and procedure step names are 1–8 characters and start with a letter or `$ # @` |
+| **Procedures** | In-stream PROCs, and catalogued PROCs and INCLUDE members supplied in the Library panel: symbolic parameters, DD overrides and procedure steps. A PROC that can't be found is a warning |
 
 **Diagnostic codes**
 
 | Prefix | Group | Default severity |
 |---|---|---|
-| `JCLL` | Lexer | Error |
-| `JCLP` | Parser / structure | Error |
-| `JCLO` | Ordering | Error |
-| `JCLD` | DD rules | Error |
+| `JCLL` | Reading lines | Error |
+| `JCLP` | Structure | Error |
+| `JCLO` | Statement order | Error |
+| `JCLD` | DD statements | Error (duplicates are warnings) |
 | `JCLK` | Keywords | Warning |
-| `JCLS` | Parameter value syntax | Warning |
-| `JCLN` | Name syntax | Error |
-| `JCLR` | Procedure resolution | Error (unresolved PROC is a warning) |
+| `JCLS` | Parameter values | Warning |
+| `JCLN` | Names | Error |
+| `JCLR` | Procedures and INCLUDE | Error (missing PROCs and members are warnings) |
+| `JCLJ` | JES2 and JES3 statements | Warning |
+| `JCLC` | IF conditions | Error |
+| `JCLG` | Job groups | Error |
 
-A job counts as **valid** when it has no errors. Warnings do not make a job invalid.
+Help in the workbench lists and explains every code. A job counts as **valid** when it has no errors. Warnings do not make a job invalid.
 
 **Example diagnostic**
 
@@ -104,9 +106,8 @@ A job counts as **valid** when it has no errors. Warnings do not make a job inva
 
 These are by design, since the tool has no access to a mainframe:
 
-- Catalogued procedures and datasets cannot be confirmed to exist.
-- The bodies of IF/THEN/ELSE blocks are checked for balance and nesting, but they are not excluded based on their conditions.
-- The classic continuation-column rules (columns 4–16) are applied loosely, to match how most modern shops write JCL.
+- Datasets can't be confirmed to exist, and catalogued procedures and INCLUDE members are only checked when the user supplies them in the Library panel.
+- IF/THEN/ELSE conditions are checked, but no return codes are simulated, so every step is checked whichever branch it is in.
 
 ---
 
