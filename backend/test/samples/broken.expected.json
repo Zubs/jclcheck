@@ -34,7 +34,7 @@
     },
     {
       "code": "JCLD001",
-      "severity": "error",
+      "severity": "warning",
       "line": 6,
       "column": 1
     },

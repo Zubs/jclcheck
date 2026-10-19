@@ -13,9 +13,11 @@ function checkDDStatements(job, diagnostics) {
             if (dd.name) {
                 const key = dd.name.toUpperCase();
                 if (seen.has(key)) {
+                    // Valid JCL, so a warning rather than an error.
                     diagnostics.push(makeDiagnostic('JCLD001', { name: dd.name, step: step.name }, {
                         line: dd.line,
-                        column: 1
+                        column: 1,
+                        severity: 'warning'
                     }));
                 } else {
                     seen.set(key, dd.line);

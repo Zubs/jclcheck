@@ -11,17 +11,17 @@
           class="tok-op">EXEC</span> <span class="tok-kw">PGM</span>=IEFBR14
 <span class="ln">02</span><span class="tok-stmt">//DD1</span>     <span class="tok-op">DD</span>   <span class="tok-kw">DSN</span>=PROD.PAY.INPUT,<span
             class="tok-kw">DISP</span>=SHR
-<span class="ln">03</span><span class="tok-stmt">//DD1</span>     <span class="tok-op">DD</span>   <span class="tok-kw">DSN</span>=PROD.PAY.OUT,<span
-            class="tok-kw">DISP</span>=(NEW,CATLG)  <span class="err-underline">DD1</span></pre>
+<span class="ln">03</span><span class="tok-stmt">//<span class="err-underline">DD2</span></span>     <span class="tok-op">DD</span>   <span
+            class="tok-kw">DISP</span>=(NEW,CATLG)</pre>
 
       <div class="callout">
         <div class="callout-head">
           <span class="callout-badge">ERR</span>
-          <span class="callout-loc">L3:3</span>
-          <span class="callout-code">JCLD001</span>
+          <span class="callout-loc">L3:1</span>
+          <span class="callout-code">JCLD002</span>
         </div>
-        <div class="callout-msg">Duplicate DD name 'DD1' in step 'STEP010'.</div>
-        <div class="callout-fix"><span>FIX ›</span> Rename this DD statement, or omit the name to concatenate.</div>
+        <div class="callout-msg">DD statement is missing a data source.</div>
+        <div class="callout-fix"><span>FIX ›</span> Specify DSN=, DUMMY, SYSOUT=, DATA, or * (instream data).</div>
       </div>
 
       <div class="preview-footline">

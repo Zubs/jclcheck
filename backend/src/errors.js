@@ -220,8 +220,8 @@ const CATALOG = {
 
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
-        message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'.`,
-        suggestion: () => `Rename one of the DD statements, or if concatenating datasets omit the ddname on the later DD statements.`
+        message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'. z/OS allocates both DD statements, but a program can reach only one of them by this name.`,
+        suggestion: () => `Rename or remove one of the DD statements. To concatenate datasets, leave the name off the later DD statements.`
     },
     JCLD002: {
         message: (d) => `DD statement is missing a data source.`,

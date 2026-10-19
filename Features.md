@@ -43,7 +43,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 17. NOTIFY statement and EMAIL
 - [x] 18. Keywords qualified with a procedure step
 - [x] 19. Member names and other dataset name forms
-- [ ] 20. Duplicate DD names
+- [x] 20. Duplicate DD names
 - [ ] 21. DD data sources, including PATH
 - [ ] 22. Job groups (JOBGROUP)
 - [ ] 23. Catalogued PROCs and INCLUDE members
@@ -1539,7 +1539,7 @@ after:
 - **NOTIFY=node.userid (feature 16).** Is `NOTIFY=N1.IBMUSER` valid on the JOB statement, or only as `USER=` on the NOTIFY statement? Nick lists it without saying. *For now:* feature 16 accepts `node.userid` on the JOB statement, so this never gives a false warning, and the provisional fixture `nick/07c-notify-node` pins that. If the reference says it isn't valid, remove the `node.userid` form from `NOTIFY_USER` in `keywords.js` and update the fixture.
 - **NOTIFY statement TYPE values (feature 17).** Nick's item 14 uses `TYPE=TSO`. Confirm the allowed values, so his example isn't wrongly flagged or wrongly accepted. *For now:* feature 17 allows `MSG` and `EMAIL` (the values in feature 14's example message, and the reference as remembered), so `TYPE=TSO` gets a `JCLS009` warning. The provisional fixture `nick/14b-notify-email` pins that. If `TSO` is valid, add it to `NOTIFY_KEYWORDS` in `keywords.js` and remove the warning from the fixture.
 - **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have. *For now:* after the JOB statement and before the first EXEC, at most 8 per job (`MAX_NOTIFY` in `parser.js`).
-- **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message.
+- **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message. *For now:* `JCLD001` is a warning that says both DDs are allocated but a program can reach only one of them by that name, without naming which. Once confirmed, name the one that's used in the message in `errors.js`.
 - **In-stream PROC before the first JOB (feature 10).** The bundled "PROC + SYMBOLICS" sample defines `MYPROC` before the JOB statement. Confirm whether z/OS accepts this. If not, fix the sample and add a placement rule.
 - **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference. The keyword tables for `MAIN`, `FORMAT`, `NET`, `NETACCT` and `DATASET` in `keywords.js`, and which statements must come before the first EXEC (`MAIN`, `NET`, `NETACCT`, `PROCESS`, `ENDPROCESS`) or before the JOB statement (`PAUSE`), were written from memory of the reference and need checking.
 - **JES3plus (feature 9).** Phoenix Software's JES3plus keeps JES3 running on z/OS 3.1 and later. JES3 support here follows IBM and stops at 2.5. Decide whether JES3plus shops should be able to choose JES3 at 3.x.
