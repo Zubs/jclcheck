@@ -6,7 +6,7 @@
 // either exists at every supported level.
 
 const { JES3_LAST_LEVEL } = require('./levels');
-const { oneOfValues, integer, char } = require('./valueRules');
+const { oneOfValues, integer, char, list } = require('./valueRules');
 
 // Value rules shared by several statements (see valueRules.js).
 const CLASS_CHAR = char(/^[A-Za-z0-9]$/, 'one character A-Z or 0-9');
@@ -77,7 +77,14 @@ const JOB_KEYWORDS = table([
     TYPRUN: { value: oneOfValues('SCAN', 'HOLD', 'JCLHOLD', 'COPY') },
     PRTY: { value: integer(0, 15) },
     ADDRSPC: { value: ADDRSPC_VALUES },
-    RD: { value: RD_VALUES }
+    RD: { value: RD_VALUES },
+    // MSGLEVEL=(statements,messages); either may be left out, not both.
+    MSGLEVEL: {
+        value: list([
+            { label: 'statements', rule: integer(0, 2) },
+            { label: 'messages', rule: integer(0, 1) }
+        ], { atLeastOne: true })
+    }
 });
 
 const EXEC_KEYWORDS = table([

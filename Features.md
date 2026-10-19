@@ -38,7 +38,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 12. Positional parameter limits
 - [x] 13. IF/THEN/ELSE conditions
 - [x] 14. Keyword value rules
-- [ ] 15. MSGLEVEL values
+- [x] 15. MSGLEVEL values
 - [ ] 16. NOTIFY= on the JOB statement
 - [ ] 17. NOTIFY statement and EMAIL
 - [ ] 18. Keywords qualified with a procedure step

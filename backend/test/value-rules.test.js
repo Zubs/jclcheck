@@ -12,8 +12,9 @@ test('rule types', async (t) => {
     await t.test('enum, integer, char, name and quoted', () => {
         assert.equal(checkValue(oneOfValues('A', 'B'), 'b'), null);
         assert.equal(checkValue(oneOfValues('SCAN'), 'SCAM').closest, 'SCAN');
-        assert.equal(checkValue(integer(1, 3), '3'), null);
-        assert.match(checkValue(integer(1, 3), 'x').detail, /whole number from 1 to 3/);
+        assert.equal(checkValue(integer(1, 9), '9'), null);
+        assert.match(checkValue(integer(1, 9), 'x').detail, /whole number from 1 to 9/);
+        assert.equal(checkValue(integer(0, 2), '3').detail, 'must be 0, 1 or 2');
         assert.equal(checkValue(char(/^[A-Z]$/, 'a letter'), 'Q'), null);
         assert.equal(checkValue(name(/^[A-Z]{1,8}$/, 'a name'), 'TOOLONGNAME').detail, 'must be a name');
         assert.equal(checkValue(quoted(3), "'A''B'"), null);
@@ -25,7 +26,7 @@ test('rule types', async (t) => {
         assert.equal(checkValue(rule, '(1,1)'), null);
         assert.equal(checkValue(rule, '(,0)'), null);
         assert.equal(checkValue(rule, '2'), null);
-        assert.equal(checkValue(rule, '(2,2)').detail, 'second must be a whole number from 0 to 1');
+        assert.equal(checkValue(rule, '(2,2)').detail, 'second must be 0 or 1');
         assert.match(checkValue(rule, '(1,1,1)').detail, /at most 2 values \(first and second\)/);
         assert.ok(checkValue(rule, '()'));
         assert.ok(checkValue(rule, '(1,1'));

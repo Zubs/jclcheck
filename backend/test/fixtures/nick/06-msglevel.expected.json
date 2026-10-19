@@ -1,9 +1,5 @@
 {
-  "source": "Nick's item 6, using feature 15's own example MSGLEVEL=(1,1,1,5) (Features.md feature 15). Column is a best estimate.",
-  "todo": {
-    "feature": 15,
-    "reason": "MSGLEVEL sub-parameters are not checked"
-  },
+  "source": "Nick's item 6, using feature 15's own example MSGLEVEL=(1,1,1,5) (Features.md feature 15). JCLS009 points at the value (column 25).",
   "diagnostics": [
     {
       "code": "JCLS009",

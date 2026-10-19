@@ -54,6 +54,12 @@ function describe(rule) {
         case 'enum':
             return `must be one of ${rule.values.join(', ')}`;
         case 'integer':
+            // A short range reads better as its values: "must be 0 or 1".
+            if (rule.max - rule.min <= 2) {
+                const values = Array.from({ length: rule.max - rule.min + 1 }, (_, i) => String(rule.min + i));
+                return `must be ${values.slice(0, -1).join(', ')} or ${values[values.length - 1]}`;
+            }
+
             return `must be a whole number from ${rule.min} to ${rule.max}`;
         case 'char':
         case 'name':
