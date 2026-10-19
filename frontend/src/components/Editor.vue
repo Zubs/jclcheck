@@ -2,7 +2,17 @@
   <div class="editor">
     <div class="editor-topline">
       <span class="editor-topline__label">{{ label }}</span>
-      <span class="editor-topline__meta">{{ lineCount }} LINES · COL 1</span>
+      <button
+          class="editor-topline__meta editor-cursor"
+          type="button"
+          title="Cursor position (press to have it read out)"
+          @click="announcePosition"
+      >
+        LN {{ cursor.line }} · <span class="editor-cursor__col" :class="{ 'is-past-71': cursor.column >= 72 }">COL {{ cursor.column }}</span>
+        <template v-if="cursor.selected"> · SEL {{ cursor.selected }}</template>
+        · {{ lineCount }} LINES
+      </button>
+      <span class="sr-only" aria-live="polite">{{ announcement }}</span>
     </div>
     <div class="editor-body">
       <div ref="gutterEl" class="editor-gutter" aria-hidden="true">
@@ -26,6 +36,10 @@
           wrap="off"
           :value="modelValue"
           @input="onInput"
+          @click="updateCursor"
+          @keyup="updateCursor"
+          @select="updateCursor"
+          @focus="updateCursor"
           @scroll="onScroll"
           @paste="onPaste"
           @keydown.tab.prevent="onTab"
@@ -49,6 +63,8 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'paste']);
 const textareaEl = ref(null);
+const cursor = ref({ line: 1, column: 1, selected: 0 });
+const announcement = ref('');
 const gutterEl = ref(null);
 const lineCount = computed(() => {
   const n = props.modelValue.split('\n').length;
@@ -102,6 +118,28 @@ function gutterTitle(n) {
 
 function onInput(e) {
   emit('update:modelValue', e.target.value);
+  updateCursor();
+}
+
+// Worked out from the textarea's own text, which the browser keeps with
+// plain \n line endings, so pasted \r\n text can't throw the count off.
+function updateCursor() {
+  const el = textareaEl.value;
+  if (!el) {
+    return;
+  }
+
+  const before = el.value.slice(0, el.selectionStart).replace(/\r/g, '').split('\n');
+  cursor.value = {
+    line: before.length,
+    column: before[before.length - 1].length + 1,
+    selected: Math.abs(el.selectionEnd - el.selectionStart)
+  };
+}
+
+// Screen readers hear the position only when they ask for it, not on every key.
+function announcePosition() {
+  announcement.value = `Line ${cursor.value.line}, column ${cursor.value.column}`;
 }
 
 // Reports only how many lines were pasted; the text stays in the editor.
@@ -144,6 +182,7 @@ function scrollToLine(line) {
   const lineText = lines[line - 1] || '';
   el.focus();
   el.setSelectionRange(offset, offset + lineText.length);
+  updateCursor();
   const lineHeight = 21;
   const target = Math.max(0, (line - 1) * lineHeight - el.clientHeight / 2);
   el.scrollTop = target;
@@ -182,6 +221,29 @@ defineExpose({ scrollToLine });
 .editor-topline__label {
   color: var(--field-turquoise);
   font-weight: 600;
+}
+
+.editor-cursor {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: default;
+}
+
+.editor-cursor__col.is-past-71 {
+  color: var(--warning);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .editor-body {

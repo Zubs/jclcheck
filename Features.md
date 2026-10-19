@@ -47,7 +47,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 21. DD data sources, including PATH
 - [x] 22. Job groups (JOBGROUP)
 - [x] 23. Catalogued PROCs and INCLUDE members
-- [ ] 24. Cursor line and column
+- [x] 24. Cursor line and column
 - [ ] 25. Syntax highlighting
 - [ ] 26. Keyboard shortcuts
 - [ ] 27. z/OS level and JES picker

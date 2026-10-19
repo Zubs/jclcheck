@@ -27,6 +27,7 @@ export const EVENTS = {
     'help/open': { details: ['f1', 'button', 'shortcut'], title: d => `Open help (${d})` },
     'editor/paste': { details: SIZE_BUCKETS, title: d => `Paste JCL (${d} lines)` },
     'undo': { details: ['f9', 'f12'], title: d => `Undo after ${d}`, feature: 26 },
+    'library': { details: ['add', 'remove'], title: d => `Library member ${d}` },
 
     // Results
     'diag/seen': { details: CODE_PATTERN, title: d => `Diagnostic seen: ${d}` },
@@ -47,7 +48,6 @@ export const EVENTS = {
     // Later features
     'level': { details: ['2.3', '2.4', '2.5', '3.1', '3.2'], title: d => `z/OS level ${d}`, feature: 27 },
     'jes': { details: ['JES2', 'JES3'], title: d => `JES: ${d}`, feature: 27 },
-    'library': { details: ['add', 'remove'], title: d => `Library member ${d}`, feature: 23 },
     'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}`, feature: 28 },
     'share': { details: ['create', 'open', 'back-to-draft', 'clipboard-blocked'], title: d => `Share: ${d}`, feature: 29 },
     'datasets': { details: ['open', 'cell-click'], title: d => `Datasets: ${d}`, feature: 36 },
