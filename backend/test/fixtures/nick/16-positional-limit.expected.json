@@ -1,15 +1,11 @@
 {
-  "source": "Nick's item 16 (Features.md feature 12). Column is a best estimate.",
-  "todo": {
-    "feature": 12,
-    "reason": "The number of positional parameters is not limited"
-  },
+  "source": "Nick's item 16 (Features.md feature 12). JCLK004 points at the first positional over the limit, column 15.",
   "diagnostics": [
     {
       "code": "JCLK004",
       "severity": "error",
       "line": 1,
-      "column": 13
+      "column": 15
     }
   ]
 }

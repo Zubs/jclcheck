@@ -3,7 +3,8 @@
 // that commas inside DISP=(...) or 'literals' don't cause a false split.
 //
 // Each parameter is either:
-//   { kind: 'positional', value, col }
+//   { kind: 'positional', value, col } (value '' and empty: true for an
+//     omitted positional such as the first one in ",'NAME'")
 //   { kind: 'keyword', key, value, col, valueCol }
 //
 // `value` for keyword params retains its raw text (which may itself be a
@@ -109,15 +110,22 @@ function tokenizeParams(operand, baseCol = 1) {
     }
 
     const parts = splitTopLevel(operand);
+    let sawKeyword = false;
     for (const part of parts) {
         const raw = part.text;
         const trimmed = raw.trim();
+        const leadingWs = raw.length - raw.trimStart().length;
+        const col = baseCol + part.col + leadingWs;
         if (trimmed === '') {
+            // An omitted positional (",,") still takes a position, so it is
+            // kept until the first keyword; later empty parts are just noise.
+            if (!sawKeyword && parts.length > 1) {
+                params.push({ kind: 'positional', value: '', empty: true, col });
+            }
+
             continue;
         }
 
-        const leadingWs = raw.length - raw.trimStart().length;
-        const col = baseCol + part.col + leadingWs;
         const eqIdx = findTopLevelEquals(trimmed);
         if (eqIdx === -1) {
             params.push({
@@ -126,6 +134,7 @@ function tokenizeParams(operand, baseCol = 1) {
                 col
             });
         } else {
+            sawKeyword = true;
             const key = trimmed.slice(0, eqIdx).trim();
             const valueRaw = trimmed.slice(eqIdx + 1).trim();
             const valueCol = col + eqIdx + 1;

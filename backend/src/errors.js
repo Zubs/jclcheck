@@ -212,6 +212,10 @@ const CATALOG = {
         message: () => `DLM= has no effect, because this DD statement has no in-stream data.`,
         suggestion: () => `Remove DLM=, or use DD * or DD DATA if this DD should hold in-stream data.`
     },
+    JCLK004: {
+        message: (d) => `The ${d.stmt} statement allows at most ${d.limit} positional parameter${d.limit === 1 ? '' : 's'}${d.what ? ` (${d.what})` : ''}; found ${d.found}.`,
+        suggestion: () => `Remove the extra positional parameters. Check for stray commas: each comma before the first keyword starts another positional parameter.`
+    },
     // A known keyword or statement that doesn't exist at the chosen z/OS level,
     // because it arrived later (reason 'since') or was removed (reason 'until').
     JCLK005: {
@@ -262,6 +266,15 @@ const CATALOG = {
     JCLS011: {
         message: (d) => `Invalid DLM value '${d.value}'.`,
         suggestion: () => `A delimiter is exactly two characters. Letters, digits and $ # @ can be written as they are (DLM=@@); quote anything else (DLM='%%').`
+    },
+
+    JCLS012: {
+        message: (d) => `The ${d.what} is ${d.length} characters long; the maximum is ${d.max}.`,
+        suggestion: (d) => `Shorten the ${d.what} to ${d.max} characters or fewer.`
+    },
+    JCLS013: {
+        message: (d) => `The programmer's name '${d.value}' contains special characters and must be enclosed in apostrophes.`,
+        suggestion: (d) => `Write it as '${d.value.replace(/'/g, "''")}'.`
     },
 
     // Name field (JCLN0xx)

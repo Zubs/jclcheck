@@ -4,6 +4,7 @@ const {
     EXEC_KEYWORDS,
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
+    POSITIONAL_LIMITS,
     DISP_STATUS,
     DISP_NORMAL,
     DISP_ABNORMAL,
@@ -126,6 +127,65 @@ function checkKeywords(
     }
 }
 
+const POSITIONAL_MEANING = {
+    JOB: "accounting information and programmer's name",
+    EXEC: 'procedure name',
+    DD: '*, DATA, DUMMY or DYNAM'
+};
+
+// Positional parameters before the first keyword; later ones are JCLK003.
+function leadingPositionals(params) {
+    const first = params.findIndex(p => p.kind === 'keyword');
+    return (first === -1 ? params : params.slice(0, first)).filter(p => p.kind === 'positional');
+}
+
+function checkPositionalLimit(params, stmt, line, diagnostics) {
+    const positionals = leadingPositionals(params);
+    const limit = POSITIONAL_LIMITS[stmt];
+    if (positionals.length > limit) {
+        diagnostics.push(makeDiagnostic(
+            'JCLK004',
+            { stmt, limit, found: positionals.length, what: POSITIONAL_MEANING[stmt] },
+            { line, column: positionals[limit].col, severity: 'error' }
+        ));
+    }
+}
+
+const MAX_ACCOUNTING = 143;
+const MAX_PROGRAMMER_NAME = 20;
+
+function checkJobPositionals(job, diagnostics) {
+    const [accounting, name] = leadingPositionals(job.params);
+    if (accounting && !accounting.empty) {
+        const inner = /^\(.*\)$/.test(accounting.value) ? accounting.value.slice(1, -1) : accounting.value;
+        if (inner.length > MAX_ACCOUNTING) {
+            diagnostics.push(makeDiagnostic(
+                'JCLS012',
+                { what: 'accounting information', length: inner.length, max: MAX_ACCOUNTING },
+                { line: job.line, column: accounting.col }
+            ));
+        }
+    }
+
+    if (!name || name.empty) {
+        return;
+    }
+
+    const quoted = name.value.match(/^'(.*)'$/);
+    const text = quoted ? quoted[1].replace(/''/g, "'") : name.value;
+    if (text.length > MAX_PROGRAMMER_NAME) {
+        diagnostics.push(makeDiagnostic(
+            'JCLS012',
+            { what: "programmer's name", length: text.length, max: MAX_PROGRAMMER_NAME },
+            { line: job.line, column: name.col }
+        ));
+    }
+
+    if (!quoted && /[^A-Za-z0-9$#@.-]/.test(text)) {
+        diagnostics.push(makeDiagnostic('JCLS013', { value: text }, { line: job.line, column: name.col }));
+    }
+}
+
 function findParam(params, key) {
     return params.find(p => p.kind === 'keyword' && p.key === key);
 }
@@ -133,7 +193,7 @@ function findParam(params, key) {
 function checkExecRequired(step, diagnostics) {
     const pgm = findParam(step.params, 'PGM');
     const proc = findParam(step.params, 'PROC');
-    const positional = step.params.find(p => p.kind === 'positional');
+    const positional = step.params.find(p => p.kind === 'positional' && !p.empty);
     if (!pgm && !proc && !positional) {
         diagnostics.push(makeDiagnostic(
             'JCLK002',
@@ -534,6 +594,7 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
         );
 
         checkExecRequired(step, diagnostics);
+        checkPositionalLimit(step.params, 'EXEC', step.line, diagnostics);
 
         for (const dd of step.dds) {
             checkName(
@@ -557,6 +618,8 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
                 dd.line,
                 diagnostics
             );
+
+            checkPositionalLimit(dd.params, 'DD', dd.line, diagnostics);
         }
     }
 }
@@ -605,6 +668,9 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
         job.line,
         diagnostics
     );
+
+    checkPositionalLimit(job.params, 'JOB', job.line, diagnostics);
+    checkJobPositionals(job, diagnostics);
 
     if (job.jcllib) {
         checkJcllib(job.jcllib, diagnostics, zosLevel);

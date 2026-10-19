@@ -196,7 +196,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
                 const pgmParam = params.find(p => p.kind === 'keyword' && p.key === 'PGM');
                 const procParam = params.find(p => p.kind === 'keyword' && p.key === 'PROC');
-                const positional = params.find(p => p.kind === 'positional');
+                const positional = params.find(p => p.kind === 'positional' && !p.empty);
                 if (pgmParam) {
                     step.pgm = pgmParam.value;
                 }

@@ -133,6 +133,11 @@ const DD_KEYWORDS = table([
     'DLM'
 ]);
 
+// How many positional parameters each statement takes: JOB has accounting
+// information and the programmer's name, EXEC a procedure name, and DD one of
+// *, DATA, DUMMY or DYNAM.
+const POSITIONAL_LIMITS = { JOB: 2, EXEC: 1, DD: 1 };
+
 const JCLLIB_KEYWORDS = table(['ORDER']);
 
 // JES2 control statements ("/*NAME ..."), from the z/OS JES2 JCL statement
@@ -267,6 +272,7 @@ module.exports = {
     EXEC_KEYWORDS,
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
+    POSITIONAL_LIMITS,
     JES2_STATEMENTS,
     JES3_STATEMENTS,
     ALL_KNOWN_KEYWORDS,

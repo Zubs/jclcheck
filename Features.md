@@ -35,7 +35,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 9. JES3 control statements
 - [x] 10. Several jobs in one job stream
 - [x] 11. JCLLIB placement
-- [ ] 12. Positional parameter limits
+- [x] 12. Positional parameter limits
 - [ ] 13. IF/THEN/ELSE conditions
 - [ ] 14. Keyword value rules
 - [ ] 15. MSGLEVEL values
@@ -541,8 +541,8 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - EXEC: 1 (procedure name)
   - DD: 1 (`*`, `DATA`, `DUMMY` or `DYNAM`)
 - The tokeniser keeps empty positional parameters (`,,`) as empty entries, so they can be counted.
-- New error, `JCLK004`: "The JOB statement allows at most 2 positional parameters (accounting information and programmer's name); found 16."
-- Size limits from the reference: accounting information is at most 143 characters, and the programmer's name at most 20 characters. A name containing special characters must be quoted.
+- New error, `JCLK004`: "The JOB statement allows at most 2 positional parameters (accounting information and programmer's name); found 15." (Nick's example has 15 commas, so 15 positionals.) It points at the first positional over the limit.
+- Size limits from the reference: accounting information is at most 143 characters, and the programmer's name at most 20 characters (warning `JCLS012`). A name containing special characters must be quoted (warning `JCLS013`).
 - A positional parameter after a keyword parameter still gets `JCLK003` as today.
 
 **Tests**
@@ -1133,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO008`, `JCLS009`–`JCLS011`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`, `JCLK004`, `JCLK005`, `JCLK006`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO008`, `JCLS009`–`JCLS013`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
