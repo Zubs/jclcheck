@@ -4,6 +4,7 @@ const { checkDDStatements } = require('./rules/ddRules');
 const { checkAllParams, checkStepsAndDDs } = require('./rules/paramRules');
 const { resolveProcCalls, validateSymbolicParams, validateDDOverrides } = require('./rules/procRules');
 const { checkJesStatements } = require('./rules/jesRules');
+const { checkIfReferences } = require('./rules/ifRules');
 const { DEFAULT_ZOS_LEVEL, DEFAULT_JES, isZosLevel, isJes, jesAvailable } = require('./levels');
 
 /**
@@ -37,6 +38,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
         validateDDOverrides(job, ruleDiags);
         checkAllParams(job, ruleDiags, context);
         checkDDStatements(job, ruleDiags);
+        checkIfReferences(job, 'job', ruleDiags);
     }
 
     validateSymbolicParams(procs, ruleDiags);
@@ -45,6 +47,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
     for (const proc of procs) {
         checkStepsAndDDs(proc.steps, ruleDiags, context);
         checkDDStatements({ steps: proc.steps }, ruleDiags);
+        checkIfReferences(proc, 'procedure', ruleDiags);
     }
 
     const all = [

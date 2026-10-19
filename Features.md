@@ -36,7 +36,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 10. Several jobs in one job stream
 - [x] 11. JCLLIB placement
 - [x] 12. Positional parameter limits
-- [ ] 13. IF/THEN/ELSE conditions
+- [x] 13. IF/THEN/ELSE conditions
 - [ ] 14. Keyword value rules
 - [ ] 15. MSGLEVEL values
 - [ ] 16. NOTIFY= on the JOB statement
@@ -1548,6 +1548,7 @@ after:
 - **Supported z/OS levels (feature 3).** The proposed list is 2.3, 2.4, 2.5, 3.1 and 3.2, with 3.2 as the default. Decide whether to keep releases that are out of support.
 - **Checking JCL sent to the internal reader (feature 7).** It is left unchecked for now. Checking it as a separate job stream could be added later.
 - **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).
+- **NOT sign in IF conditions (feature 13).** Only `¬` and the word `NOT` are accepted. Some PC keyboards and code pages turn `¬` into `^` or `!`. Decide whether to accept those as aliases.
 - **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain.
 - **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.

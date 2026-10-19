@@ -140,7 +140,8 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
   JES3 (`//*MAIN`, ...) control statements are recognised and checked.
 - **Parsing / structure**: statement recognition (JOB, EXEC, DD, PROC, PEND,
   SET, IF/THEN/ELSE/ENDIF, INCLUDE), unmatched parentheses, IF/ENDIF and
-  PROC/PEND balancing and nesting.
+  PROC/PEND balancing and nesting. IF conditions are parsed and their step
+  references checked; each IF records the steps in its THEN and ELSE branches.
 - **Ordering**: JOB must come first; EXEC before its DDs. A job stream can
   hold several jobs, each checked on its own; `//` ends a job.
 - **DD statements**: duplicate ddnames within a step; a DD must have exactly
@@ -164,7 +165,8 @@ Every diagnostic carries `{ code, severity, line, column, message,
 suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
 `JCLLxxx` lexer, `JCLPxxx` parser, `JCLOxxx` ordering, `JCLDxxx` DD rules,
 `JCLKxxx` keyword rules, `JCLSxxx` value syntax, `JCLNxxx` name syntax,
-`JCLRxxx` procedure resolution, `JCLJxxx` JES control statements).
+`JCLRxxx` procedure resolution, `JCLJxxx` JES control statements, `JCLCxxx`
+IF conditions).
 
 `POST /api/validate` returns `{ diagnostics, ast, stats, zosLevel, jes }`.
 `ast.jobs` lists every job in the stream (it replaced the single `ast.job`

@@ -9,6 +9,7 @@ function JobNode(name, line) {
         params: [],
         steps: [],
         procs: [],
+        ifs: [],
         statements: []
     };
 }
@@ -45,6 +46,7 @@ function ProcNode(name, line) {
         line,
         params: [],
         steps: [],
+        ifs: [],
         endLine: null
     };
 }
@@ -54,8 +56,11 @@ function IfNode(condition, line) {
         type: 'If',
         condition,
         line,
-        thenBranch: [],
+        thenBranch: [], // { name, line } of each step inside, nested IFs included
         elseBranch: [],
+        sawElse: false,
+        refs: [], // step references in the condition
+        earlierSteps: [], // names of the steps written before this IF
         endLine: null
     };
 }

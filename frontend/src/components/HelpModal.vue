@@ -18,6 +18,9 @@
           <li><strong>Structure</strong> — statement ordering (JOB → EXEC → DD), matching IF/ENDIF and PROC/PEND blocks,
             continuation lines, parenthesis balance.
           </li>
+          <li><strong>IF conditions</strong> — RC, ABEND, ABENDCC and RUN tests, operators and brackets, THEN, and that
+            each step named in a condition comes earlier in the job.
+          </li>
           <li><strong>DD statements</strong> — duplicate ddnames within a step, missing or conflicting data sources (DSN
             vs DUMMY vs SYSOUT vs instream data).
           </li>
@@ -78,6 +81,10 @@
           <tr>
             <td>JCLRxxx</td>
             <td>PROC resolution / symbolics</td>
+          </tr>
+          <tr>
+            <td>JCLCxxx</td>
+            <td>IF/THEN/ELSE conditions</td>
           </tr>
           <tr>
             <td>JCLJxxx</td>

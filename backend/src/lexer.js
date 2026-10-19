@@ -17,7 +17,7 @@
 // trailing comma or an open parenthesis/quote.
 
 const { makeDiagnostic } = require('./errors');
-const { JES3_STATEMENTS } = require('./keywords');
+const { JES3_STATEMENTS, STATEMENT_TYPES } = require('./keywords');
 
 function isCommentLine(line) {
     return /^\/\/\*/.test(line);
@@ -90,8 +90,8 @@ function splitFields(line) {
  * field ends and a trailing comment begins: the first blank that is
  * outside of any parentheses/quotes.
  */
-function splitOperandAndComment(rest, startInQuote = false) {
-    let depth = 0;
+function splitOperandAndComment(rest, startInQuote = false, startDepth = 0) {
+    let depth = startDepth;
     let inQuote = startInQuote;
     for (let i = 0; i < rest.length; i++) {
         const ch = rest[i];
@@ -223,6 +223,15 @@ function jes3Statement(rawLine, lineNo) {
         operand: text.slice(m[0].length).trimEnd(),
         operandCol: m[0].length + 1
     };
+}
+
+function continuesCondition(line) {
+    if (line === undefined || !isJclLine(line) || isCommentLine(line) || line[2] !== ' ') {
+        return false;
+    }
+
+    const { name, op } = splitFields(statementText(line));
+    return !name && op !== '' && !STATEMENT_TYPES.has(op.toUpperCase());
 }
 
 /**
@@ -451,7 +460,7 @@ function lex(source, { jes = 'JES2' } = {}) {
                 // remainder is the continued operand (conventionally cols 4-16, but
                 // we accept any indent for resilience).
                 const stripped = statementText(contLine).replace(/^\/\//, '').replace(/^\s*/, '');
-                split2 = splitOperandAndComment(stripped);
+                split2 = splitOperandAndComment(stripped, false, Math.max(cont.openParens, 0));
                 operand += split2.operand;
             }
 
@@ -460,6 +469,20 @@ function lex(source, { jes = 'JES2' } = {}) {
             nextIdx0 += 1;
             cont = needsContinuation(operand);
             quoted = cont.openQuote || splitsDoubledQuote(contLine, lines[nextIdx0]);
+        }
+
+        // An IF condition runs until THEN, so it continues onto following
+        // "//" lines with a blank column 3 that don't start another statement.
+        if (operandComplete && op.toUpperCase() === 'IF') {
+            while (!/\bTHEN\b/i.test(`${operand} ${comment}`) && continuesCondition(lines[nextIdx0])) {
+                const contLine = lines[nextIdx0];
+                rawPhysicalLines.push(contLine);
+                const split = splitOperandAndComment(statementText(contLine).slice(2).trim());
+                operand += ` ${split.operand}`;
+                comment = split.comment || comment;
+                lastConsumedLineNo = nextIdx0 + 1;
+                nextIdx0 += 1;
+            }
         }
 
         // A marked column 72 after a complete operand continues the comment

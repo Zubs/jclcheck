@@ -176,6 +176,40 @@ const CATALOG = {
         suggestion: () => `Choose JES3 (at z/OS 2.5 or earlier) to check it, or ignore this if your shop runs JES2.`
     },
 
+    // IF/THEN/ELSE conditions (JCLC0xx)
+    JCLC001: {
+        message: (d) => `Invalid IF condition: ${d.detail}`,
+        suggestion: () => `Conditions use RC, ABEND, ABENDCC or RUN (optionally step.RC or step.procstep.RC), comparison operators such as = or GT, NOT (¬), AND (&), OR (|) and brackets, and end with THEN.`
+    },
+    JCLC002: {
+        message: (d) => `RC can only be compared with a whole number from 0 to 4095; found '${d.value}'.`,
+        suggestion: () => `Use a return code from 0 to 4095, for example RC > 4.`
+    },
+    JCLC003: {
+        message: (d) => `'${d.value}' is not a valid ABENDCC value.`,
+        suggestion: () => `Use a system code S followed by three hex digits (ABENDCC = S0C4) or a user code U followed by 0000-4095 (ABENDCC = U0100).`
+    },
+    JCLC004: {
+        message: (d) => `'${d.step}' in this IF condition is not an earlier step in this ${d.where}.`,
+        suggestion: () => `Name a step that comes before the IF statement, and check the spelling.`
+    },
+    JCLC005: {
+        message: (d) => `'${d.procstep}' is not a step in procedure '${d.proc}', which step '${d.step}' calls.`,
+        suggestion: (d) => `Use one of the steps of '${d.proc}'.`
+    },
+    JCLC006: {
+        message: () => `IF condition must end with THEN.`,
+        suggestion: () => `Add THEN after the condition, for example // IF (STEP1.RC = 0) THEN.`
+    },
+    JCLC007: {
+        message: () => `This IF already has an ELSE.`,
+        suggestion: () => `An IF can have only one ELSE. Remove this one, or close the IF with ENDIF and start a new IF.`
+    },
+    JCLC008: {
+        message: (d) => `IF statements are nested more than ${d.max} levels deep.`,
+        suggestion: () => `Simplify the conditions, or combine nested IFs with AND.`
+    },
+
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
         message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'.`,

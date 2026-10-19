@@ -18,6 +18,26 @@ const { tokenizeParams } = require('./paramTokenizer');
 const { makeDiagnostic } = require('./errors');
 const { STATEMENT_TYPES } = require('./keywords');
 const { availability, DEFAULT_ZOS_LEVEL } = require('./levels');
+const { parseCondition, conditionChars } = require('./conditions');
+const { statementText } = require('./lexer');
+
+const MAX_IF_DEPTH = 15;
+
+// The IF condition as written, from after "IF" on its first line and from
+// column 3 on continuation lines, keeping each character's line and column.
+function ifConditionChars(stmt) {
+    const chars = [];
+    stmt.raw.forEach((raw, i) => {
+        const from = i === 0 ? stmt.opCol - 1 + stmt.op.length : 2;
+        if (i > 0) {
+            chars.push({ ch: ' ', line: stmt.line + i, col: from + 1 });
+        }
+
+        chars.push(...conditionChars(statementText(raw).slice(from), stmt.line + i, from + 1));
+    });
+
+    return chars;
+}
 
 function attachParams(
     node,
@@ -208,6 +228,10 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 }
 
                 container.steps.push(step);
+                for (const node of ifStack) {
+                    (node.sawElse ? node.elseBranch : node.thenBranch).push({ name: step.name, line: step.line });
+                }
+
                 currentStep = step;
                 break;
             }
@@ -237,8 +261,24 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 break;
             }
             case 'IF': {
-                const node = IfNode(stmt.operand, stmt.line);
+                const chars = ifConditionChars(stmt);
+                const node = IfNode(chars.map(c => c.ch).join('').trim(), stmt.line);
+                const { refs, errors } = parseCondition(chars, { line: stmt.line, col: stmt.opCol });
+                for (const e of errors) {
+                    diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
+                }
+
+                if (ifStack.length >= MAX_IF_DEPTH) {
+                    diagnostics.push(makeDiagnostic('JCLC008', { max: MAX_IF_DEPTH }, { line: stmt.line, column: stmt.opCol }));
+                }
+
+                node.refs = refs;
+                node.earlierSteps = container.steps.map(st => st.name).filter(Boolean);
                 ifStack.push(node);
+                if (container.ifs) {
+                    container.ifs.push(node);
+                }
+
                 break;
             }
             case 'THEN':
@@ -246,12 +286,17 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 // treat as a no-op continuation marker.
                 break;
             case 'ELSE': {
-                if (ifStack.length === 0) {
+                const node = ifStack[ifStack.length - 1];
+                if (!node) {
                     diagnostics.push(makeDiagnostic(
                         'JCLP007',
                         {},
                         { line: stmt.line, column: stmt.opCol }
                     ));
+                } else if (node.sawElse) {
+                    diagnostics.push(makeDiagnostic('JCLC007', {}, { line: stmt.line, column: stmt.opCol }));
+                } else {
+                    node.sawElse = true;
                 }
 
                 break;
