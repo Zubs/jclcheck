@@ -45,12 +45,17 @@
       </section>
     </main>
 
+    <div v-if="undoState" class="undo-notice" role="status">
+      <span>{{ undoState.key === 'f12' ? 'Editor cleared.' : 'Sample loaded over your JCL.' }}</span>
+      <button class="undo-button" @click="undoReplace">UNDO</button>
+    </div>
+
     <PfBar
         :keys="pfKeys"
-        @help="openHelp"
+        @help="openHelp()"
         @validate="runValidation('button')"
-        @sample="cycleSample"
-        @clear="clearEditor"
+        @sample="cycleSample()"
+        @clear="clearEditor()"
     />
 
     <HelpModal v-if="showHelp" @close="showHelp = false"/>
@@ -94,6 +99,10 @@ const library = ref([]);
 const showLibrary = ref(false);
 const libraryRef = ref(null);
 const errorStatus = ref(null);
+// The user's text that F9 or F12 just replaced, offered back for a few seconds.
+const undoState = ref(null);
+const UNDO_MS = 5000;
+let undoTimer = null;
 let nextMemberId = 1;
 
 // Diagnostics inside a library member are shown in that member's editor.
@@ -251,12 +260,15 @@ function updateMember(id, field, value) {
 }
 
 onMounted(() => {
+  window.addEventListener('keydown', onKeydown);
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', sendVisitSummary);
   runValidation();
 });
 
 onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown);
+  clearTimeout(undoTimer);
   document.removeEventListener('visibilitychange', onVisibilityChange);
   window.removeEventListener('pagehide', sendVisitSummary);
   sendVisitSummary();
@@ -281,12 +293,32 @@ function onPaste(lines) {
   track('editor/paste', sizeBucket(lines));
 }
 
-function openHelp() {
-  track('help/open', 'button');
+function openHelp(trigger = 'button') {
+  track('help/open', trigger);
   showHelp.value = true;
 }
 
+// Keeps text the user typed so the replacement can be undone.
+function rememberForUndo(key) {
+  clearTimeout(undoTimer);
+  undoState.value = lastChangeByUser && code.value.trim() ? { text: code.value, key } : null;
+  if (undoState.value) {
+    undoTimer = setTimeout(() => {
+      undoState.value = null;
+    }, UNDO_MS);
+  }
+}
+
+function undoReplace() {
+  track('undo', undoState.value.key);
+  code.value = undoState.value.text;
+  lastChangeByUser = true;
+  clearTimeout(undoTimer);
+  undoState.value = null;
+}
+
 function cycleSample() {
+  rememberForUndo('f9');
   sampleIdx.value = (sampleIdx.value + 1) % SAMPLE_ORDER.length;
   const key = SAMPLE_ORDER[sampleIdx.value];
   track('sample', key);
@@ -294,10 +326,48 @@ function cycleSample() {
   code.value = SAMPLES[key].code;
 }
 
-function clearEditor() {
-  track('clear', 'button');
+function clearEditor(trigger = 'button') {
+  if (code.value === '') {
+    return;
+  }
+
+  rememberForUndo('f12');
+  track('clear', trigger);
   lastChangeByUser = false;
   code.value = '';
+}
+
+// F keys, with fallbacks for browsers and Macs that keep them. Alt shortcuts
+// use the key's position (e.code), since Alt changes e.key on a Mac.
+function onKeydown(e) {
+  if (showHelp.value) {
+    if (e.key === 'Escape' || e.key === 'F1') {
+      e.preventDefault();
+      showHelp.value = false;
+    }
+
+    return;
+  }
+
+  const mod = e.ctrlKey || e.metaKey;
+  const alt = e.altKey && !mod;
+  const actions = {
+    F1: () => openHelp('f1'),
+    F5: () => runValidation('f5'),
+    F9: () => cycleSample(),
+    F12: () => clearEditor('f12')
+  };
+  let action = actions[e.key];
+  if (!action && mod && e.key === 'Enter') {
+    action = () => runValidation('shortcut');
+  } else if (!action && alt) {
+    action = { KeyH: () => openHelp('shortcut'), KeyS: () => cycleSample(), KeyC: () => clearEditor('shortcut') }[e.code];
+  }
+
+  if (action) {
+    e.preventDefault();
+    action();
+  }
 }
 
 const statusClass = computed(() => {
@@ -337,22 +407,26 @@ const pfKeys = computed(() => ([
   {
     key: 'F1',
     label: 'HELP',
+    shortcut: 'Alt+H',
     event: 'help'
   },
   {
     key: 'F5',
     label: 'VALIDATE',
+    shortcut: 'Ctrl/⌘+Enter',
     event: 'validate',
     primary: true
   },
   {
     key: 'F9',
     label: 'SAMPLE',
+    shortcut: 'Alt+S',
     event: 'sample'
   },
   {
     key: 'F12',
     label: 'CLEAR',
+    shortcut: 'Alt+C',
     event: 'clear'
   }
 ]));
@@ -457,6 +531,30 @@ const pfKeys = computed(() => ([
 
 .header-status__text {
   color: var(--text-dim);
+}
+
+.undo-notice {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-family: var(--font-cond);
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  color: var(--text-bright);
+  background: var(--surface-raised);
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 6px 12px;
+}
+
+.undo-button {
+  font: inherit;
+  color: var(--warning);
+  background: transparent;
+  border: 1px solid var(--warning);
+  border-radius: var(--radius);
+  padding: 2px 10px;
+  cursor: pointer;
 }
 
 .main {

@@ -157,12 +157,15 @@ describe('Workbench', () => {
         expect(textarea.value.slice(textarea.selectionStart, textarea.selectionEnd)).toBe(lineThree);
     });
 
-    test.fails('checks the JCL when F5 is pressed (feature 26)', async () => {
+    // Was an expected failure until feature 26.
+    test('checks the JCL when F5 is pressed (feature 26)', async () => {
         await mountWorkbench();
         validateJcl.mockClear();
-        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'F5', bubbles: true, cancelable: true }));
+        const event = new KeyboardEvent('keydown', { key: 'F5', bubbles: true, cancelable: true });
+        window.dispatchEvent(event);
         await flushPromises();
         expect(validateJcl).toHaveBeenCalledTimes(1);
+        expect(event.defaultPrevented).toBe(true);
     });
 
     test.fails('ignores a reply that arrives after a newer one (feature 35)', async () => {
@@ -409,5 +412,109 @@ describe('Workbench library', () => {
         validateJcl.mockRejectedValue(Object.assign(new Error('bad'), { status: 400 }));
         await addMember(w, { member: '1BAD', source: '' });
         expect(statusText(w)).toBe('CHECK A LIBRARY MEMBER NAME');
+    });
+});
+
+describe('Workbench keyboard shortcuts', () => {
+    async function press(key, options = {}) {
+        const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...options });
+        window.dispatchEvent(event);
+        await flushPromises();
+        return event;
+    }
+
+    test('Ctrl+Enter checks the JCL', async () => {
+        await mountWorkbench();
+        validateJcl.mockClear();
+        await press('Enter', { ctrlKey: true });
+        expect(validateJcl).toHaveBeenCalledTimes(1);
+        expect(track).toHaveBeenCalledWith('check', 'shortcut');
+    });
+
+    test('F9 three times cycles through the samples back to the first', async () => {
+        const w = await mountWorkbench();
+        const seen = [];
+        for (let i = 0; i < 3; i++) {
+            await press('F9');
+            seen.push(w.find('textarea').element.value);
+        }
+
+        expect(seen).toEqual([SAMPLES.broken.code, SAMPLES.proc.code, SAMPLES.clean.code]);
+    });
+
+    test('F1 opens help, Escape closes it, and other keys wait while it is open', async () => {
+        const w = await mountWorkbench();
+        await press('F1');
+        expect(w.findComponent(HelpModal).exists()).toBe(true);
+        expect(track).toHaveBeenCalledWith('help/open', 'f1');
+        validateJcl.mockClear();
+        await press('F5');
+        expect(validateJcl).not.toHaveBeenCalled();
+        await press('Escape');
+        expect(w.findComponent(HelpModal).exists()).toBe(false);
+    });
+
+    test('Alt+C clears the editor when the browser keeps F12', async () => {
+        const w = await mountWorkbench();
+        await press('ç', { altKey: true, code: 'KeyC' });
+        expect(w.find('textarea').element.value).toBe('');
+        expect(track).toHaveBeenCalledWith('clear', 'shortcut');
+    });
+
+    test('F12 on an empty editor does nothing and offers no undo', async () => {
+        const w = await mountWorkbench();
+        await press('F12');
+        track.mockClear();
+        await press('F12');
+        expect(w.find('.undo-notice').exists()).toBe(false);
+        expect(track).not.toHaveBeenCalledWith('clear', 'f12');
+    });
+
+    test('Undo after F12 brings the typed text back exactly', async () => {
+        const w = await mountWorkbench();
+        await edit(w, '//MINE JOB\n//S EXEC PGM=X  ');
+        await press('F12');
+        expect(w.find('textarea').element.value).toBe('');
+        await w.find('.undo-button').trigger('click');
+        expect(w.find('textarea').element.value).toBe('//MINE JOB\n//S EXEC PGM=X  ');
+        expect(track).toHaveBeenCalledWith('undo', 'f12');
+        expect(w.find('.undo-notice').exists()).toBe(false);
+    });
+
+    test('the Undo notice goes away after 5 seconds', async () => {
+        const w = await mountWorkbench();
+        await edit(w, '//MINE JOB');
+        await press('F9');
+        expect(w.find('.undo-notice').exists()).toBe(true);
+        await vi.advanceTimersByTimeAsync(5000);
+        expect(w.find('.undo-notice').exists()).toBe(false);
+    });
+
+    test('a sample replacing a sample offers no undo', async () => {
+        const w = await mountWorkbench();
+        await press('F9');
+        expect(w.find('.undo-notice').exists()).toBe(false);
+    });
+
+    test('keys do nothing after the workbench is left', async () => {
+        const w = await mountWorkbench();
+        w.unmount();
+        validateJcl.mockClear();
+        await press('F5');
+        expect(validateJcl).not.toHaveBeenCalled();
+    });
+
+    test('a keyboard-only session: write, check, read help, close it, fix', async () => {
+        const w = await mountWorkbench();
+        await edit(w, '//J JOB\n//S EXEC PGM=X,REGON=4M');
+        validateJcl.mockClear();
+        await press('F5');
+        expect(validateJcl).toHaveBeenCalledTimes(1);
+        await press('F1');
+        expect(w.findComponent(HelpModal).exists()).toBe(true);
+        await press('Escape');
+        await edit(w, '//J JOB\n//S EXEC PGM=X,REGION=4M');
+        await press('Enter', { metaKey: true });
+        expect(validateJcl).toHaveBeenLastCalledWith('//J JOB\n//S EXEC PGM=X,REGION=4M', { library: [] });
     });
 });

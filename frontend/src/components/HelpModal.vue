@@ -40,6 +40,18 @@
           </li>
         </ul>
 
+        <h3>Keys</h3>
+        <table>
+          <tr><td>F1 · Alt+H</td><td>Open this help (Escape or F1 closes it)</td></tr>
+          <tr><td>F5 · Ctrl/⌘+Enter</td><td>Check the JCL now</td></tr>
+          <tr><td>F9 · Alt+S</td><td>Load the next sample</td></tr>
+          <tr><td>F12 · Alt+C</td><td>Clear the editor</td></tr>
+        </table>
+        <p>
+          Some browsers keep F keys for themselves, and Macs need Fn, so each key has a fallback.
+          If F9 or F12 replaces text you typed, an Undo button brings it back for a few seconds.
+        </p>
+
         <h3>Library</h3>
         <p>
           Open <strong>LIBRARY</strong> at the top to paste the catalogued procedures and INCLUDE

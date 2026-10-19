@@ -26,7 +26,7 @@ export const EVENTS = {
     'clear': { details: ['f12', 'button', 'shortcut'], title: d => `Clear editor (${d})` },
     'help/open': { details: ['f1', 'button', 'shortcut'], title: d => `Open help (${d})` },
     'editor/paste': { details: SIZE_BUCKETS, title: d => `Paste JCL (${d} lines)` },
-    'undo': { details: ['f9', 'f12'], title: d => `Undo after ${d}`, feature: 26 },
+    'undo': { details: ['f9', 'f12'], title: d => `Undo after ${d}` },
     'library': { details: ['add', 'remove'], title: d => `Library member ${d}` },
 
     // Results
