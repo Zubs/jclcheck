@@ -11,6 +11,7 @@ function JobNode(name, line) {
         procs: [],
         ifs: [],
         notifies: [],
+        sets: [], // { line, names } of each SET statement
         statements: []
     };
 }

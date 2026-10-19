@@ -442,6 +442,12 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 break;
             }
             case 'SET': {
+                if (job) {
+                    const set = { params: [] };
+                    attachParams(set, stmt, diagnostics);
+                    job.sets.push({ line: stmt.line, names: set.params.filter(p => p.kind === 'keyword').map(p => p.key) });
+                }
+
                 break;
             }
             case 'INCLUDE': {

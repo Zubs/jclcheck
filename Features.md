@@ -55,7 +55,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 29. Shareable links
 - [x] 30. Accurate copy, help and docs
 - [x] 31. DSN with LIKE
-- [ ] 32. Symbols in in-stream PROCs
+- [x] 32. Symbols in in-stream PROCs
 - [ ] 33. Positions on continued statements
 - [ ] 34. Severity of real JCL errors
 - [ ] 35. Stale results in the workbench

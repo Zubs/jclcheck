@@ -16,6 +16,7 @@ const {
 const { availability, DEFAULT_ZOS_LEVEL } = require('../levels');
 const { closest, checkValue } = require('../valueRules');
 const { parseCondition, conditionChars } = require('../conditions');
+const { symbolUses } = require('./procRules');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
@@ -53,7 +54,8 @@ function checkKeywords(
     stmtLabel,
     line,
     diagnostics,
-    zosLevel = DEFAULT_ZOS_LEVEL
+    zosLevel = DEFAULT_ZOS_LEVEL,
+    procName = null // set when the statement calls a procedure
 ) {
     let sawKeyword = false;
     for (const p of params) {
@@ -66,7 +68,8 @@ function checkKeywords(
                     {
                         keyword: p.key,
                         stmt: stmtLabel,
-                        closest
+                        closest,
+                        proc: procName
                     }, {
                         line,
                         column: p.col
@@ -411,9 +414,9 @@ function checkDsn(
         return;
     }
 
-    if (v.startsWith('&')) {
+    if (/(^|[^&])&[A-Za-z$#@]/.test(v)) {
         return;
-    } // symbolic parameter - can't statically validate
+    } // contains a symbolic parameter - can't statically validate
 
     if (v.startsWith('*.')) {
         return;
@@ -633,7 +636,11 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
 
         let execAllowed = EXEC_KEYWORDS;
         if (step.resolvedProc) {
-            const symbolNames = new Set(step.resolvedProc.params.filter(p => p.kind === 'keyword').map(p => p.key));
+            // Any symbol the PROC uses can be set on the EXEC, default or not.
+            const symbolNames = new Set([
+                ...step.resolvedProc.params.filter(p => p.kind === 'keyword').map(p => p.key),
+                ...symbolUses(step.resolvedProc).map(u => u.sym)
+            ]);
             execAllowed = new Map([...EXEC_KEYWORDS, ...[...symbolNames].map(name => [name, {}])]);
         }
 
@@ -647,7 +654,8 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
             'EXEC',
             step.line,
             diagnostics,
-            zosLevel
+            zosLevel,
+            step.resolvedProc ? step.resolvedProc.name : null
         );
 
         checkParamValues(

@@ -294,7 +294,9 @@ const CATALOG = {
 
     // Validator: keywords / params (JCLK0xx)
     JCLK001: {
-        message: (d) => `'${d.keyword}' is not a recognized keyword for a ${d.stmt} statement.`,
+        message: (d) => d.proc
+            ? `'${d.keyword}' is not an EXEC keyword or a symbolic parameter of procedure '${d.proc}'.`
+            : `'${d.keyword}' is not a recognized keyword for a ${d.stmt} statement.`,
         suggestion: (d) => d.closest ? `Did you mean '${d.closest}'?` : `Remove the parameter or check the spelling against the IBM JCL Reference.`
     },
     JCLK002: {
@@ -412,7 +414,7 @@ const CATALOG = {
         suggestion: (d) => `Add an in-stream PROC named '${d.name}', add the catalogued procedure in the Library panel, or check for a typo.`
     },
     JCLR002: {
-        message: (d) => `Symbolic parameter '${d.sym}' is not defined in procedure '${d.proc}'.`,
+        message: (d) => `Symbolic parameter '${d.sym}' is not defined in procedure '${d.proc}'${d.step ? ` when called by step '${d.step}'` : ''}.`,
         suggestion: (d) => `Add &${d.sym}= as a default on the PROC statement, or supply it on the EXEC statement.`
     },
     JCLR004: {

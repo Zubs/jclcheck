@@ -82,7 +82,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, lib
     }
 
     checkJobGroups(jobGroups, jobs, ruleDiags, context);
-    validateSymbolicParams(procs, ruleDiags);
+    validateSymbolicParams(jobs, procs, ruleDiags);
     checkJesStatements(statements, ruleDiags, context);
     // Also validate parameters inside in-stream PROC bodies themselves.
     for (const proc of procs) {

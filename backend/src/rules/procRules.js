@@ -1,4 +1,5 @@
 const { makeDiagnostic } = require('../errors');
+const { SYSTEM_SYMBOLS } = require('../keywords');
 
 function buildProcMap(procs) {
     const map = new Map();
@@ -48,59 +49,66 @@ function resolveProcCalls(
     }
 }
 
-const SYMBOL_RE = /&([A-Za-z$#@][A-Za-z0-9$#@]*)\.?/g;
+// &NAME, but not the second & of a temporary dataset name (&&TEMP).
+const SYMBOL_RE = /(?<!&)&([A-Za-z$#@][A-Za-z0-9$#@]*)\.?/g;
+const usesCache = new WeakMap();
 
-/** Flags &SYMBOLs referenced inside a PROC body that were never declared as defaults. */
-function validateSymbolicParams(procs, diagnostics) {
-    for (const proc of procs) {
-        const declared = new Set(proc.params.filter(p => p.kind === 'keyword').map(p => p.key));
+/** Every &SYMBOL in a PROC body, with where it is. */
+function symbolUses(proc) {
+    if (!usesCache.has(proc)) {
+        const uses = [];
         for (const step of proc.steps) {
-            scanParamsForSymbols(
-                step.params,
-                declared,
-                proc.name,
-                step.line,
-                diagnostics
-            );
-
-            for (const dd of step.dds) {
-                scanParamsForSymbols(
-                    dd.params,
-                    declared,
-                    proc.name,
-                    dd.line,
-                    diagnostics
-                );
+            for (const owner of [step, ...step.dds]) {
+                for (const p of owner.params) {
+                    const start = p.kind === 'keyword' ? p.valueCol : p.col;
+                    for (const m of (p.value || '').matchAll(SYMBOL_RE)) {
+                        uses.push({ sym: m[1].toUpperCase(), name: m[1], line: owner.line, column: start + m.index });
+                    }
+                }
             }
+        }
+
+        usesCache.set(proc, uses);
+    }
+
+    return usesCache.get(proc);
+}
+
+function keywordNames(params) {
+    return params.filter(p => p.kind === 'keyword' && !p.key.includes('.')).map(p => p.key);
+}
+
+function reportUndefined(proc, defined, step, diagnostics) {
+    for (const use of symbolUses(proc)) {
+        if (!defined.has(use.sym)) {
+            diagnostics.push(makeDiagnostic(
+                'JCLR002',
+                { sym: use.name, proc: proc.name, step: step && (step.name || '(unnamed)') },
+                { line: use.line, column: use.column }
+            ));
         }
     }
 }
 
-function scanParamsForSymbols(
-    params,
-    declared,
-    procName,
-    line,
-    diagnostics
-) {
-    for (const p of params) {
-        const text = p.kind === 'keyword' ? p.value : p.value;
-        if (!text || text.indexOf('&') === -1) {
-            continue;
+/**
+ * Checks the symbols of each PROC call by call: a symbol is defined by a
+ * default on the PROC statement, a SET earlier in the job, the calling EXEC,
+ * or a system symbol. A PROC nobody calls is checked against its defaults.
+ */
+function validateSymbolicParams(jobs, procs, diagnostics) {
+    const called = new Set();
+    for (const job of jobs) {
+        for (const step of job.steps.filter(s => s.resolvedProc)) {
+            const proc = step.resolvedProc;
+            called.add(proc);
+            const setBefore = (job.sets || []).filter(set => set.line < step.line).flatMap(set => set.names);
+            const defined = new Set([...SYSTEM_SYMBOLS, ...keywordNames(proc.params), ...setBefore, ...keywordNames(step.params)]);
+            reportUndefined(proc, defined, step, diagnostics);
         }
+    }
 
-        let m;
-        const re = new RegExp(SYMBOL_RE);
-        while ((m = re.exec(text)) !== null) {
-            const sym = m[1].toUpperCase();
-            if (!declared.has(sym)) {
-                diagnostics.push(makeDiagnostic(
-                    'JCLR002',
-                    { sym: m[1], proc: procName },
-                    { line, column: p.col }
-                ));
-            }
-        }
+    for (const proc of procs.filter(p => !called.has(p))) {
+        reportUndefined(proc, new Set([...SYSTEM_SYMBOLS, ...keywordNames(proc.params)]), null, diagnostics);
     }
 }
 
@@ -181,5 +189,6 @@ function validateDDOverrides(job, diagnostics) {
 module.exports = {
     resolveProcCalls,
     validateSymbolicParams,
+    symbolUses,
     validateDDOverrides
 };

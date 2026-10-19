@@ -204,6 +204,14 @@ const DD_KEYWORDS = table([
 // *, DATA, DUMMY or DYNAM.
 const POSITIONAL_LIMITS = { JOB: 2, EXEC: 1, DD: 1 };
 
+// JCL system symbols, always defined: &SYSUID, and the static and date/time
+// system symbols (feature 41 asks which a job class may restrict).
+const SYSTEM_SYMBOLS = new Set([
+    'SYSUID', 'SYSNAME', 'SYSCLONE', 'SYSPLEX', 'SYSALVL', 'SYSR1', 'SYSSMFID',
+    'YYMMDD', 'LYYMMDD', 'YR2', 'LYR2', 'YR4', 'LYR4', 'MON', 'LMON', 'DAY', 'LDAY',
+    'JDAY', 'LJDAY', 'WDAY', 'LWDAY', 'HHMMSS', 'LHHMMSS', 'HR', 'LHR', 'MIN', 'LMIN', 'SEC', 'LSEC'
+]);
+
 // EXEC keywords that can name one step of a called procedure (COND.S1=).
 const QUALIFIABLE_KEYWORDS = new Set(['COND', 'REGION', 'TIME', 'PARM', 'ACCT', 'ADDRSPC', 'DPRTY', 'PERFORM', 'RD']);
 
@@ -373,6 +381,7 @@ module.exports = {
     GROUP_KEYWORDS,
     POSITIONAL_LIMITS,
     QUALIFIABLE_KEYWORDS,
+    SYSTEM_SYMBOLS,
     NOTIFY_USER,
     JES2_STATEMENTS,
     JES3_STATEMENTS,
