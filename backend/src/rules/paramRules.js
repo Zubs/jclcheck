@@ -372,6 +372,8 @@ function checkTime(
     ));
 }
 
+const MEMBER_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
+
 function checkDsn(
     value,
     line,
@@ -379,9 +381,34 @@ function checkDsn(
     diagnostics
 ) {
     let v = value.trim();
-    const genMatch = v.match(/\(([+-]?\d+)\)$/);
-    if (genMatch) {
-        v = v.slice(0, genMatch.index);
+    if (/^'.*'$/.test(v)) {
+        // The reference lets a quoted name break the usual rules.
+        diagnostics.push(makeDiagnostic('JCLS014', { value }, { line, column: col, severity: 'info' }));
+        return;
+    }
+
+    // A trailing (...) is a generation (0, +n, -n) or a member name.
+    // (A missing ")" is matched too, so it is reported rather than ignored.)
+    const paren = v.match(/\(([^()]*)\)?$/);
+    if (paren) {
+        const inside = paren[1];
+        v = v.slice(0, paren.index);
+        const symbolic = inside.includes('&');
+        if (!symbolic && !/^[+-]?\d+$/.test(inside) && (!paren[0].endsWith(')') || !MEMBER_RE.test(inside))) {
+            diagnostics.push(makeDiagnostic('JCLS010', { member: inside }, { line, column: col }));
+        }
+    }
+
+    if (v.startsWith('&&')) {
+        if (!MEMBER_RE.test(v.slice(2))) {
+            diagnostics.push(makeDiagnostic(
+                'JCLS006',
+                { value, hint: `A temporary dataset name is && followed by 1-8 letters, digits or $#@, starting with a letter or $#@ (for example &&TEMP).` },
+                { line, column: col }
+            ));
+        }
+
+        return;
     }
 
     if (v.startsWith('&')) {

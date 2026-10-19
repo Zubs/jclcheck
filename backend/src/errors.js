@@ -321,11 +321,19 @@ const CATALOG = {
         message: (d) => `${d.keyword} ${d.detail}; found '${d.found}'.`,
         suggestion: (d) => d.closest ? `Did you mean '${d.closest}'?` : `Change the value of ${d.keyword} to one that is allowed.`
     },
+    JCLS010: {
+        message: (d) => d.member === '' ? `The member name in brackets is empty.` : `'${d.member}' is not a valid member name.`,
+        suggestion: () => `A member name is 1-8 letters, digits or $#@, starting with a letter or $#@, in brackets after the dataset name: DSN=MY.LIB(MEMBER). A generation is (0), (+n) or (-n).`
+    },
     JCLS011: {
         message: (d) => `Invalid DLM value '${d.value}'.`,
         suggestion: () => `A delimiter is exactly two characters. Letters, digits and $ # @ can be written as they are (DLM=@@); quote anything else (DLM='%%').`
     },
 
+    JCLS014: {
+        message: () => `Quoted dataset names are not checked against the naming rules.`,
+        suggestion: () => `Leave the quotes off unless the name really needs characters the rules don't allow.`
+    },
     JCLS012: {
         message: (d) => `The ${d.what} is ${d.length} characters long; the maximum is ${d.max}.`,
         suggestion: (d) => `Shorten the ${d.what} to ${d.max} characters or fewer.`
