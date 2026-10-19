@@ -49,6 +49,8 @@ const quoted = max => ({ type: 'quoted', max });
 const list = (items, { atLeastOne = false } = {}) => ({ type: 'list', items, atLeastOne });
 const oneOf = (...rules) => ({ type: 'oneOf', rules });
 const email = max => ({ type: 'email', max });
+const each = (rule, max = Infinity) => ({ type: 'each', rule, max });
+const path = max => ({ type: 'path', max });
 
 // Gives a rule its own wording, for when the generated one would be clumsy.
 const described = (rule, text) => ({ ...rule, describe: text });
@@ -73,6 +75,10 @@ function describe(rule) {
             return `must be a quoted string of at most ${rule.max} characters`;
         case 'email':
             return `must be an e-mail address in quotes, at most ${rule.max} characters, with one @`;
+        case 'each':
+            return `${rule.max === Infinity ? '' : `takes at most ${rule.max} values, each of which `}${describe(rule.rule)}`;
+        case 'path':
+            return `must be an absolute path starting with /, at most ${rule.max} characters`;
         case 'oneOf':
             return rule.rules.map(describe).join(', or ');
         default:
@@ -104,6 +110,22 @@ function checkValue(rule, value) {
             const m = v.match(/^'(.*)'$/);
             const address = m ? m[1].replace(/''/g, "'") : '';
             return m && address.length <= rule.max && /^[^@\s]+@[^@\s]+$/.test(address) ? null : fail();
+        }
+
+        case 'path': {
+            const m = v.match(/^'(.*)'$/);
+            const p = m ? m[1].replace(/''/g, "'") : v;
+            return p.startsWith('/') && p.length <= rule.max ? null : fail();
+        }
+
+        case 'each': {
+            const parts = v.startsWith('(') && v.endsWith(')') ? splitTopLevel(v.slice(1, -1)).map(x => x.text.trim()) : [v];
+            if (parts.length > rule.max) {
+                return fail();
+            }
+
+            const bad = parts.find(x => checkValue(rule.rule, x));
+            return bad === undefined ? null : { ...checkValue(rule.rule, bad), detail: describe(rule) };
         }
 
         case 'oneOf':
@@ -166,6 +188,8 @@ module.exports = {
     list,
     oneOf,
     email,
+    each,
+    path,
     described,
     checkValue
 };

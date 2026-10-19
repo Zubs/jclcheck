@@ -6,7 +6,7 @@
 // either exists at every supported level.
 
 const { JES3_LAST_LEVEL } = require('./levels');
-const { oneOfValues, integer, char, name, list, oneOf, email, described } = require('./valueRules');
+const { oneOfValues, integer, char, name, list, oneOf, email, each, path, described } = require('./valueRules');
 
 // Value rules shared by several statements (see valueRules.js).
 const CLASS_CHAR = char(/^[A-Za-z0-9]$/, 'one character A-Z or 0-9');
@@ -165,8 +165,25 @@ const DD_KEYWORDS = table([
     'PROTECT',
     'QNAME',
     'CHKPT',
-    'DLM'
+    'DLM',
+    'PATH',
+    'PATHOPTS',
+    'PATHMODE',
+    'PATHDISP',
+    'FILEDATA'
 ], {
+    // z/OS UNIX files.
+    PATH: { value: path(255) },
+    PATHOPTS: {
+        value: each(oneOfValues('ORDONLY', 'OWRONLY', 'ORDWR', 'OAPPEND', 'OCREAT', 'OEXCL', 'ONOCTTY',
+            'ONONBLOCK', 'OSYNC', 'OTRUNC'))
+    },
+    PATHMODE: {
+        value: each(oneOfValues('SIRUSR', 'SIWUSR', 'SIXUSR', 'SIRWXU', 'SIRGRP', 'SIWGRP', 'SIXGRP', 'SIRWXG',
+            'SIROTH', 'SIWOTH', 'SIXOTH', 'SIRWXO', 'SISUID', 'SISGID', 'SISVTX'))
+    },
+    PATHDISP: { value: each(oneOfValues('KEEP', 'DELETE'), 2) },
+    FILEDATA: { value: oneOfValues('BINARY', 'TEXT', 'RECORD') },
     FREE: { value: oneOfValues('END', 'CLOSE') },
     AVGREC: { value: oneOfValues('U', 'K', 'M') },
     RETPD: { value: integer(0, 93000) }

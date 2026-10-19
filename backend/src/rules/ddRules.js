@@ -31,6 +31,7 @@ function checkDDStatements(job, diagnostics) {
             );
 
             checkDelimiter(dd, diagnostics);
+            checkPathOptions(dd, diagnostics);
         }
     }
 }
@@ -43,6 +44,10 @@ function checkDataSource(dd, step, diagnostics) {
     const hasStar = params.some(p => p.kind === 'positional' && p.value.trim() === '*');
     const hasData = params.some(p => (p.kind === 'positional' && p.value.toUpperCase() === 'DATA') || dd.instreamData);
     const hasLike = params.some(p => p.kind === 'keyword' && p.key === 'LIKE');
+    const hasPath = params.some(p => p.kind === 'keyword' && p.key === 'PATH');
+    // These name where the data comes from without conflicting with the rest:
+    // a subsystem, a DD defined later (DDNAME=), or a new temporary dataset.
+    const hasOtherSource = params.some(p => p.kind === 'keyword' && ['SUBSYS', 'DDNAME', 'SPACE'].includes(p.key));
 
     const sources = [];
     if (hasDSN) {
@@ -65,7 +70,11 @@ function checkDataSource(dd, step, diagnostics) {
         sources.push('LIKE');
     }
 
-    if (sources.length === 0 && !dd.instreamData) {
+    if (hasPath) {
+        sources.push('PATH');
+    }
+
+    if (sources.length === 0 && !dd.instreamData && !hasOtherSource) {
         diagnostics.push(makeDiagnostic('JCLD002', {}, { line: dd.line, column: 1 }));
     } else if (sources.length > 1) {
         diagnostics.push(makeDiagnostic(
@@ -73,6 +82,32 @@ function checkDataSource(dd, step, diagnostics) {
             { a: sources[0], b: sources[1] },
             { line: dd.line, column: 1 }
         ));
+    }
+}
+
+const ACCESS_MODES = ['ORDONLY', 'OWRONLY', 'ORDWR'];
+
+function checkPathOptions(dd, diagnostics) {
+    const find = key => dd.params.find(p => p.kind === 'keyword' && p.key === key);
+    const pathParam = find('PATH');
+    if (!pathParam) {
+        const option = ['PATHOPTS', 'PATHMODE', 'PATHDISP'].map(find).find(Boolean);
+        if (option) {
+            diagnostics.push(makeDiagnostic('JCLD007', { keyword: option.key }, { line: dd.line, column: option.col, severity: 'warning' }));
+        }
+
+        return;
+    }
+
+    const disp = find('DISP');
+    if (disp) {
+        diagnostics.push(makeDiagnostic('JCLD006', {}, { line: dd.line, column: disp.col }));
+    }
+
+    const opts = find('PATHOPTS');
+    const modes = opts ? (opts.subvalues || [opts.value]).filter(o => ACCESS_MODES.includes(o.toUpperCase())) : [];
+    if (modes.length > 1) {
+        diagnostics.push(makeDiagnostic('JCLD005', { modes }, { line: dd.line, column: opts.valueCol }));
     }
 }
 

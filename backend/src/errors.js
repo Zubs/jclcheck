@@ -237,6 +237,19 @@ const CATALOG = {
         suggestion: () => `To check the nested job, paste it into the workbench on its own.`
     },
 
+    JCLD005: {
+        message: (d) => `PATHOPTS can have only one of ORDONLY, OWRONLY and ORDWR; found ${d.modes.join(', ')}.`,
+        suggestion: () => `Use ORDWR to read and write, or keep just one of ORDONLY or OWRONLY.`
+    },
+    JCLD006: {
+        message: () => `DISP can't be used with PATH.`,
+        suggestion: () => `Use PATHDISP=(normal,abnormal) to say what happens to a z/OS UNIX file, for example PATHDISP=(KEEP,DELETE).`
+    },
+    JCLD007: {
+        message: (d) => `${d.keyword} only applies to z/OS UNIX files, but this DD has no PATH.`,
+        suggestion: () => `Add PATH='/path/to/file', or remove the PATH options.`
+    },
+
     // Validator: keywords / params (JCLK0xx)
     JCLK001: {
         message: (d) => `'${d.keyword}' is not a recognized keyword for a ${d.stmt} statement.`,
