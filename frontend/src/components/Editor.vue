@@ -49,7 +49,37 @@
             @paste="onPaste"
             @keydown.tab.prevent="onTab"
             @mousemove="onHover"
+            @mouseleave="hideSoon"
         ></textarea>
+        <div
+            v-if="panel"
+            class="explain-panel"
+            role="tooltip"
+            :style="{ top: `${panel.top}px`, left: `${panel.left}px` }"
+            @mouseenter="cancelHide"
+            @mouseleave="hidePanel"
+        >
+          <p v-for="(d, i) in panel.diagnostics" :key="i" class="explain-diag" :class="`is-${d.severity}`">
+            {{ d.code }}: {{ d.message }}
+          </p>
+          <template v-if="panel.explanation.unknown">
+            <p class="explain-text">No description: not a known keyword.</p>
+          </template>
+          <template v-else>
+            <p class="explain-head"><strong>{{ panel.explanation.keyword }}</strong> {{ panel.explanation.text }}</p>
+            <ul v-if="panel.explanation.parts.length" class="explain-parts">
+              <li v-for="(part, i) in panel.explanation.parts" :key="i">
+                <code>{{ part.value || '(none)' }}</code>
+                <span v-if="part.label" class="explain-label">{{ part.label }}:</span>
+                {{ part.text }}
+              </li>
+            </ul>
+            <p class="explain-meta">
+              {{ panel.explanation.since ? `Since z/OS ${panel.explanation.since}.` : 'In every supported z/OS level.' }}
+              <a v-if="panel.explanation.reference" :href="panel.explanation.reference" target="_blank" rel="noopener">IBM JCL Reference ↗</a>
+            </p>
+          </template>
+        </div>
       </div>
     </div>
   </div>
@@ -62,14 +92,17 @@ import {
   nextTick
 } from 'vue';
 import { renderHtml, diagnosticsAt } from '../highlight';
+import { explainAt } from '../explain';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
   diagnostics: { type: Array, default: () => [] },
-  label: { type: String, default: 'SOURCE' }
+  label: { type: String, default: 'SOURCE' },
+  // Keyword descriptions from GET /api/keywords, or null when not loaded.
+  keywords: { type: Object, default: null }
 });
 
-const emit = defineEmits(['update:modelValue', 'paste']);
+const emit = defineEmits(['update:modelValue', 'paste', 'explain']);
 const textareaEl = ref(null);
 const cursor = ref({ line: 1, column: 1, selected: 0 });
 const announcement = ref('');
@@ -77,6 +110,9 @@ const gutterEl = ref(null);
 const highlightEl = ref(null);
 const measureEl = ref(null);
 const hoverTitle = ref('');
+// The explanation panel (feature 40), with any diagnostics at the same place.
+const panel = ref(null);
+let hideTimer = null;
 const highlighted = computed(() => renderHtml(props.modelValue, props.diagnostics));
 const lineCount = computed(() => {
   const n = props.modelValue.split('\n').length;
@@ -129,6 +165,7 @@ function gutterTitle(n) {
 }
 
 function onInput(e) {
+  panel.value = null;
   emit('update:modelValue', e.target.value);
   updateCursor();
 }
@@ -178,14 +215,67 @@ const PAD_LEFT = 16;
 const PAD_TOP = 12;
 const LINE_HEIGHT = 21;
 
-// Shows the messages of the diagnostics under the pointer, as the gutter does.
+function charWidth() {
+  return measureEl.value?.getBoundingClientRect().width || 7.8;
+}
+
+// Shows the panel for the keyword or value at a place, below its line.
+// Returns whether there was anything to explain.
+function showPanel(line, column) {
+  const explanation = explainAt(props.modelValue, line, column, props.keywords);
+  if (!explanation) {
+    panel.value = null;
+    return false;
+  }
+
+  const el = textareaEl.value;
+  cancelHide();
+  panel.value = {
+    line,
+    column,
+    explanation,
+    diagnostics: diagnosticsAt(props.diagnostics, line, column),
+    top: PAD_TOP + line * LINE_HEIGHT - el.scrollTop,
+    left: Math.max(PAD_LEFT + (column - 1) * charWidth() - el.scrollLeft, 0)
+  };
+  return true;
+}
+
+// Explains what is under the pointer; diagnostics alone keep the plain tooltip.
 function onHover(e) {
   const el = textareaEl.value;
   const rect = el.getBoundingClientRect();
-  const charWidth = measureEl.value?.getBoundingClientRect().width || 7.8;
-  const column = Math.floor((e.clientX - rect.left - PAD_LEFT + el.scrollLeft) / charWidth) + 1;
+  const column = Math.floor((e.clientX - rect.left - PAD_LEFT + el.scrollLeft) / charWidth()) + 1;
   const line = Math.floor((e.clientY - rect.top - PAD_TOP + el.scrollTop) / LINE_HEIGHT) + 1;
-  hoverTitle.value = diagnosticsAt(props.diagnostics, line, column).map(d => `${d.code}: ${d.message}`).join('\n');
+  if (panel.value && panel.value.line === line && panel.value.column === column) {
+    return;
+  }
+
+  const shown = showPanel(line, column);
+  if (shown) {
+    emit('explain', 'mouse');
+  }
+
+  hoverTitle.value = shown ? '' : diagnosticsAt(props.diagnostics, line, column).map(d => `${d.code}: ${d.message}`).join('\n');
+}
+
+function cancelHide() {
+  clearTimeout(hideTimer);
+}
+
+function hideSoon() {
+  cancelHide();
+  hideTimer = setTimeout(hidePanel, 300);
+}
+
+function hidePanel() {
+  panel.value = null;
+}
+
+/** Alt+K: explains the keyword at the cursor. */
+function explainAtCursor() {
+  updateCursor();
+  return showPanel(cursor.value.line, cursor.value.column);
 }
 
 function onTab(e) {
@@ -227,7 +317,7 @@ function scrollToLine(line) {
   }
 }
 
-defineExpose({ scrollToLine });
+defineExpose({ scrollToLine, explainAtCursor });
 </script>
 
 <style scoped>
@@ -398,5 +488,69 @@ defineExpose({ scrollToLine });
 
 .editor-textarea::placeholder {
   color: var(--text-faint);
+}
+.explain-panel {
+  position: absolute;
+  z-index: 5;
+  max-width: min(480px, 90%);
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--grid-line-strong);
+  border-radius: var(--radius);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-sans);
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.explain-panel p {
+  margin: 0 0 4px;
+}
+
+.explain-diag {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.explain-diag.is-error {
+  color: var(--error);
+}
+
+.explain-diag.is-warning {
+  color: var(--warning);
+}
+
+.explain-diag.is-info {
+  color: var(--info);
+}
+
+.explain-head strong {
+  font-family: var(--font-mono);
+  color: var(--field-turquoise);
+}
+
+.explain-parts {
+  margin: 4px 0;
+  padding-left: 16px;
+}
+
+.explain-parts code {
+  font-family: var(--font-mono);
+  color: var(--text-bright);
+}
+
+.explain-label {
+  color: var(--text-dim);
+}
+
+.explain-meta {
+  color: var(--text-dim);
+  font-size: 11.5px;
+}
+
+.explain-meta a {
+  margin-left: 6px;
+  color: var(--field-turquoise);
 }
 </style>

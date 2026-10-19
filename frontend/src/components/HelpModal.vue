@@ -46,6 +46,7 @@
             <tr><td>F1 · Alt+H</td><td>Open this help (Escape or F1 closes it)</td></tr>
             <tr><td>F4 · Alt+R</td><td>Format: lay the JCL out in the usual columns, with a preview first</td></tr>
             <tr><td>F5 · Ctrl/⌘+Enter</td><td>Check the JCL now</td></tr>
+            <tr><td>Alt+K</td><td>Explain the keyword at the cursor, as hovering over it does</td></tr>
             <tr><td>F6 · Alt+L</td><td>Share the job as a link (nothing is stored on a server)</td></tr>
             <tr><td>F9 · Alt+S</td><td>Load the next sample</td></tr>
             <tr><td>F12 · Alt+C</td><td>Clear the editor</td></tr>

@@ -71,6 +71,22 @@ export async function formatJcl(source) {
     return res.json();
 }
 
+// Keyword descriptions for hover explanations, for one z/OS level.
+export async function getKeywords(zosLevel) {
+    let res;
+    try {
+        res = await fetch(`${API_BASE}/api/keywords${zosLevel ? `?zos=${encodeURIComponent(zosLevel)}` : ''}`);
+    } catch (err) {
+        throw apiError(`Keywords request failed: ${err.message}`, 0);
+    }
+
+    if (!res.ok) {
+        throw apiError(`Keywords request failed (${res.status})`, res.status);
+    }
+
+    return res.json();
+}
+
 // The z/OS levels the API supports, for the workbench's level picker.
 export async function getLevels() {
     let res;

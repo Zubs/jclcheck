@@ -4,6 +4,7 @@ const validator = require('./validator');
 const { checkDsn, MEMBER_RE } = require('./rules/paramRules');
 const { profileProblem } = require('./profile');
 const { format } = require('./formatter');
+const { keywordHelp } = require('./descriptions');
 
 const MAX_LIBRARY = 50;
 const {
@@ -195,6 +196,16 @@ function createApp({
         }
 
         res.status(202).json({ status: 'accepted' });
+    });
+
+    // Keyword descriptions for the workbench's hover explanations (feature 40).
+    app.get('/api/keywords', (req, res) => {
+        const zosLevel = req.query.zos === undefined ? DEFAULT_ZOS_LEVEL : req.query.zos;
+        if (!isZosLevel(zosLevel)) {
+            return res.status(400).json({ error: 'bad_request', message: `Unknown z/OS level. Supported levels: ${ZOS_LEVELS.join(', ')}.` });
+        }
+
+        res.json(keywordHelp(zosLevel));
     });
 
     // The workbench's level picker reads this, so it never keeps its own copy.

@@ -1,8 +1,7 @@
 // Every analytics event the site may send, and the details each one allows.
 // An event is counted as `<name>/<detail>`, and only when the detail passes
 // its rule, so free text (JCL, dataset names, anything typed) can never reach
-// GoatCounter. Entries marked `feature` belong to features from Features.md
-// that aren't built yet; they send nothing until that feature calls track().
+// GoatCounter.
 
 export const CODE_PATTERN = /^JCL[A-Z][0-9]{3}$/;
 
@@ -45,7 +44,7 @@ export const EVENTS = {
     'visit/latency': { details: ['0-250ms', '250ms-1s', '1s+'], title: d => `Visit: typical response ${d}` },
     'visit/end': { details: ['clean', 'errors', 'warnings'], title: d => `Visit ended ${d}` },
 
-    // Later features
+    // Level, drafts, sharing, datasets, profile, formatter and explanations
     'level': { details: ['2.3', '2.4', '2.5', '3.1', '3.2'], title: d => `z/OS level ${d}` },
     'jes': { details: ['JES2', 'JES3'], title: d => `JES: ${d}` },
     'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}` },
@@ -55,8 +54,7 @@ export const EVENTS = {
     'profile': { details: ['edit'], title: () => 'Profile edited' },
     'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}` },
     'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}` },
-    // Keyword names come from the API's keyword list once feature 40 is built.
-    'hover': { details: ['shortcut'], title: d => `Keyword explanation: ${d}`, feature: 40 }
+    'hover': { details: ['mouse', 'shortcut'], title: d => `Keyword explanation: ${d}` }
 };
 
 /** Whether `detail` is allowed for the event `name`. */

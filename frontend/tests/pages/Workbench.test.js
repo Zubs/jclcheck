@@ -2,11 +2,11 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils';
 import Workbench from '../../src/pages/Workbench.vue';
 import HelpModal from '../../src/components/HelpModal.vue';
-import { validateJcl, getLevels, formatJcl } from '../../src/api.js';
+import { validateJcl, getLevels, formatJcl, getKeywords } from '../../src/api.js';
 import { track } from '../../src/analytics.js';
 import { SAMPLES } from '../../src/samples.js';
 
-vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn(), getLevels: vi.fn(), formatJcl: vi.fn() }));
+vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn(), getLevels: vi.fn(), formatJcl: vi.fn(), getKeywords: vi.fn() }));
 
 const LEVELS = {
     levels: [
@@ -72,6 +72,8 @@ beforeEach(() => {
     validateJcl.mockResolvedValue(CLEAN);
     getLevels.mockReset();
     getLevels.mockResolvedValue(LEVELS);
+    getKeywords.mockReset();
+    getKeywords.mockResolvedValue(null);
     track.mockClear();
 });
 
@@ -1112,5 +1114,83 @@ describe('Workbench formatter (feature 39)', () => {
         await pfButton(w, 'FORMAT').trigger('click');
         await flushPromises();
         expect(w.find('.format-message').text()).toContain("can't be formatted");
+    });
+});
+
+describe('Workbench keyword explanations (feature 40)', () => {
+    const KEYWORDS = {
+        zosLevel: '3.2',
+        statements: {
+            DD: {
+                DISP: {
+                    text: 'The dataset\'s status.',
+                    since: null,
+                    reference: 'https://www.ibm.com/docs/en/search/DISP',
+                    positions: [{ label: 'Status', values: { SHR: 'Use an existing dataset; other jobs may read it at the same time.' } }]
+                }
+            }
+        }
+    };
+    const JCL = '//J JOB\n//S EXEC PGM=X\n//D DD DISP=SHR,FOO=1';
+    // Where the editor's measurements put a 1-based line and column.
+    const point = (line, column) => ({ clientX: 16 + 7.8 * (column - 0.5), clientY: 12 + 21 * (line - 0.5) });
+
+    test('loads the descriptions for the chosen level, and again when it changes', async () => {
+        getKeywords.mockResolvedValue(KEYWORDS);
+        const w = await mountWorkbench();
+        expect(getKeywords).toHaveBeenLastCalledWith('3.2');
+        await w.find('.level-picker').setValue('2.5');
+        await flushPromises();
+        expect(getKeywords).toHaveBeenLastCalledWith('2.5');
+    });
+
+    test('hovering a value shows its explanation, with the diagnostic first', async () => {
+        getKeywords.mockResolvedValue(KEYWORDS);
+        validateJcl.mockResolvedValue({
+            diagnostics: [{ code: 'JCLS001', severity: 'error', line: 3, column: 13, length: 3, message: 'Invalid DISP value.', suggestion: null }],
+            stats: { errors: 1, warnings: 0, statementCount: 3, stepCount: 1, procCount: 0, valid: false }
+        });
+        const w = await mountWorkbench();
+        await edit(w, JCL);
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+        await w.find('textarea').trigger('mousemove', point(3, 14));
+        const panel = w.find('.explain-panel');
+        expect(panel.find('.explain-diag').text()).toBe('JCLS001: Invalid DISP value.');
+        expect(panel.text()).toContain('Use an existing dataset; other jobs may read it at the same time.');
+        expect(panel.text()).toContain('In every supported z/OS level.');
+        expect(panel.find('a').attributes('href')).toBe('https://www.ibm.com/docs/en/search/DISP');
+        expect(tracked('hover')).toEqual(['mouse']);
+    });
+
+    test('an unknown keyword says so, and blank space shows nothing', async () => {
+        getKeywords.mockResolvedValue(KEYWORDS);
+        const w = await mountWorkbench();
+        await edit(w, JCL);
+        await w.find('textarea').trigger('mousemove', point(3, 18));
+        expect(w.find('.explain-panel').text()).toContain('No description: not a known keyword.');
+        await w.find('textarea').trigger('mousemove', point(3, 4));
+        expect(w.find('.explain-panel').exists()).toBe(false);
+    });
+
+    test('Alt+K explains the keyword at the cursor', async () => {
+        getKeywords.mockResolvedValue(KEYWORDS);
+        const w = await mountWorkbench();
+        await edit(w, JCL);
+        const el = w.find('textarea').element;
+        el.setSelectionRange(JCL.indexOf('DISP') + 1, JCL.indexOf('DISP') + 1);
+        window.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', code: 'KeyK', altKey: true, cancelable: true }));
+        await flushPromises();
+        expect(w.find('.explain-panel').text()).toContain('DISP');
+        expect(tracked('hover')).toEqual(['shortcut']);
+    });
+
+    test('without the descriptions hovering shows nothing and checking still works', async () => {
+        getKeywords.mockRejectedValue(new Error('down'));
+        const w = await mountWorkbench();
+        await edit(w, JCL);
+        await w.find('textarea').trigger('mousemove', point(3, 9));
+        expect(w.find('.explain-panel').exists()).toBe(false);
+        expect(statusText(w)).toBe('CLEAN — 0 ERRORS');
     });
 });

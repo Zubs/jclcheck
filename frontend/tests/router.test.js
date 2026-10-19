@@ -5,7 +5,7 @@ import router from '../src/router.js';
 import { pageview } from '../src/analytics.js';
 
 vi.mock('../src/analytics.js', () => ({ pageview: vi.fn(), track: vi.fn() }));
-vi.mock('../src/api.js', () => ({ validateJcl: vi.fn(() => new Promise(() => {})) }));
+vi.mock('../src/api.js', () => ({ validateJcl: vi.fn(() => new Promise(() => {})), getLevels: vi.fn(() => Promise.reject(new Error('offline'))), getKeywords: vi.fn(async () => null) }));
 
 // The router scrolls to the top after each navigation; jsdom has no scrolling.
 vi.stubGlobal('scrollTo', vi.fn());

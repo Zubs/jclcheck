@@ -11,7 +11,9 @@ import { validateJcl } from '../src/api.js';
 
 vi.mock('../src/api.js', () => ({
     validateJcl: vi.fn(),
-    getLevels: vi.fn(async () => ({ levels: [{ level: '3.1', jes3: false }, { level: '3.2', jes3: false }], defaultLevel: '3.2', defaultJes: 'JES2' }))
+    getLevels: vi.fn(async () => ({ levels: [{ level: '3.1', jes3: false }, { level: '3.2', jes3: false }], defaultLevel: '3.2', defaultJes: 'JES2' })),
+    getKeywords: vi.fn(async () => ({ zosLevel: '3.1', statements: { DD: { DSN: { text: 'The dataset name.', since: null } } } })),
+    formatJcl: vi.fn()
 }));
 vi.stubGlobal('scrollTo', vi.fn());
 

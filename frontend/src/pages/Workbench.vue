@@ -39,7 +39,9 @@
             ref="editorRef"
             v-model="code"
             :diagnostics="jobDiagnostics"
+            :keywords="keywords"
             @update:modelValue="onUserEdit"
+            @explain="onExplain"
             @paste="onPaste"
         />
         <LibraryPanel
@@ -129,7 +131,7 @@ import HelpModal from '../components/HelpModal.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
 import ProfilePanel from '../components/ProfilePanel.vue';
 import FormatPreview from '../components/FormatPreview.vue';
-import { validateJcl, getLevels, formatJcl } from '../api';
+import { validateJcl, getLevels, formatJcl, getKeywords } from '../api';
 import { shareLink, decodeShare } from '../share';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
 import { track } from '../analytics';
@@ -226,6 +228,11 @@ const UNDO_NOTICE = { f4: 'JCL formatted.', f9: 'Sample loaded over your JCL.', 
 // Formatting (feature 39) shows a preview before anything changes.
 const formatPreview = ref(null);
 const formatMessage = ref('');
+// Keyword descriptions for the editor's hover panel (feature 40), loaded once
+// per z/OS level. Without them hovering shows nothing and checking goes on.
+const keywords = ref(null);
+const keywordCache = new Map();
+let explainCounted = false;
 const UNDO_MS = 5000;
 let undoTimer = null;
 let nextMemberId = library.value.length + 1;
@@ -566,6 +573,31 @@ async function loadLevels() {
   jes.value = chosenJes;
 }
 
+async function loadKeywords() {
+  const level = zosLevel.value || '';
+  if (!keywordCache.has(level)) {
+    keywordCache.set(level, Promise.resolve().then(() => getKeywords(zosLevel.value)).catch(() => null));
+  }
+
+  const loaded = await keywordCache.get(level);
+  if ((zosLevel.value || '') === level) {
+    keywords.value = loaded;
+  }
+}
+
+function onExplain(trigger) {
+  if (!explainCounted) {
+    explainCounted = true;
+    track('hover', trigger);
+  }
+}
+
+function explainKeyword() {
+  if (editorRef.value?.explainAtCursor()) {
+    track('hover', 'shortcut');
+  }
+}
+
 function onLevelChange(e) {
   zosLevel.value = e.target.value;
   track('level', zosLevel.value);
@@ -577,6 +609,7 @@ function onLevelChange(e) {
 
   rememberPicker();
   runValidation();
+  loadKeywords();
 }
 
 function onJesChange(e) {
@@ -597,6 +630,7 @@ onMounted(async () => {
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', sendVisitSummary);
   await loadLevels();
+  loadKeywords();
   await openSharedLink();
   // Loading a shared job schedules a check; the one below replaces it.
   await nextTick();
@@ -839,7 +873,8 @@ function onKeydown(e) {
       KeyS: () => cycleSample(),
       KeyC: () => clearEditor('shortcut'),
       KeyL: () => shareJob(),
-      KeyR: () => formatJob('shortcut')
+      KeyR: () => formatJob('shortcut'),
+      KeyK: () => explainKeyword()
     }[e.code];
   }
 

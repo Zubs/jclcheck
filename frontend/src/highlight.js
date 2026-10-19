@@ -112,7 +112,7 @@ function classifyLine(line, state) {
 
     const text = line.slice(0, 71);
     let i = 2;
-    let op = '';
+    let op = state.continues ? state.op : '';
     if (!state.continues) {
         while (i < text.length && text[i] !== ' ') {
             cls[i++] = 'name';
@@ -129,6 +129,10 @@ function classifyLine(line, state) {
 
         op = text.slice(opStart, i).toUpperCase();
     }
+
+    // The statement each line belongs to, for hover explanations.
+    cls.op = op;
+    state.op = op;
 
     while (text[i] === ' ') {
         i++;
@@ -167,7 +171,7 @@ function classifyLine(line, state) {
 
 /** One array of character classes per line. */
 export function classifyLines(text) {
-    const state = { data: null, pendingData: null, continues: false, depth: 0 };
+    const state = { data: null, pendingData: null, continues: false, depth: 0, op: '' };
     return text.replace(/\r/g, '').split('\n').map(line => classifyLine(line, state));
 }
 
