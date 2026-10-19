@@ -7,6 +7,15 @@
         <span class="header-brand__title">JCLCHECK</span>
         <span class="header-brand__subtitle">JCL VALIDATION WORKBENCH</span>
       </div>
+      <div v-if="levels.length" class="header-picker">
+        <select class="level-picker" aria-label="z/OS level" :value="zosLevel" @change="onLevelChange">
+          <option v-for="l in levels" :key="l.level" :value="l.level">z/OS {{ l.level }}</option>
+        </select>
+        <select class="jes-picker" aria-label="JES" :value="jes" @change="onJesChange">
+          <option value="JES2">JES2</option>
+          <option value="JES3" :disabled="!jes3At(zosLevel)">JES3</option>
+        </select>
+      </div>
       <button class="header-library" :class="{ 'is-open': showLibrary }" @click="toggleLibrary">
         LIBRARY ({{ library.length }})
       </button>
@@ -15,6 +24,8 @@
         <span class="header-status__text">{{ statusText }}</span>
       </div>
     </header>
+
+    <div v-if="pickerNotice" class="picker-notice" role="status">{{ pickerNotice }}</div>
 
     <main class="main">
       <section class="pane pane-editor" :class="{ 'has-library': showLibrary }">
@@ -39,6 +50,7 @@
         <ErrorPanel
             :diagnostics="diagnostics"
             :stats="stats"
+            :checked-against="checkedAgainst"
             :loading="loading"
             @select="onSelectDiagnostic"
         />
@@ -76,7 +88,7 @@ import ErrorPanel from '../components/ErrorPanel.vue';
 import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
-import { validateJcl } from '../api';
+import { validateJcl, getLevels } from '../api';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
 import { track } from '../analytics';
 import {
@@ -99,6 +111,15 @@ const library = ref([]);
 const showLibrary = ref(false);
 const libraryRef = ref(null);
 const errorStatus = ref(null);
+// The z/OS level and JES to check against, from GET /api/levels. If the
+// levels can't be loaded the picker is hidden and the API's defaults apply.
+const levels = ref([]);
+const zosLevel = ref(null);
+const jes = ref(null);
+const pickerNotice = ref('');
+const checkedAgainst = ref('');
+const PICKER_KEY = 'jclcheck.picker';
+
 // The user's text that F9 or F12 just replaced, offered back for a few seconds.
 const undoState = ref(null);
 const UNDO_MS = 5000;
@@ -180,7 +201,8 @@ async function runValidation(trigger) {
   errored.value = false;
   const startedAt = Date.now();
   try {
-    const result = await validateJcl(source, { library: libraryForApi() });
+    const result = await validateJcl(source, { library: libraryForApi(), zosLevel: zosLevel.value, jes: jes.value });
+    checkedAgainst.value = result.zosLevel ? `Z/OS ${result.zosLevel} · ${result.jes}` : '';
     visit.responseTimes.push(Date.now() - startedAt);
     visit.lastResult = resultKind(result.stats);
     diagnostics.value = result.diagnostics;
@@ -259,10 +281,97 @@ function updateMember(id, field, value) {
   }
 }
 
-onMounted(() => {
+function jes3At(level) {
+  return Boolean(levels.value.find(l => l.level === level)?.jes3);
+}
+
+function readStoredPicker() {
+  try {
+    return JSON.parse(localStorage.getItem(PICKER_KEY)) || {};
+  } catch {
+    return {};
+  }
+}
+
+// Remembered for the next visit and kept in the address, so a shared link
+// checks the same way. replaceState, not the router, so it isn't a new page view.
+function rememberPicker() {
+  try {
+    localStorage.setItem(PICKER_KEY, JSON.stringify({ zosLevel: zosLevel.value, jes: jes.value }));
+  } catch {
+    // Blocked storage only means the choice isn't remembered.
+  }
+
+  const url = new URL(window.location.href);
+  url.searchParams.set('zos', zosLevel.value);
+  url.searchParams.set('jes', jes.value);
+  window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+}
+
+// The address wins over storage; anything unusable falls back with a notice.
+async function loadLevels() {
+  let data;
+  try {
+    data = await getLevels();
+  } catch {
+    return;
+  }
+
+  levels.value = data.levels;
+  const params = new URLSearchParams(window.location.search);
+  const stored = readStoredPicker();
+  let level = params.get('zos') || stored.zosLevel || data.defaultLevel;
+  if (!data.levels.some(l => l.level === level)) {
+    if (params.get('zos')) {
+      pickerNotice.value = `z/OS ${level} isn't supported, so this checks against z/OS ${data.defaultLevel}.`;
+    }
+
+    level = data.defaultLevel;
+  }
+
+  let chosenJes = params.get('jes') || stored.jes || data.defaultJes;
+  if (chosenJes !== 'JES2' && chosenJes !== 'JES3') {
+    chosenJes = data.defaultJes;
+  }
+
+  zosLevel.value = level;
+  if (chosenJes === 'JES3' && !jes3At(level)) {
+    if (params.get('jes')) {
+      pickerNotice.value = `IBM removed JES3 in z/OS 3.1, so z/OS ${level} is checked for JES2.`;
+    }
+
+    chosenJes = 'JES2';
+  }
+
+  jes.value = chosenJes;
+}
+
+function onLevelChange(e) {
+  zosLevel.value = e.target.value;
+  track('level', zosLevel.value);
+  pickerNotice.value = '';
+  if (jes.value === 'JES3' && !jes3At(zosLevel.value)) {
+    jes.value = 'JES2';
+    pickerNotice.value = `IBM removed JES3 in z/OS 3.1, so this now checks for JES2.`;
+  }
+
+  rememberPicker();
+  runValidation();
+}
+
+function onJesChange(e) {
+  jes.value = e.target.value;
+  track('jes', jes.value);
+  pickerNotice.value = '';
+  rememberPicker();
+  runValidation();
+}
+
+onMounted(async () => {
   window.addEventListener('keydown', onKeydown);
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', sendVisitSummary);
+  await loadLevels();
   runValidation();
 });
 
@@ -576,8 +685,32 @@ const pfKeys = computed(() => ([
   gap: 12px;
 }
 
-.header-library {
+.header-picker {
   margin-left: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.level-picker,
+.jes-picker {
+  font-family: var(--font-cond);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-bright);
+  background: var(--surface);
+  border: 1px solid var(--grid-line-strong);
+  border-radius: var(--radius);
+  padding: 3px 6px;
+}
+
+.picker-notice {
+  font-family: var(--font-cond);
+  font-size: 12px;
+  color: var(--warning);
+}
+
+.header-library {
+  margin-left: 12px;
   margin-right: 16px;
   font-family: var(--font-cond);
   font-size: 11px;

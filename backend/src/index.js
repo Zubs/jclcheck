@@ -9,6 +9,7 @@ const {
     DEFAULT_ZOS_LEVEL,
     JES_TYPES,
     JES3_LAST_LEVEL,
+    DEFAULT_JES,
     isZosLevel,
     isJes,
     jesAvailable
@@ -176,6 +177,15 @@ function createApp({
         }
 
         res.status(202).json({ status: 'accepted' });
+    });
+
+    // The workbench's level picker reads this, so it never keeps its own copy.
+    app.get('/api/levels', (req, res) => {
+        res.json({
+            levels: ZOS_LEVELS.map(level => ({ level, jes3: jesAvailable('JES3', level) })),
+            defaultLevel: DEFAULT_ZOS_LEVEL,
+            defaultJes: DEFAULT_JES
+        });
     });
 
     app.get('/api/health', (req, res) => {

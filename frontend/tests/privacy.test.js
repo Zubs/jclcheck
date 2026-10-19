@@ -9,7 +9,10 @@ import router from '../src/router.js';
 import { initAnalytics } from '../src/analytics.js';
 import { validateJcl } from '../src/api.js';
 
-vi.mock('../src/api.js', () => ({ validateJcl: vi.fn() }));
+vi.mock('../src/api.js', () => ({
+    validateJcl: vi.fn(),
+    getLevels: vi.fn(async () => ({ levels: [{ level: '3.1', jes3: false }, { level: '3.2', jes3: false }], defaultLevel: '3.2', defaultJes: 'JES2' }))
+}));
 vi.stubGlobal('scrollTo', vi.fn());
 
 const MARKER = 'ZQXMARK9';

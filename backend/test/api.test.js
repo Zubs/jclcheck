@@ -230,6 +230,25 @@ test('library in /api/validate', async (t) => {
     });
 });
 
+test('GET /api/levels', async (t) => {
+    const request = await serve(t, { analytics: fakeAnalytics() });
+
+    await t.test('O: lists the levels, where JES3 is offered, and the defaults', async () => {
+        const body = await (await request('/api/levels')).json();
+        assert.deepEqual(body, {
+            levels: [
+                { level: '2.3', jes3: true },
+                { level: '2.4', jes3: true },
+                { level: '2.5', jes3: true },
+                { level: '3.1', jes3: false },
+                { level: '3.2', jes3: false }
+            ],
+            defaultLevel: '3.2',
+            defaultJes: 'JES2'
+        });
+    });
+});
+
 test('/api/usage', async (t) => {
     await t.test('O: a valid batch answers 202 and records each event', async (t) => {
         const analytics = fakeAnalytics();

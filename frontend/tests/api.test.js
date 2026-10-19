@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { validateJcl } from '../src/api.js';
+import { validateJcl, getLevels } from '../src/api.js';
 
 let fetchMock;
 
@@ -28,6 +28,19 @@ describe('validateJcl', () => {
         const library = [{ dsn: 'MY.PROCS', member: 'P1', source: '//S EXEC PGM=X' }];
         await validateJcl('//J JOB', { library });
         expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ source: '//J JOB', library });
+    });
+
+    test('sends the z/OS level and JES when they are chosen', async () => {
+        fetchMock.mockResolvedValue(new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
+        await validateJcl('//J JOB', { zosLevel: '2.5', jes: 'JES3' });
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ source: '//J JOB', zosLevel: '2.5', jes: 'JES3' });
+    });
+
+    test('getLevels reads /api/levels', async () => {
+        const levels = { levels: [{ level: '3.2', jes3: false }], defaultLevel: '3.2', defaultJes: 'JES2' };
+        fetchMock.mockResolvedValue(new Response(JSON.stringify(levels), { status: 200 }));
+        await expect(getLevels()).resolves.toEqual(levels);
+        expect(fetchMock.mock.calls[0][0]).toBe('/api/levels');
     });
 
     test('returns the JSON result on success', async () => {

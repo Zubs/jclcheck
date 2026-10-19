@@ -3,6 +3,7 @@
     <div class="panel-topline">
       <span class="panel-topline__label">DIAGNOSTICS</span>
       <span class="panel-topline__meta">
+        <span class="checked-against" v-if="checkedAgainst">{{ checkedAgainst }}</span>
         <span class="stat is-error" v-if="stats">{{ stats.errors }} ERR</span>
         <span class="stat is-warning" v-if="stats">{{ stats.warnings }} WARN</span>
       </span>
@@ -47,7 +48,8 @@
 defineProps({
   diagnostics: { type: Array, default: () => [] },
   stats: { type: Object, default: null },
-  loading: { type: Boolean, default: false }
+  loading: { type: Boolean, default: false },
+  checkedAgainst: { type: String, default: '' }
 });
 defineEmits(['select']);
 

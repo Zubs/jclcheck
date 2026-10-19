@@ -90,3 +90,10 @@ When the backend counts a direct (non-workbench) request to `/api/validate` that
 #### Scenario: Rejected level isn't counted as a level
 - **WHEN** a direct request has `"zosLevel": "9.9"`
 - **THEN** `api/result/bad-request` is recorded and no `api/level/` hit is
+
+### Requirement: Levels endpoint
+`GET /api/levels` SHALL return every supported level, oldest first, each with whether JES3 can be chosen at it, and the default level and JES.
+
+#### Scenario: Listing levels
+- **WHEN** `GET /api/levels` is requested
+- **THEN** the response lists 2.3, 2.4, 2.5, 3.1 and 3.2 with `jes3` true up to 2.5 and false after, and gives `defaultLevel: "3.2"` and `defaultJes: "JES2"`

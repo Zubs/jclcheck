@@ -2,11 +2,25 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { mount, flushPromises, RouterLinkStub } from '@vue/test-utils';
 import Workbench from '../../src/pages/Workbench.vue';
 import HelpModal from '../../src/components/HelpModal.vue';
-import { validateJcl } from '../../src/api.js';
+import { validateJcl, getLevels } from '../../src/api.js';
 import { track } from '../../src/analytics.js';
 import { SAMPLES } from '../../src/samples.js';
 
-vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn() }));
+vi.mock('../../src/api.js', () => ({ validateJcl: vi.fn(), getLevels: vi.fn() }));
+
+const LEVELS = {
+    levels: [
+        { level: '2.3', jes3: true },
+        { level: '2.4', jes3: true },
+        { level: '2.5', jes3: true },
+        { level: '3.1', jes3: false },
+        { level: '3.2', jes3: false }
+    ],
+    defaultLevel: '3.2',
+    defaultJes: 'JES2'
+};
+// What every check sends at the default level and JES.
+const DEFAULTS = { zosLevel: '3.2', jes: 'JES2' };
 vi.mock('../../src/analytics.js', () => ({ track: vi.fn(), pageview: vi.fn() }));
 
 const CLEAN = {
@@ -55,6 +69,8 @@ beforeEach(() => {
     vi.useFakeTimers();
     validateJcl.mockReset();
     validateJcl.mockResolvedValue(CLEAN);
+    getLevels.mockReset();
+    getLevels.mockResolvedValue(LEVELS);
     track.mockClear();
 });
 
@@ -67,7 +83,7 @@ describe('Workbench', () => {
     test('checks the clean sample once when it opens', async () => {
         await mountWorkbench();
         expect(validateJcl).toHaveBeenCalledTimes(1);
-        expect(validateJcl).toHaveBeenCalledWith(SAMPLES.clean.code, { library: [] });
+        expect(validateJcl).toHaveBeenCalledWith(SAMPLES.clean.code, { library: [], ...DEFAULTS });
     });
 
     test('sends one check 450 ms after the last of several quick edits, with the latest text', async () => {
@@ -84,7 +100,7 @@ describe('Workbench', () => {
 
         await vi.advanceTimersByTimeAsync(1);
         expect(validateJcl).toHaveBeenCalledTimes(1);
-        expect(validateJcl).toHaveBeenCalledWith('//ABC', { library: [] });
+        expect(validateJcl).toHaveBeenCalledWith('//ABC', { library: [], ...DEFAULTS });
     });
 
     test('shows VALIDATING while a check is in flight', async () => {
@@ -376,7 +392,8 @@ describe('Workbench library', () => {
         const w = await mountWorkbench();
         await addMember(w, { dsn: 'my.procs', member: 'myproc2', source: '//MYPROC2 PROC' });
         expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, {
-            library: [{ dsn: 'MY.PROCS', member: 'MYPROC2', source: '//MYPROC2 PROC' }]
+            library: [{ dsn: 'MY.PROCS', member: 'MYPROC2', source: '//MYPROC2 PROC' }],
+            ...DEFAULTS
         });
         expect(track).toHaveBeenCalledWith('library', 'add');
     });
@@ -387,7 +404,7 @@ describe('Workbench library', () => {
         await w.find('.library-remove').trigger('click');
         await vi.advanceTimersByTimeAsync(450);
         await flushPromises();
-        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [] });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], ...DEFAULTS });
         expect(track).toHaveBeenCalledWith('library', 'remove');
     });
 
@@ -515,6 +532,107 @@ describe('Workbench keyboard shortcuts', () => {
         await press('Escape');
         await edit(w, '//J JOB\n//S EXEC PGM=X,REGION=4M');
         await press('Enter', { metaKey: true });
-        expect(validateJcl).toHaveBeenLastCalledWith('//J JOB\n//S EXEC PGM=X,REGION=4M', { library: [] });
+        expect(validateJcl).toHaveBeenLastCalledWith('//J JOB\n//S EXEC PGM=X,REGION=4M', { library: [], ...DEFAULTS });
+    });
+});
+
+describe('Workbench level and JES picker', () => {
+    afterEach(() => {
+        window.history.replaceState(null, '', '/');
+        localStorage.clear();
+        vi.restoreAllMocks();
+    });
+
+    const pick = async (w, selector, value) => {
+        await w.find(selector).setValue(value);
+        await flushPromises();
+    };
+
+    test('Z: a first visit selects the newest level and JES2', async () => {
+        const w = await mountWorkbench();
+        expect(w.find('.level-picker').element.value).toBe('3.2');
+        expect(w.find('.jes-picker').element.value).toBe('JES2');
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '3.2', jes: 'JES2' });
+    });
+
+    test('O: choosing 2.3 checks again at 2.3, counts it and keeps it in the address', async () => {
+        const w = await mountWorkbench();
+        validateJcl.mockClear();
+        track.mockClear();
+        await pick(w, '.level-picker', '2.3');
+        expect(validateJcl).toHaveBeenCalledTimes(1);
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.3', jes: 'JES2' });
+        expect(track).toHaveBeenCalledWith('level', '2.3');
+        expect(window.location.search).toBe('?zos=2.3&jes=JES2');
+        expect(JSON.parse(localStorage.getItem('jclcheck.picker'))).toEqual({ zosLevel: '2.3', jes: 'JES2' });
+    });
+
+    test('B: the oldest and newest levels can both be chosen', async () => {
+        const w = await mountWorkbench();
+        await pick(w, '.level-picker', '2.3');
+        await pick(w, '.level-picker', '3.2');
+        expect(validateJcl.mock.calls.map(([, options]) => options.zosLevel).slice(-2)).toEqual(['2.3', '3.2']);
+    });
+
+    test('B: JES3 at 2.5, then 3.1 switches back to JES2 with a notice', async () => {
+        const w = await mountWorkbench();
+        await pick(w, '.level-picker', '2.5');
+        await pick(w, '.jes-picker', 'JES3');
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3' });
+        await pick(w, '.level-picker', '3.1');
+        expect(w.find('.jes-picker').element.value).toBe('JES2');
+        expect(w.find('.picker-notice').text()).toContain('IBM removed JES3 in z/OS 3.1');
+        expect(w.find('.jes-picker option[value="JES3"]').element.disabled).toBe(true);
+    });
+
+    test('a shared address chooses the level and JES', async () => {
+        window.history.replaceState(null, '', '/app?zos=2.5&jes=JES3');
+        await mountWorkbench();
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.5', jes: 'JES3' });
+    });
+
+    test('E: an unknown level in the address falls back with a notice', async () => {
+        window.history.replaceState(null, '', '/app?zos=9.9');
+        const w = await mountWorkbench();
+        expect(w.find('.level-picker').element.value).toBe('3.2');
+        expect(w.find('.picker-notice').text()).toContain("z/OS 9.9 isn't supported");
+    });
+
+    test('E: JES3 at a 3.x level in the address falls back to JES2 with a notice', async () => {
+        window.history.replaceState(null, '', '/app?zos=3.2&jes=JES3');
+        const w = await mountWorkbench();
+        expect(w.find('.jes-picker').element.value).toBe('JES2');
+        expect(w.find('.picker-notice').text()).toContain('IBM removed JES3');
+    });
+
+    test('a remembered choice is used on the next visit', async () => {
+        localStorage.setItem('jclcheck.picker', JSON.stringify({ zosLevel: '2.4', jes: 'JES3' }));
+        await mountWorkbench();
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES3' });
+    });
+
+    test('E: blocked storage leaves the picker working', async () => {
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+            throw new Error('blocked');
+        });
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new Error('blocked');
+        });
+        const w = await mountWorkbench();
+        await pick(w, '.level-picker', '2.4');
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: '2.4', jes: 'JES2' });
+    });
+
+    test('I: the panel shows what the result was checked against', async () => {
+        validateJcl.mockResolvedValue({ ...CLEAN, zosLevel: '2.4', jes: 'JES2' });
+        const w = await mountWorkbench();
+        expect(w.find('.checked-against').text()).toBe('Z/OS 2.4 · JES2');
+    });
+
+    test('without the levels the picker is hidden and the API defaults apply', async () => {
+        getLevels.mockRejectedValue(new Error('down'));
+        const w = await mountWorkbench();
+        expect(w.find('.level-picker').exists()).toBe(false);
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: null, jes: null });
     });
 });
