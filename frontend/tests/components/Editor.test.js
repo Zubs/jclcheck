@@ -175,3 +175,42 @@ describe('Editor cursor position', () => {
         expect(live.text()).toBe('Line 1, column 3');
     });
 });
+
+describe('Editor highlighting', () => {
+    test('O: the highlight layer shows the coloured text, even without diagnostics', () => {
+        const w = mountEditor({ modelValue: '//STEP1 EXEC PGM=IEFBR14' });
+        const layer = w.find('.editor-highlight');
+        expect(layer.find('.t-name').text()).toBe('STEP1');
+        expect(layer.find('.t-op').text()).toBe('EXEC');
+        expect(layer.find('.t-kw').text()).toBe('PGM');
+        expect(layer.find('.t-val').text()).toBe('IEFBR14');
+    });
+
+    test('I: a diagnostic underlines its text in the layer', () => {
+        const w = mountEditor({ modelValue: '//A JOB\n//B EXEC PGM=X', diagnostics: [{ line: 2, column: 5, length: 4, severity: 'warning', code: 'JCLK001', message: 'm' }] });
+        expect(w.find('.editor-highlight .u-warning').text()).toBe('EXEC');
+    });
+
+    test('I: scrolling the textarea scrolls the layer the same way', async () => {
+        const w = mountEditor({}, { attachTo: document.body });
+        const textarea = w.find('textarea');
+        textarea.element.scrollTop = 40;
+        textarea.element.scrollLeft = 25;
+        await textarea.trigger('scroll');
+        const layer = w.find('.editor-highlight').element;
+        expect([layer.scrollTop, layer.scrollLeft]).toEqual([40, 25]);
+    });
+
+    test('I: resting the pointer on an underlined column shows its message', async () => {
+        const diagnostics = [{ line: 2, column: 5, length: 4, severity: 'error', code: 'JCLK001', message: 'Unknown keyword.' }];
+        const w = mountEditor({ modelValue: '//A JOB\n//B EXEC PGM=X', diagnostics }, { attachTo: document.body });
+        const textarea = w.find('textarea');
+        // jsdom has no layout: the box is at 0,0 and a character is 7.8px wide.
+        const x = 16 + 7.8 * 5.5; // column 6
+        const y = 12 + 21 * 1.5; // line 2
+        await textarea.trigger('mousemove', { clientX: x, clientY: y });
+        expect(textarea.attributes('title')).toBe('JCLK001: Unknown keyword.');
+        await textarea.trigger('mousemove', { clientX: 16 + 7.8 * 12.5, clientY: y });
+        expect(textarea.attributes('title') || '').toBe('');
+    });
+});

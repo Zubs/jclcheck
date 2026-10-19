@@ -27,23 +27,30 @@
           <span class="editor-gutter__dot" v-if="lineSeverity(n)"></span>
         </div>
       </div>
-      <textarea
-          ref="textareaEl"
-          class="editor-textarea"
-          spellcheck="false"
-          autocapitalize="off"
-          autocomplete="off"
-          wrap="off"
-          :value="modelValue"
-          @input="onInput"
-          @click="updateCursor"
-          @keyup="updateCursor"
-          @select="updateCursor"
-          @focus="updateCursor"
-          @scroll="onScroll"
-          @paste="onPaste"
-          @keydown.tab.prevent="onTab"
-      ></textarea>
+      <div class="editor-text">
+        <!-- eslint-disable-next-line vue/no-v-html -- built from escaped text in highlight.js -->
+        <pre ref="highlightEl" class="editor-highlight" aria-hidden="true" v-html="highlighted"></pre>
+        <span ref="measureEl" class="editor-measure" aria-hidden="true">X</span>
+        <textarea
+            ref="textareaEl"
+            class="editor-textarea"
+            spellcheck="false"
+            autocapitalize="off"
+            autocomplete="off"
+            wrap="off"
+            :value="modelValue"
+            :title="hoverTitle"
+            @input="onInput"
+            @click="updateCursor"
+            @keyup="updateCursor"
+            @select="updateCursor"
+            @focus="updateCursor"
+            @scroll="onScroll"
+            @paste="onPaste"
+            @keydown.tab.prevent="onTab"
+            @mousemove="onHover"
+        ></textarea>
+      </div>
     </div>
   </div>
 </template>
@@ -54,6 +61,7 @@ import {
   computed,
   nextTick
 } from 'vue';
+import { renderHtml, diagnosticsAt } from '../highlight';
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
@@ -66,6 +74,10 @@ const textareaEl = ref(null);
 const cursor = ref({ line: 1, column: 1, selected: 0 });
 const announcement = ref('');
 const gutterEl = ref(null);
+const highlightEl = ref(null);
+const measureEl = ref(null);
+const hoverTitle = ref('');
+const highlighted = computed(() => renderHtml(props.modelValue, props.diagnostics));
 const lineCount = computed(() => {
   const n = props.modelValue.split('\n').length;
   return Math.max(n, 1);
@@ -154,6 +166,26 @@ function onScroll(e) {
   if (gutterEl.value) {
     gutterEl.value.scrollTop = e.target.scrollTop;
   }
+
+  if (highlightEl.value) {
+    highlightEl.value.scrollTop = e.target.scrollTop;
+    highlightEl.value.scrollLeft = e.target.scrollLeft;
+  }
+}
+
+// Same layout numbers as the textarea's CSS below.
+const PAD_LEFT = 16;
+const PAD_TOP = 12;
+const LINE_HEIGHT = 21;
+
+// Shows the messages of the diagnostics under the pointer, as the gutter does.
+function onHover(e) {
+  const el = textareaEl.value;
+  const rect = el.getBoundingClientRect();
+  const charWidth = measureEl.value?.getBoundingClientRect().width || 7.8;
+  const column = Math.floor((e.clientX - rect.left - PAD_LEFT + el.scrollLeft) / charWidth) + 1;
+  const line = Math.floor((e.clientY - rect.top - PAD_TOP + el.scrollTop) / LINE_HEIGHT) + 1;
+  hoverTitle.value = diagnosticsAt(props.diagnostics, line, column).map(d => `${d.code}: ${d.message}`).join('\n');
 }
 
 function onTab(e) {
@@ -188,6 +220,10 @@ function scrollToLine(line) {
   el.scrollTop = target;
   if (gutterEl.value) {
     gutterEl.value.scrollTop = target;
+  }
+
+  if (highlightEl.value) {
+    highlightEl.value.scrollTop = target;
   }
 }
 
@@ -294,19 +330,70 @@ defineExpose({ scrollToLine });
   box-shadow: 0 0 4px currentColor;
 }
 
-.editor-textarea {
+.editor-text {
   flex: 1;
-  resize: none;
-  border: none;
-  outline: none;
-  background: transparent;
-  color: var(--text-primary);
+  position: relative;
+  min-width: 0;
+}
+
+/* The highlight layer and the textarea share every measurement, so the
+   coloured text sits exactly under the (transparent) typed text. */
+.editor-highlight,
+.editor-textarea {
+  position: absolute;
+  inset: 0;
+  margin: 0;
   font-family: var(--font-mono);
   font-size: 13px;
   line-height: 21px;
   padding: 12px 16px;
   white-space: pre;
+  tab-size: 8;
+}
+
+.editor-highlight {
+  overflow: hidden;
+  color: var(--text-primary);
+  pointer-events: none;
+  /* Faint rulers at columns 72 and 80, scrolling with the text. */
+  background-image:
+    linear-gradient(var(--syn-ruler), var(--syn-ruler)),
+    linear-gradient(var(--syn-ruler), var(--syn-ruler));
+  background-size: 1px 100%;
+  background-repeat: no-repeat;
+  background-position: calc(16px + 71ch) 0, calc(16px + 79ch) 0;
+  background-attachment: local;
+}
+
+.editor-measure {
+  position: absolute;
+  visibility: hidden;
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.editor-highlight :deep(.t-name) { color: var(--syn-name); }
+.editor-highlight :deep(.t-op) { color: var(--syn-op); font-weight: 600; }
+.editor-highlight :deep(.t-kw) { color: var(--syn-kw); }
+.editor-highlight :deep(.t-val) { color: var(--syn-val); }
+.editor-highlight :deep(.t-str) { color: var(--syn-str); }
+.editor-highlight :deep(.t-cmt) { color: var(--syn-cmt); font-style: italic; }
+.editor-highlight :deep(.t-data) { color: var(--syn-data); }
+.editor-highlight :deep(.t-jes) { color: var(--syn-jes); }
+.editor-highlight :deep(.t-cont) { color: var(--syn-cont); font-weight: 700; }
+.editor-highlight :deep(.t-seq) { color: var(--syn-seq); }
+.editor-highlight :deep(.u-error) { text-decoration: underline wavy var(--error); text-underline-offset: 3px; }
+.editor-highlight :deep(.u-warning) { text-decoration: underline wavy var(--warning); text-underline-offset: 3px; }
+.editor-highlight :deep(.u-info) { text-decoration: underline dotted var(--info); text-underline-offset: 3px; }
+
+.editor-textarea {
+  resize: none;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: transparent;
   caret-color: var(--text-bright);
+  overflow: auto;
 }
 
 .editor-textarea::placeholder {
