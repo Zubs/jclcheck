@@ -122,7 +122,7 @@ function checkPositionalLimit(params, stmt, line, diagnostics) {
         diagnostics.push(makeDiagnostic(
             'JCLK004',
             { stmt, limit, found: positionals.length, what: POSITIONAL_MEANING[stmt] },
-            { line: positionals[limit].line ?? line, column: positionals[limit].col, severity: 'error' }
+            { line: positionals[limit].line ?? line, column: positionals[limit].col }
         ));
     }
 }
@@ -386,7 +386,7 @@ function checkDsn(
     let v = value.trim();
     if (/^'.*'$/.test(v)) {
         // The reference lets a quoted name break the usual rules.
-        diagnostics.push(makeDiagnostic('JCLS014', { value }, { line, column: col, severity: 'info' }));
+        diagnostics.push(makeDiagnostic('JCLS014', { value }, { line, column: col }));
         return;
     }
 
@@ -504,6 +504,12 @@ function checkParamValues(
             continue;
         }
 
+        // A symbolic value (DISP=&D) is only known once the PROC is called.
+        const entry = keywordTable && keywordTable.get(p.key);
+        if (/(^|[^&])&[A-Za-z$#@]/.test(p.value) && !(entry && entry.checkSymbols)) {
+            continue;
+        }
+
         switch (p.key) {
             case 'DISP':
                 checkDisp(
@@ -603,7 +609,7 @@ function checkProcstepKeywords(step, params, diagnostics) {
     for (const p of params.filter(q => q.procstep !== undefined)) {
         const at = { line: p.line ?? step.line, column: p.col };
         if (step.pgm) {
-            diagnostics.push(makeDiagnostic('JCLK009', { keyword: p.key, procstep: p.procstep }, { ...at, severity: 'error' }));
+            diagnostics.push(makeDiagnostic('JCLK009', { keyword: p.key, procstep: p.procstep }, at));
             continue;
         }
 
@@ -729,7 +735,7 @@ function checkNotify(notify, diagnostics, zosLevel) {
             { line: notify.line, column: 1 }
         ));
     } else if (email && user) {
-        diagnostics.push(makeDiagnostic('JCLK007', {}, { line: user.line ?? notify.line, column: user.col, severity: 'error' }));
+        diagnostics.push(makeDiagnostic('JCLK007', {}, { line: user.line ?? notify.line, column: user.col }));
     }
 
     checkWhen(findParam(notify.params, 'WHEN'), notify.line, diagnostics);

@@ -1,6 +1,22 @@
 // Every diagnostic code the validator can report, with a one-line description
 // for the Help dialog. A test keeps this list identical to the CATALOG in
-// backend/src/errors.js, so a new code can't ship without being explained.
+// backend/src/errors.js, so a new code can't ship without being explained,
+// and keeps each code's default severity the same as the catalog's.
+
+const WARNINGS = new Set([
+    'JCLD001', 'JCLD007',
+    'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',
+    'JCLK001', 'JCLK005', 'JCLK006', 'JCLK008',
+    'JCLL006',
+    'JCLR001', 'JCLR003', 'JCLR005',
+    'JCLS002', 'JCLS003', 'JCLS004', 'JCLS005', 'JCLS009', 'JCLS010', 'JCLS011', 'JCLS012', 'JCLS013'
+]);
+const INFO = new Set(['JCLD004', 'JCLJ306', 'JCLS014']);
+
+/** A code's default severity: error, warning or info. */
+export function severityOf(code) {
+    return INFO.has(code) ? 'info' : WARNINGS.has(code) ? 'warning' : 'error';
+}
 
 export const CODE_GROUPS = [
     {

@@ -13,11 +13,9 @@ function checkDDStatements(job, diagnostics) {
             if (dd.name) {
                 const key = dd.name.toUpperCase();
                 if (seen.has(key)) {
-                    // Valid JCL, so a warning rather than an error.
                     diagnostics.push(makeDiagnostic('JCLD001', { name: dd.name, step: step.name }, {
                         line: dd.line,
-                        column: 1,
-                        severity: 'warning'
+                        column: 1
                     }));
                 } else {
                     seen.set(key, dd.line);
@@ -99,7 +97,7 @@ function checkPathOptions(dd, diagnostics) {
     if (!pathParam) {
         const option = ['PATHOPTS', 'PATHMODE', 'PATHDISP'].map(find).find(Boolean);
         if (option) {
-            diagnostics.push(makeDiagnostic('JCLD007', { keyword: option.key }, { line: option.line ?? dd.line, column: option.col, severity: 'warning' }));
+            diagnostics.push(makeDiagnostic('JCLD007', { keyword: option.key }, { line: option.line ?? dd.line, column: option.col }));
         }
 
         return;
@@ -130,7 +128,7 @@ function checkInternalReader(step, diagnostics) {
 
     for (const dd of step.dds) {
         if (dd.instreamData && dd.instreamData.some(line => JOB_LINE_RE.test(line))) {
-            diagnostics.push(makeDiagnostic('JCLD004', {}, { line: dd.line, column: 1, severity: 'info' }));
+            diagnostics.push(makeDiagnostic('JCLD004', {}, { line: dd.line, column: 1 }));
         }
     }
 }

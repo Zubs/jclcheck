@@ -57,7 +57,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 31. DSN with LIKE
 - [x] 32. Symbols in in-stream PROCs
 - [x] 33. Positions on continued statements
-- [ ] 34. Severity of real JCL errors
+- [x] 34. Severity of real JCL errors
 - [ ] 35. Stale results in the workbench
 - [ ] 36. Dataset flow checks
 - [ ] 37. Inline suppressions and site profile
@@ -1555,7 +1555,7 @@ after:
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
 - **Underline lengths (feature 33).** Feature 33 gives each parameter its own line and column, but not a `length`, since nothing used it yet: most diagnostics still underline one character. Decide whether diagnostics should underline the whole parameter or value, and add the lengths then.
 - **IF and WHEN conditions over several lines (feature 33).** IF conditions keep their own per-character positions. A `WHEN=` condition on a NOTIFY or job group statement that runs onto another line is reported on the line its value starts, with columns counted as if it were one line.
-- **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.
+- **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error. Feature 34 also made the other codes' severities explicit, keeping what they were (for example `JCLK004` too many positionals and `JCLK007`/`JCLK009` stay errors, `JCLR003` unmatched DD overrides stays a warning); `test/severities.test.js` lists them all. It also found that a symbolic `DISP=&D` in a PROC was still checked, and now skips symbolic values in the DISP, SPACE, DCB, REGION, TIME, RECFM and DSORG checks.
 - **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
 - **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.

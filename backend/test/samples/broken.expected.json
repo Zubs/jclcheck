@@ -28,7 +28,7 @@
     },
     {
       "code": "JCLS001",
-      "severity": "warning",
+      "severity": "error",
       "line": 5,
       "column": 46
     },

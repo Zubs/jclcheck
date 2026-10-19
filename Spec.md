@@ -72,19 +72,19 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 
 | Prefix | Group | Default severity |
 |---|---|---|
-| `JCLL` | Reading lines | Error |
+| `JCLL` | Reading lines | Error (in-stream data without its delimiter is a warning) |
 | `JCLP` | Structure | Error |
 | `JCLO` | Statement order | Error |
-| `JCLD` | DD statements | Error (duplicates are warnings) |
-| `JCLK` | Keywords | Warning |
-| `JCLS` | Parameter values | Warning |
+| `JCLD` | DD statements | Error (duplicates and path options without PATH are warnings; in-stream JCL for the internal reader is information) |
+| `JCLK` | Keywords | Warning (a missing required parameter, a positional after a keyword, too many positionals and misused keywords are errors) |
+| `JCLS` | Parameter values | Warning (invalid DISP and dataset names are errors; quoted names are information) |
 | `JCLN` | Names | Error |
-| `JCLR` | Procedures and INCLUDE | Error (missing PROCs and members are warnings) |
-| `JCLJ` | JES2 and JES3 statements | Warning |
+| `JCLR` | Procedures and INCLUDE | Error (missing PROCs and members, and unmatched DD overrides, are warnings) |
+| `JCLJ` | JES2 and JES3 statements | Warning (a JES3-looking comment under JES2 is information) |
 | `JCLC` | IF conditions | Error |
 | `JCLG` | Job groups | Error |
 
-Help in the workbench lists and explains every code. A job counts as **valid** when it has no errors. Warnings do not make a job invalid.
+Each code has its own default severity, set in the catalogue in `errors.js`; the table gives the usual one for each group. Help in the workbench lists and explains every code, with its severity. A job counts as **valid** when it has no errors. Warnings do not make a job invalid.
 
 **Example diagnostic**
 

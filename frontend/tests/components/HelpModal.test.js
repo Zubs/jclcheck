@@ -3,7 +3,7 @@ import { mount } from '@vue/test-utils';
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import HelpModal from '../../src/components/HelpModal.vue';
-import { CODE_GROUPS } from '../../src/diagnosticCodes.js';
+import { CODE_GROUPS, severityOf } from '../../src/diagnosticCodes.js';
 
 // The codes the backend can report: the keys of CATALOG in errors.js.
 // (Tests run from the frontend folder.)
@@ -43,6 +43,18 @@ describe('HelpModal', () => {
         for (const code of listed) {
             expect(text).toContain(code);
         }
+    });
+
+    test('shows each code with the catalog\'s default severity', () => {
+        const catalog = [...readFileSync(resolve('../backend/src/errors.js'), 'utf8')
+            .matchAll(/^ {4}(JCL[A-Z][0-9]{3}): \{\n(?: {8}\/\/.*\n)? {8}severity: '(\w+)'/gm)];
+        expect(catalog.length).toBe(catalogCodes().length);
+        for (const [, code, severity] of catalog) {
+            expect(severityOf(code), code).toBe(severity);
+        }
+
+        const row = mount(HelpModal).findAll('tr').find(r => r.text().startsWith('JCLK002'));
+        expect(row.find('.help-sev').text()).toBe('error');
     });
 
     test('each group only holds codes with its prefix', () => {

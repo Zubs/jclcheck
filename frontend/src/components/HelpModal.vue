@@ -81,12 +81,17 @@
         </p>
 
         <h3>Diagnostic codes</h3>
+        <p>
+          Each code is shown with its usual severity. A job is valid when it has no
+          errors; warnings and information notes don't stop it.
+        </p>
         <div v-for="group in CODE_GROUPS" :key="group.prefix" class="help-codes">
           <h4>{{ group.prefix }} — {{ group.name }}</h4>
           <table>
             <tbody>
               <tr v-for="(text, code) in group.codes" :key="code">
                 <td>{{ code }}</td>
+                <td :class="`help-sev sev-${severityOf(code)}`">{{ severityOf(code) }}</td>
                 <td>{{ text }}</td>
               </tr>
             </tbody>
@@ -118,7 +123,7 @@
 </template>
 
 <script setup>
-import { CODE_GROUPS } from '../diagnosticCodes';
+import { CODE_GROUPS, severityOf } from '../diagnosticCodes';
 
 defineEmits(['close']);
 </script>
@@ -225,5 +230,22 @@ defineEmits(['close']);
 .help-body td:first-child {
   color: var(--field-blue);
   white-space: nowrap;
+}
+
+.help-body .help-sev {
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.help-body .sev-error {
+  color: var(--error);
+}
+
+.help-body .sev-warning {
+  color: var(--warning);
+}
+
+.help-body .sev-info {
+  color: var(--info);
 }
 </style>

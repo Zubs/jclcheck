@@ -175,7 +175,7 @@ member. See `backend/src/errors.js` for the full catalog: `JCLL` reading
 lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
 keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
 JES statements, `JCLC` IF conditions, `JCLG` job groups. The workbench's
-Help lists every code.
+Help lists every code with its default severity, which each catalog entry sets.
 
 ## API
 

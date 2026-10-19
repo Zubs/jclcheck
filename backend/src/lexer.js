@@ -563,7 +563,6 @@ function lex(source, { jes = 'JES2' } = {}) {
             {
                 line: instreamOwner.line,
                 column: 1,
-                severity: 'warning',
                 source: 'lexer'
             }
         ));

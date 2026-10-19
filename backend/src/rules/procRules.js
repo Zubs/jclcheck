@@ -40,8 +40,7 @@ function resolveProcCalls(
                 { name: step.calledProc, libraries: job.jcllib && procLibraries(job.jcllib) },
                 {
                     line: step.line,
-                    column: 1,
-                    severity: 'warning' // could legitimately be a cataloged procedure we can't see
+                    column: 1
                 }
             ));
         } else {
@@ -152,8 +151,7 @@ function validateDDOverrides(job, diagnostics) {
                         { name: dd.name, step: step.resolvedProc.name },
                         {
                             line: dd.line,
-                            column: 1,
-                            severity: 'warning'
+                            column: 1
                         }
                     ));
 
@@ -167,8 +165,7 @@ function validateDDOverrides(job, diagnostics) {
                         { name: ddName, step: stepName },
                         {
                             line: dd.line,
-                            column: 1,
-                            severity: 'warning'
+                            column: 1
                         }
                     ));
                 }
@@ -178,8 +175,7 @@ function validateDDOverrides(job, diagnostics) {
                     { name: dd.name, step: step.resolvedProc.name },
                     {
                         line: dd.line,
-                        column: 1,
-                        severity: 'warning'
+                        column: 1
                     }
                 ));
             }

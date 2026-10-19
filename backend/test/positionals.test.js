@@ -34,7 +34,7 @@ test('positional parameter limits', async (t) => {
     });
 
     await t.test('E: a positional after a keyword still gets JCLK003', () => {
-        assert.deepEqual(diags('//J JOB CLASS=A,(ACCT)\n' + STEP), [['JCLK003', 'warning', 17]]);
+        assert.deepEqual(diags('//J JOB CLASS=A,(ACCT)\n' + STEP), [['JCLK003', 'error', 17]]);
     });
 
     await t.test('S: a typical JOB statement is clean', () => {

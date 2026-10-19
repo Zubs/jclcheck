@@ -47,7 +47,7 @@ test('dataset name forms', async (t) => {
     });
 
     await t.test('E: && alone gets JCLS006', () => {
-        assert.deepEqual(diags('&&'), [['JCLS006', 'warning']]);
+        assert.deepEqual(diags('&&'), [['JCLS006', 'error']]);
     });
 
     await t.test('O: a quoted name only gets an info note', () => {

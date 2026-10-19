@@ -85,7 +85,7 @@ function checkComment(stmt, jes, diagnostics) {
 
     const name = m[1].toUpperCase();
     if (jes === 'JES2' && JES3_STATEMENTS.has(name)) {
-        diagnostics.push(makeDiagnostic('JCLJ306', { name }, { line: stmt.line, column: 1, severity: 'info' }));
+        diagnostics.push(makeDiagnostic('JCLJ306', { name }, { line: stmt.line, column: 1 }));
     } else if (jes === 'JES3' && (m[3] || '').includes('=')) {
         const closest = closestKeyword(name, JES3_STATEMENTS);
         if (closest) {

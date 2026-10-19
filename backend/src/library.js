@@ -107,7 +107,7 @@ function expandIncludes(statements, library, diagnostics, chain = [], startOrder
         const entry = memberParam && library.find(memberParam.value, order);
         if (!entry) {
             if (memberParam) {
-                diagnostics.push(makeDiagnostic('JCLR005', { name: memberParam.value }, { line: memberParam.valueLine ?? stmt.line, column: memberParam.valueCol, severity: 'warning' }));
+                diagnostics.push(makeDiagnostic('JCLR005', { name: memberParam.value }, { line: memberParam.valueLine ?? stmt.line, column: memberParam.valueCol }));
             }
 
             out.push(stmt);
