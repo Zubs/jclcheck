@@ -52,10 +52,13 @@
       <section class="pane pane-diag">
         <ErrorPanel
             :diagnostics="diagnostics"
+            :datasets="datasets"
             :stats="stats"
             :checked-against="checkedAgainst"
             :loading="loading"
             @select="onSelectDiagnostic"
+            @select-dataset="onSelectDataset"
+            @open-datasets="track('datasets', 'open')"
         />
       </section>
     </main>
@@ -156,6 +159,7 @@ function loadDraft() {
 const draft = loadDraft();
 const code = ref(draft ? draft.code : SAMPLES.clean.code);
 const diagnostics = ref([]);
+const datasets = ref([]);
 const stats = ref(null);
 const loading = ref(false);
 const errored = ref(false);
@@ -282,6 +286,7 @@ async function runValidation(trigger) {
     visit.responseTimes.push(Date.now() - startedAt);
     visit.lastResult = resultKind(result.stats);
     diagnostics.value = result.diagnostics;
+    datasets.value = result.datasets || [];
     stats.value = result.stats;
     trackDiagnostics(result.diagnostics);
   } catch (e) {
@@ -511,8 +516,18 @@ onBeforeUnmount(() => {
   sendVisitSummary();
 });
 
-async function onSelectDiagnostic(d) {
+function onSelectDiagnostic(d) {
   track('diag/click', d.code);
+  return goTo(d);
+}
+
+function onSelectDataset(touch) {
+  track('datasets', 'cell-click');
+  return goTo(touch);
+}
+
+// Goes to a line in the editor, or in a library member.
+async function goTo(d) {
   if (d.member) {
     showLibrary.value = true;
     await nextTick();

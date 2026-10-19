@@ -366,6 +366,21 @@ describe('Workbench analytics', () => {
         expect(tracked('diag/click')).toEqual(['JCLD002']);
     });
 
+    test('opens the DATASETS grid and goes to a DD from a cell (feature 36)', async () => {
+        validateJcl.mockResolvedValue({
+            ...CLEAN,
+            datasets: [{ job: 'J', steps: ['S1'], datasets: [{ name: 'A.B', temporary: false, touches: [{ step: 'S1', dd: 'D', line: 2, column: 5, actions: ['R'] }] }] }]
+        });
+        const w = await mountWorkbench();
+        await edit(w, '//J JOB\n//S1 EXEC PGM=X\n//D DD DSN=A.B,DISP=SHR');
+        await w.find('.panel-tab--datasets').trigger('click');
+        await w.find('.flow-cell').trigger('click');
+        await flushPromises();
+        expect(tracked('datasets')).toEqual(['open', 'cell-click']);
+        const el = w.find('textarea').element;
+        expect(el.value.slice(el.selectionStart, el.selectionEnd)).toBe('//S1 EXEC PGM=X');
+    });
+
     test('counts an error status as api/error/<status>', async () => {
         vi.spyOn(console, 'error').mockImplementation(() => {});
         validateJcl.mockRejectedValue(Object.assign(new Error('failed (500)'), { status: 500 }));

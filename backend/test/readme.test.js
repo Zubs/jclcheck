@@ -20,6 +20,7 @@ test('README example request and response match the API', () => {
     const result = validate(request.source, { zosLevel: request.zosLevel, jes: request.jes });
     const actual = JSON.parse(JSON.stringify({
         diagnostics: result.diagnostics,
+        datasets: result.datasets,
         stats: result.stats,
         zosLevel: result.zosLevel,
         jes: result.jes

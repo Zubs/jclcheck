@@ -59,7 +59,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 33. Positions on continued statements
 - [x] 34. Severity of real JCL errors
 - [x] 35. Stale results in the workbench
-- [ ] 36. Dataset flow checks
+- [x] 36. Dataset flow checks
 - [ ] 37. Inline suppressions and site profile
 - [ ] 38. Command-line tool and CI output
 - [ ] 39. Formatter
@@ -1557,6 +1557,7 @@ after:
 - **IF and WHEN conditions over several lines (feature 33).** IF conditions keep their own per-character positions. A `WHEN=` condition on a NOTIFY or job group statement that runs onto another line is reported on the line its value starts, with columns counted as if it were one line.
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error. Feature 34 also made the other codes' severities explicit, keeping what they were (for example `JCLK004` too many positionals and `JCLK007`/`JCLK009` stay errors, `JCLR003` unmatched DD overrides stays a warning); `test/severities.test.js` lists them all. It also found that a symbolic `DISP=&D` in a PROC was still checked, and now skips symbolic values in the DISP, SPACE, DCB, REGION, TIME, RECFM and DSORG checks.
 - **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.
+- **Dataset flow details (feature 36).** Choices to confirm: a `NEW` dataset with no normal disposition counts as deleted when its step ends, so reading it later gets `JCLF004`; DD overrides without a procedure step name (`//OUT DD ...` on a step calling a PROC) aren't applied to the flow, only `PROCSTEP.DD` ones; after a step that calls a PROC that wasn't supplied, `JCLF001` and `JCLF002` are not reported, since that PROC may create or read the dataset; and a grid cell joins a step's actions (`NP` for `DISP=(NEW,PASS)`). `DCB=*.STEP.DD` referbacks aren't checked yet.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
 - **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.
 

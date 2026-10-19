@@ -445,7 +445,8 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 if (job) {
                     const set = { params: [] };
                     attachParams(set, stmt, diagnostics);
-                    job.sets.push({ line: stmt.line, names: set.params.filter(p => p.kind === 'keyword').map(p => p.key) });
+                    const assigned = set.params.filter(p => p.kind === 'keyword');
+                    job.sets.push({ line: stmt.line, names: assigned.map(p => p.key), values: Object.fromEntries(assigned.map(p => [p.key, p.value])) });
                 }
 
                 break;

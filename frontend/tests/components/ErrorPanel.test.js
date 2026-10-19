@@ -75,4 +75,48 @@ describe('ErrorPanel', () => {
         const w = mount(ErrorPanel, { props: { diagnostics: [{ ...WARNING, line: 3, column: 5, member: 'CAMPBEL.PROCS.JCL(MYPROC2)' }], stats: STATS } });
         expect(w.find('.diag-loc').text()).toBe('MYPROC2 L3:5');
     });
+
+    describe('DATASETS tab (feature 36)', () => {
+        const DATASETS = [{
+            job: 'J1',
+            steps: ['S1', 'S2', 'S3'],
+            datasets: [{
+                name: '&&T',
+                temporary: true,
+                touches: [
+                    { step: 'S1', dd: 'O', line: 3, column: 12, actions: ['N', 'P'] },
+                    { step: 'S2', dd: 'I', line: 5, column: 12, actions: ['R'] },
+                    { step: 'S3', dd: 'I', line: 7, column: 12, actions: ['R', 'D'] }
+                ]
+            }]
+        }];
+
+        test('shows a grid with a row per dataset and a column per step', async () => {
+            const w = mount(ErrorPanel, { props: { datasets: DATASETS, stats: STATS } });
+            await w.find('.panel-tab--datasets').trigger('click');
+            expect(w.find('.diag-list').exists()).toBe(false);
+            expect(w.findAll('.flow-grid thead th').map(th => th.text())).toEqual(['DATASET', 'S1', 'S2', 'S3']);
+            const cells = w.findAll('.flow-grid tbody td').map(td => td.text());
+            expect(w.find('.flow-name').text()).toBe('&&T');
+            expect(cells).toEqual(['NP', 'R', 'RD']);
+            expect(w.find('.flow-cell').attributes('title')).toBe('O DD: new, pass');
+        });
+
+        test('says so when there are no datasets', async () => {
+            const w = mount(ErrorPanel, { props: { datasets: [], stats: STATS } });
+            await w.find('.panel-tab--datasets').trigger('click');
+            expect(w.find('.panel-status').text()).toContain('NO DATASETS');
+        });
+
+        test('emits the touch when a cell is clicked, and open-datasets once', async () => {
+            const w = mount(ErrorPanel, { props: { datasets: DATASETS, stats: STATS } });
+            await w.find('.panel-tab--datasets').trigger('click');
+            await w.find('.panel-tab--datasets').trigger('click');
+            expect(w.emitted('open-datasets')).toHaveLength(1);
+            await w.findAll('.flow-cell')[1].trigger('click');
+            expect(w.emitted('select-dataset')[0][0]).toMatchObject({ step: 'S2', line: 5 });
+            await w.find('.panel-tab--diagnostics').trigger('click');
+            expect(w.find('.flow-grid').exists()).toBe(false);
+        });
+    });
 });

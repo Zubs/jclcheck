@@ -5,6 +5,7 @@
 
 const WARNINGS = new Set([
     'JCLD001', 'JCLD007',
+    'JCLF002', 'JCLF003', 'JCLF004',
     'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',
     'JCLK001', 'JCLK005', 'JCLK006', 'JCLK008',
     'JCLL006',
@@ -72,6 +73,17 @@ export const CODE_GROUPS = [
             JCLD005: 'PATHOPTS with more than one of ORDONLY, OWRONLY and ORDWR.',
             JCLD006: 'DISP used with PATH (use PATHDISP).',
             JCLD007: 'Path options without PATH.'
+        }
+    },
+    {
+        prefix: 'JCLF',
+        name: 'Dataset flow',
+        codes: {
+            JCLF001: 'A temporary dataset read before any step creates or passes it.',
+            JCLF002: 'A dataset passed that no later step reads.',
+            JCLF003: 'A dataset created and catalogued twice with no delete in between.',
+            JCLF004: 'A dataset read after an earlier step deletes it.',
+            JCLF005: "A referback (*.step.dd) to a step or DD that doesn't exist or comes later."
         }
     },
     {

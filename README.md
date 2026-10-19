@@ -168,13 +168,21 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
   (symbolic parameters, DD overrides, procedure steps). Catalogued procedures
   and INCLUDE members are found and checked when supplied in the `library`
   (the workbench's Library panel), in the job's JCLLIB order.
+- **Dataset flow**: each dataset is followed through the job's steps,
+  including the steps of called PROCs: a temporary dataset read before any
+  step creates or passes it, a pass no later step reads, a dataset
+  catalogued twice, a read after a delete, and referbacks (`*.STEP.DD`) to
+  nothing. Known symbol values are filled in; names that stay symbolic and
+  relative generations are skipped. The workbench's DATASETS tab shows the
+  flow as a grid.
 
 Every diagnostic carries `{ code, severity, line, column, length, message,
 suggestion, source }`, plus `member` when it was found inside a library
 member. See `backend/src/errors.js` for the full catalog: `JCLL` reading
 lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
 keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
-JES statements, `JCLC` IF conditions, `JCLG` job groups. The workbench's
+JES statements, `JCLC` IF conditions, `JCLG` job groups, `JCLF` dataset
+flow. The workbench's
 Help lists every code with its default severity, which each catalog entry sets.
 
 ## API
@@ -186,8 +194,13 @@ Help lists every code with its default severity, which each catalog entry sets.
 | `GET /api/health` | `{ "ok": true }` |
 | `POST /api/usage` | Opt-in CLI usage counts (see Analytics). |
 
-The response from `/api/validate` is `{ diagnostics, ast, stats, zosLevel,
-jes }`. `ast.jobs` lists every job in the stream (it replaced the single
+The response from `/api/validate` is `{ diagnostics, ast, datasets, stats,
+zosLevel, jes }`. `datasets` has an entry for each job that names a dataset:
+`{ job, steps, datasets }`, where `steps` are the job's steps in order (a step
+calling a PROC appears as `STEP.PROCSTEP`) and each dataset is `{ name,
+temporary, touches }`, with a touch `{ step, dd, line, column, actions }` for
+each DD naming it. Actions are `N` new, `R` read, `M` mod, `P` pass and `D`
+delete. `ast.jobs` lists every job in the stream (it replaced the single
 `ast.job` when several jobs per stream were supported), `ast.procs` the
 procedures and `ast.jobGroups` the JES2 job groups. `stats` has `errors`,
 `warnings`, `info`, `statementCount`, `jobCount`, `stepCount` (across all
@@ -218,6 +231,7 @@ Response, without `ast`:
       "source": "validator"
     }
   ],
+  "datasets": [],
   "stats": {
     "errors": 0,
     "warnings": 1,

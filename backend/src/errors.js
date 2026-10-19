@@ -311,6 +311,35 @@ const CATALOG = {
         suggestion: () => `Start the group with a JOBGROUP statement, or remove this statement.`
     },
 
+    // Validator: dataset flow across steps (JCLF0xx)
+    JCLF001: {
+        severity: 'error',
+        message: (d) => `Temporary dataset '${d.name}' is read in step ${d.step}, but no earlier step creates or passes it.`,
+        suggestion: (d) => d.closest
+            ? `Did you mean '${d.closest.name}', which step ${d.closest.step} creates?`
+            : `Create it with DISP=(NEW,PASS) in an earlier step, or check the name.`
+    },
+    JCLF002: {
+        severity: 'warning',
+        message: (d) => `Dataset '${d.name}' is passed by step ${d.step}, but no later step reads it.`,
+        suggestion: () => `Read it in a later step, or use DISP=(NEW,DELETE) or CATLG instead of PASS.`
+    },
+    JCLF003: {
+        severity: 'warning',
+        message: (d) => `Dataset '${d.name}' is created and catalogued again in step ${d.step}; step ${d.first} already catalogued it.`,
+        suggestion: () => `The second allocation fails because the name is already catalogued. Delete it in between, or use another name.`
+    },
+    JCLF004: {
+        severity: 'warning',
+        message: (d) => `Dataset '${d.name}' is read in step ${d.step}, but step ${d.deletedBy} deletes it${d.implicit ? ' (a NEW dataset with no disposition is deleted when its step ends)' : ''}.`,
+        suggestion: () => `Keep or pass it in the earlier step, for example DISP=(NEW,PASS), or create it again.`
+    },
+    JCLF005: {
+        severity: 'error',
+        message: (d) => `Referback '${d.ref}' ${d.detail}.`,
+        suggestion: () => `A referback names an earlier DD: *.ddname in the same step, *.step.ddname, or *.step.procstep.ddname.`
+    },
+
     // Validator: DD / duplicates (JCLD0xx)
     JCLD001: {
         // Valid JCL: both DDs are allocated.

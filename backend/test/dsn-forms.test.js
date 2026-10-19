@@ -4,7 +4,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { validate } = require('../src/validator');
 
-const dd = dsn => `//J JOB\n//S EXEC PGM=X\n//D DD DSN=${dsn},DISP=SHR\n`;
+// NEW, so a temporary name is created here rather than read (feature 36).
+const dd = dsn => `//J JOB\n//S EXEC PGM=X\n//D DD DSN=${dsn},\n//         DISP=(NEW,DELETE)\n`;
 const diags = dsn => validate(dd(dsn)).diagnostics.map(d => [d.code, d.severity]);
 
 test('dataset name forms', async (t) => {

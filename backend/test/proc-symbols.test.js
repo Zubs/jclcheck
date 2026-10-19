@@ -10,7 +10,7 @@ const EXAMPLE = `//J1   JOB (A),'X'
 //     SET HLQ=PROD
 //P    PROC
 //S1   EXEC PGM=SORT
-//W    DD DSN=&&WORK,DISP=(NEW,PASS),SPACE=(TRK,1)
+//W    DD DSN=&&WORK,DISP=(NEW,DELETE),SPACE=(TRK,1)
 //D    DD DSN=&SYSUID..DATA,DISP=SHR
 //E    DD DSN=&HLQ..&ENV..DATA,DISP=SHR
 //     PEND
@@ -25,7 +25,7 @@ test('symbols in PROCs', async (t) => {
     });
 
     await t.test('O: &&WORK is a temporary dataset, not a symbol', () => {
-        assert.deepEqual(diags('//J JOB\n//P PROC\n//S1 EXEC PGM=X\n//W DD DSN=&&WORK,DISP=(NEW,PASS)\n//  PEND\n//S EXEC P\n'), []);
+        assert.deepEqual(diags('//J JOB\n//P PROC\n//S1 EXEC PGM=X\n//W DD DSN=&&WORK,DISP=(NEW,DELETE)\n//  PEND\n//S EXEC P\n'), []);
     });
 
     await t.test('M: SET, &SYSUID, &&WORK and an EXEC override are all defined', () => {
