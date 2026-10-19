@@ -10,8 +10,9 @@ function apiError(message, status) {
 // `library` holds { dsn, member, source } entries for catalogued procedures
 // and INCLUDE members; it's only sent when there is something in it.
 // `zosLevel` and `jes` are sent when chosen; otherwise the API's defaults apply.
+// `profile` is the site profile object, sent when there is one.
 // `signal` lets the workbench abort a check that a newer one replaces.
-export async function validateJcl(source, { library = [], zosLevel, jes, signal } = {}) {
+export async function validateJcl(source, { library = [], zosLevel, jes, profile, signal } = {}) {
     let res;
     try {
         res = await fetch(`${API_BASE}/api/validate`, {
@@ -25,7 +26,8 @@ export async function validateJcl(source, { library = [], zosLevel, jes, signal 
                 source,
                 ...(library.length ? { library } : {}),
                 ...(zosLevel ? { zosLevel } : {}),
-                ...(jes ? { jes } : {})
+                ...(jes ? { jes } : {}),
+                ...(profile ? { profile } : {})
             }),
             signal
         });
@@ -35,7 +37,15 @@ export async function validateJcl(source, { library = [], zosLevel, jes, signal 
 
     if (!res.ok) {
         const text = await res.text().catch(() => '');
-        throw apiError(`Validation request failed (${res.status}): ${text}`, res.status);
+        const err = apiError(`Validation request failed (${res.status}): ${text}`, res.status);
+        // A 400 says which option was refused, for example the profile.
+        try {
+            err.detail = JSON.parse(text).message;
+        } catch {
+            // Not JSON: the status alone has to do.
+        }
+
+        throw err;
     }
 
     return res.json();

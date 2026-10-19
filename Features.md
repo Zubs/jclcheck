@@ -60,7 +60,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 34. Severity of real JCL errors
 - [x] 35. Stale results in the workbench
 - [x] 36. Dataset flow checks
-- [ ] 37. Inline suppressions and site profile
+- [x] 37. Inline suppressions and site profile
 - [ ] 38. Command-line tool and CI output
 - [ ] 39. Formatter
 - [ ] 40. Keyword explanations on hover
@@ -1558,6 +1558,7 @@ after:
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error. Feature 34 also made the other codes' severities explicit, keeping what they were (for example `JCLK004` too many positionals and `JCLK007`/`JCLK009` stay errors, `JCLR003` unmatched DD overrides stays a warning); `test/severities.test.js` lists them all. It also found that a symbolic `DISP=&D` in a PROC was still checked, and now skips symbolic values in the DISP, SPACE, DCB, REGION, TIME, RECFM and DSORG checks.
 - **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.
 - **Dataset flow details (feature 36).** Choices to confirm: a `NEW` dataset with no normal disposition counts as deleted when its step ends, so reading it later gets `JCLF004`; DD overrides without a procedure step name (`//OUT DD ...` on a step calling a PROC) aren't applied to the flow, only `PROCSTEP.DD` ones; after a step that calls a PROC that wasn't supplied, `JCLF001` and `JCLF002` are not reported, since that PROC may create or read the dataset; and a grid cell joins a step's actions (`NP` for `DISP=(NEW,PASS)`). `DCB=*.STEP.DD` referbacks aren't checked yet.
+- **Suppression and profile details (feature 37).** Choices to confirm: an `OFF` written before the JOB statement covers that job, and the next JOB statement or a `//` null statement ends an `OFF` block; an `ON` for a code that isn't off is ignored; suppressions only apply to the job's own lines, not to diagnostics inside library members; a code the profile switches `off` isn't returned at all (unlike a suppressed one); `dsnPrefixes` applies to DDs whose DISP status is NEW, or that have no DISP; `allowed` applies to that keyword on every JOB, EXEC and DD; and a profile's `names.dd` isn't applied to `PROCSTEP.DD` overrides. The workbench edits the profile as JSON text; a form could come later.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
 - **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.
 

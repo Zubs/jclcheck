@@ -968,4 +968,86 @@ describe('Workbench sharing', () => {
         await vi.waitFor(() => expect(writeText).toHaveBeenCalledTimes(2));
         expect(w.find('.share-message').exists()).toBe(true);
     });
+
+    test('a shared link carries the site profile (feature 37)', async () => {
+        let w = await mountWorkbench();
+        await w.find('.header-profile').trigger('click');
+        await w.find('.profile-text').setValue('{"names":{"job":"AR*"}}');
+        const link = await shareAndCapture(w);
+        w.unmount();
+        localStorage.clear();
+        w = await openLink(link);
+        expect(validateJcl.mock.calls[0][1].profile).toEqual({ names: { job: 'AR*' } });
+        await w.find('.back-to-draft').trigger('click');
+        await w.find('.header-profile').trigger('click');
+        expect(w.find('.profile-text').element.value).toBe('');
+    });
+});
+
+describe('Workbench site profile and suppressions (feature 37)', () => {
+    const SUPPRESSED = {
+        diagnostics: [
+            { code: 'JCLK001', severity: 'warning', line: 3, column: 20, message: 'LOCALKW', suggestion: null, suppressed: true },
+            { code: 'JCLD002', severity: 'error', line: 4, column: 1, message: 'no source', suggestion: null }
+        ],
+        stats: { errors: 1, warnings: 0, suppressed: 1, statementCount: 3, stepCount: 1, procCount: 0, valid: false }
+    };
+
+    async function openProfile(w, text) {
+        await w.find('.header-profile').trigger('click');
+        await w.find('.profile-text').setValue(text);
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+    }
+
+    test('sends a valid profile with each check, and counts its rules once', async () => {
+        const w = await mountWorkbench();
+        await openProfile(w, '{"names":{"job":"AR*"},"allowed":{"CLASS":["A"]}}');
+        expect(validateJcl.mock.calls.at(-1)[1].profile).toEqual({ names: { job: 'AR*' }, allowed: { CLASS: ['A'] } });
+        await pfButton(w, 'VALIDATE').trigger('click');
+        await flushPromises();
+        expect(tracked('profile')).toEqual(['edit']);
+        expect(tracked('profile/rule')).toEqual(['names', 'allowed']);
+        expect(w.find('.profile-topline__meta').text()).toBe('IN USE');
+    });
+
+    test('does not send a profile that is not valid JSON, and says why', async () => {
+        const w = await mountWorkbench();
+        await openProfile(w, '{"names":');
+        expect(validateJcl.mock.calls.at(-1)[1]).not.toHaveProperty('profile');
+        expect(w.find('.profile-problem').text()).toContain('Not valid JSON');
+        expect(w.find('.profile-topline__meta').text()).toBe('NOT USED');
+    });
+
+    test('shows the API\'s reason when it refuses the profile', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => {});
+        const w = await mountWorkbench();
+        validateJcl.mockRejectedValueOnce(Object.assign(new Error('400'), { status: 400, detail: 'profile.names.job must be a string or a list of up to 200 strings.' }));
+        await openProfile(w, '{"names":{"job":5}}');
+        expect(statusText(w)).toBe('CHECK THE SITE PROFILE');
+        expect(w.find('.profile-problem').text()).toContain('profile.names.job');
+    });
+
+    test('keeps the profile in the draft', async () => {
+        let w = await mountWorkbench();
+        await openProfile(w, '{"dsnPrefixes":["AR"]}');
+        await vi.advanceTimersByTimeAsync(600);
+        expect(JSON.parse(localStorage.getItem('jclcheck.draft')).profile).toBe('{"dsnPrefixes":["AR"]}');
+        w.unmount();
+        validateJcl.mockClear();
+        w = await mountWorkbench();
+        expect(validateJcl.mock.calls[0][1].profile).toEqual({ dsnPrefixes: ['AR'] });
+    });
+
+    test('hides suppressed diagnostics until asked, and does not underline them', async () => {
+        validateJcl.mockResolvedValue(SUPPRESSED);
+        const w = await mountWorkbench();
+        expect(w.findAll('.diag').map(d => d.find('.diag-code').text())).toEqual(['JCLD002']);
+        expect(w.find('.stat-suppressed').text()).toBe('1 SUPPRESSED');
+        expect(w.find('.u-warning').exists()).toBe(false);
+        await w.find('.stat-suppressed').trigger('click');
+        expect(w.findAll('.diag').map(d => d.find('.diag-sev').text())).toEqual(['HIDDEN', 'ERR']);
+        expect(tracked('suppress')).toEqual(['JCLK001']);
+        expect(tracked('diag/seen')).toEqual(['JCLD002']);
+    });
 });

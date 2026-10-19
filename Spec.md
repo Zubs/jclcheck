@@ -20,7 +20,7 @@ The site should load fast and be easy to find through search engines for searche
 
 - **Audience:** People learning JCL, mainframe trainees, and developers who want a quick check before they submit a job.
 - **Price:** Free. No sign-up, no accounts and no usage limits.
-- **Privacy:** JCL is sent to the API to be checked, and is never stored or counted there. The user's draft and library are kept only in their own browser, and a shared link carries the JCL inside the link itself, after the `#`, which is never sent to a server. Usage is counted anonymously with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. Nothing is counted when the browser sends Do Not Track or Global Privacy Control.
+- **Privacy:** JCL is sent to the API to be checked, and is never stored or counted there. The user's draft, library and site profile are kept only in their own browser, and a shared link carries them inside the link itself, after the `#`, which is never sent to a server. Usage is counted anonymously with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. Nothing is counted when the browser sends Do Not Track or Global Privacy Control.
 - **Ownership:** Zubair owns the code and the product.
 
 ---
@@ -54,6 +54,7 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 - **PF-key action bar and keys:** F1 Help (Alt+H), F5 Validate (Ctrl/⌘+Enter), F6 Share (Alt+L), F9 Sample (Alt+S), F12 Clear (Alt+C). Escape closes help. When F9 or F12 replaces typed text, an Undo notice brings it back for 5 seconds.
 - **Drafts:** The JCL and library are saved in the user's browser and come back on the next visit. If storage is blocked, a one-line notice says so.
 - **Sharing:** Share puts the JCL, library, level and JES in a link (compressed, after `#jcl=`), copied to the clipboard. Opening it shows the job without replacing the user's draft until they edit it, with "Back to my draft".
+- **Profile panel:** PROFILE in the header edits the site profile as JSON. It is saved with the draft and included in shared links; JSON that doesn't parse isn't used, and the panel says why. The diagnostics panel shows how many diagnostics JCLCHECK comments hid and lists them on request.
 - **Datasets tab:** The diagnostics panel's DATASETS tab shows a grid with a row per dataset and a column per step, each cell showing how that step uses it (N new, R read, M mod, P pass, D delete). Clicking a cell goes to that DD.
 - **Samples:** A clean job, a broken job with many typical mistakes, and a job with an in-stream PROC, symbolic parameters and DD overrides.
 
@@ -68,6 +69,7 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 | **Keywords and values** | JOB, EXEC, DD, JCLLIB and NOTIFY keywords with "Did you mean…?", positional limits, keywords qualified with a procedure step, value rules (CLASS, TYPRUN, PRTY, MSGLEVEL, NOTIFY, EMAIL, …), DISP, SPACE, DCB, REGION, TIME and dataset names (members, generations, temporary and quoted names) |
 | **Names** | Job, step, DD and procedure step names are 1–8 characters and start with a letter or `$ # @` |
 | **Dataset flow** | Each dataset followed through the job's steps and called PROCs: temporary datasets read before they exist, passes nobody reads, datasets catalogued twice, reads after a delete, and referbacks to nothing |
+| **Suppressions and site profile** | `//* JCLCHECK OFF-NEXT code` and `OFF`/`ON` blocks hide named codes (still returned, not counted); a site profile adds name patterns, allowed values, new-dataset prefixes, extra keywords and per-code severities |
 | **Procedures** | In-stream PROCs, and catalogued PROCs and INCLUDE members supplied in the Library panel: symbolic parameters, DD overrides and procedure steps. A PROC that can't be found is a warning |
 
 **Diagnostic codes**
@@ -80,11 +82,12 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 | `JCLD` | DD statements | Error (duplicates and path options without PATH are warnings; in-stream JCL for the internal reader is information) |
 | `JCLK` | Keywords | Warning (a missing required parameter, a positional after a keyword, too many positionals and misused keywords are errors) |
 | `JCLS` | Parameter values | Warning (invalid DISP and dataset names are errors; quoted names are information) |
-| `JCLN` | Names | Error |
+| `JCLN` | Names | Error (site profile rules are warnings) |
 | `JCLR` | Procedures and INCLUDE | Error (missing PROCs and members, and unmatched DD overrides, are warnings) |
 | `JCLJ` | JES2 and JES3 statements | Warning (a JES3-looking comment under JES2 is information) |
 | `JCLC` | IF conditions | Error |
 | `JCLG` | Job groups | Error |
+| `JCLX` | Suppressions | Information |
 | `JCLF` | Dataset flow | Warning (reading a temporary dataset nobody created, and a referback to nothing, are errors) |
 
 Each code has its own default severity, set in the catalogue in `errors.js`; the table gives the usual one for each group. Help in the workbench lists and explains every code, with its severity. A job counts as **valid** when it has no errors. Warnings do not make a job invalid.
@@ -100,7 +103,7 @@ Each code has its own default severity, set in the catalogue in `errors.js`; the
 | Endpoint | Description |
 |---|---|
 | `GET /api/levels` | Returns `{ levels, defaultLevel, defaultJes }`: the supported z/OS levels, oldest first, each as `{ level, jes3 }` where `jes3` says whether JES3 can be chosen at it. The workbench's level picker uses it. |
-| `POST /api/validate` | Body `{ "source": "<JCL text>", "zosLevel": "2.5", "jes": "JES3" }` (2 MB limit). `zosLevel` is optional: one of `2.3`, `2.4`, `2.5`, `3.1` or `3.2`, with `3.2` the default. Any other level gets a 400 response listing the supported ones. `jes` is optional: `JES2` (the default) or `JES3`; JES3 can only be chosen at z/OS 2.5 or earlier, since IBM removed it in 3.1, and other values get a 400 response. `library` is optional: up to 50 `{ dsn, member, source }` entries holding catalogued procedures and INCLUDE members (leave `dsn` out for the system procedure library); they are searched in the job's JCLLIB order, and an invalid entry gets a 400 response naming it. Returns `{ diagnostics, ast, datasets, stats, zosLevel, jes }`, where `zosLevel` and `jes` are the ones used. A diagnostic found inside a library member also has `member` (for example `CAMPBEL.PROCS.JCL(MYPROC2)`), and its line and column are within that member. A keyword or statement that exists but not at the chosen level gets the warning `JCLK005`. Each diagnostic has `code`, `severity`, `line`, `column`, `length`, `message`, `suggestion` and `source`. `ast` has `jobs` (one entry per JOB statement) and `procs`. `datasets` lists, for each job that names a dataset, its steps and each dataset's touches (`{ step, dd, line, column, actions }`, with actions `N`, `R`, `M`, `P` and `D`). `stats` has `errors`, `warnings`, `info`, `statementCount`, `jobCount`, `stepCount` (across all jobs), `procCount` and `valid` |
+| `POST /api/validate` | Body `{ "source": "<JCL text>", "zosLevel": "2.5", "jes": "JES3" }` (2 MB limit). `zosLevel` is optional: one of `2.3`, `2.4`, `2.5`, `3.1` or `3.2`, with `3.2` the default. Any other level gets a 400 response listing the supported ones. `jes` is optional: `JES2` (the default) or `JES3`; JES3 can only be chosen at z/OS 2.5 or earlier, since IBM removed it in 3.1, and other values get a 400 response. `profile` is optional: a site profile (`names`, `allowed`, `dsnPrefixes`, `extraKeywords`, `severity`); an invalid one gets a 400 response naming the field. `library` is optional: up to 50 `{ dsn, member, source }` entries holding catalogued procedures and INCLUDE members (leave `dsn` out for the system procedure library); they are searched in the job's JCLLIB order, and an invalid entry gets a 400 response naming it. Returns `{ diagnostics, ast, datasets, stats, zosLevel, jes }`, where `zosLevel` and `jes` are the ones used. A diagnostic found inside a library member also has `member` (for example `CAMPBEL.PROCS.JCL(MYPROC2)`), and its line and column are within that member. A keyword or statement that exists but not at the chosen level gets the warning `JCLK005`. Each diagnostic has `code`, `severity`, `line`, `column`, `length`, `message`, `suggestion` and `source`. `ast` has `jobs` (one entry per JOB statement) and `procs`. `datasets` lists, for each job that names a dataset, its steps and each dataset's touches (`{ step, dd, line, column, actions }`, with actions `N`, `R`, `M`, `P` and `D`). Diagnostics hidden by `//* JCLCHECK` comments have `suppressed: true`. `stats` has `errors`, `warnings`, `info`, `suppressed`, `statementCount`, `jobCount`, `stepCount` (across all jobs), `procCount` and `valid` |
 | `GET /api/health` | Returns `{ "ok": true }` |
 
 ---

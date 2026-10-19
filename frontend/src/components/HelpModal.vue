@@ -64,6 +64,21 @@
           it to jump there.
         </p>
 
+        <h3>Suppressions and site profile</h3>
+        <p>
+          To hide a diagnostic you know is wrong for your shop, add a JCL comment naming its code:
+          <code>//* JCLCHECK OFF-NEXT JCLK001</code> hides it on the next statement, and
+          <code>//* JCLCHECK OFF JCLK001</code> hides it until <code>//* JCLCHECK ON JCLK001</code>
+          or the end of the job. The job still runs unchanged. Hidden diagnostics don't count;
+          click <strong>SUPPRESSED</strong> in the panel to list them.
+        </p>
+        <p>
+          Open <strong>PROFILE</strong> to add your shop's rules as JSON: name patterns
+          (<code>*</code> and <code>%</code>), allowed values, prefixes for new datasets, extra
+          keywords, and a different severity, or <code>off</code>, for any code. It is saved with
+          your draft and included in shared links.
+        </p>
+
         <h3>Columns</h3>
         <p>
           Each line is read like an 80-column card, as z/OS reads it. Columns 1–71 hold the

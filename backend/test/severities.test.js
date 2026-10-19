@@ -27,10 +27,11 @@ const SEVERITIES = {
         'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',
         'JCLK001', 'JCLK005', 'JCLK006', 'JCLK008',
         'JCLL006',
+        'JCLN002',
         'JCLR001', 'JCLR003', 'JCLR005',
         'JCLS002', 'JCLS003', 'JCLS004', 'JCLS005', 'JCLS009', 'JCLS010', 'JCLS011', 'JCLS012', 'JCLS013'
     ],
-    info: ['JCLD004', 'JCLJ306', 'JCLS014']
+    info: ['JCLD004', 'JCLJ306', 'JCLS014', 'JCLX001', 'JCLX002']
 };
 
 const STEP = '//S EXEC PGM=X\n';

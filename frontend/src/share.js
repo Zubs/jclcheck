@@ -1,4 +1,4 @@
-// Shareable links: the JCL, library members, z/OS level and JES, gzipped with
+// Shareable links: the JCL, library members, site profile, z/OS level and JES, gzipped with
 // the browser's CompressionStream and base64url-encoded after "#jcl=". The part
 // after # never reaches a server, so nothing is stored or sent anywhere.
 
@@ -24,7 +24,7 @@ function fromBase64Url(text) {
     return Uint8Array.from(binary, ch => ch.charCodeAt(0));
 }
 
-/** @param {{ jcl: string, library: object[], zosLevel: string|null, jes: string|null }} payload */
+/** @param {{ jcl: string, library: object[], profile?: string, zosLevel: string|null, jes: string|null }} payload */
 export async function encodeShare(payload) {
     const json = new TextEncoder().encode(JSON.stringify({ v: 1, ...payload }));
     return toBase64Url(await pipe(json, new CompressionStream('gzip')));
@@ -36,7 +36,8 @@ export async function decodeShare(fragment) {
     const payload = JSON.parse(json);
     const text = v => typeof v === 'string';
     if (payload.v !== 1 || !text(payload.jcl) || !Array.isArray(payload.library) ||
-        !payload.library.every(e => e && text(e.dsn) && text(e.member) && text(e.source))) {
+        !payload.library.every(e => e && text(e.dsn) && text(e.member) && text(e.source)) ||
+        (payload.profile !== undefined && !text(payload.profile))) {
         throw new Error('not a JCLcheck link');
     }
 

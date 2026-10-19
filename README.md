@@ -175,6 +175,12 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
   nothing. Known symbol values are filled in; names that stay symbolic and
   relative generations are skipped. The workbench's DATASETS tab shows the
   flow as a grid.
+- **Suppressions and site profile**: `//* JCLCHECK OFF-NEXT code[,code]`
+  hides those codes on the next statement, and `//* JCLCHECK OFF code` hides
+  them until `//* JCLCHECK ON code` or the end of the job. Suppressed
+  diagnostics come back with `suppressed: true` and aren't counted. A site
+  `profile` adds name patterns, allowed values, prefixes for new datasets,
+  extra keywords and per-code severities (`JCLN002` for a broken rule).
 
 Every diagnostic carries `{ code, severity, line, column, length, message,
 suggestion, source }`, plus `member` when it was found inside a library
@@ -182,14 +188,14 @@ member. See `backend/src/errors.js` for the full catalog: `JCLL` reading
 lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
 keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
 JES statements, `JCLC` IF conditions, `JCLG` job groups, `JCLF` dataset
-flow. The workbench's
+flow, `JCLX` suppressions. The workbench's
 Help lists every code with its default severity, which each catalog entry sets.
 
 ## API
 
 | Endpoint | What it does |
 |---|---|
-| `POST /api/validate` | Checks `source`. Optional: `zosLevel` (`2.3`-`3.2`, default `3.2`), `jes` (`JES2` or `JES3`; JES3 only at 2.5 and earlier) and `library` (up to 50 `{ dsn, member, source }` entries). Unknown levels, JES values or bad library entries get a 400 response that says why. |
+| `POST /api/validate` | Checks `source`. Optional: `zosLevel` (`2.3`-`3.2`, default `3.2`), `jes` (`JES2` or `JES3`; JES3 only at 2.5 and earlier) `library` (up to 50 `{ dsn, member, source }` entries) and `profile` (a site profile, below). Unknown levels, JES values, bad library entries or an invalid profile get a 400 response that says why. |
 | `GET /api/levels` | The supported levels, oldest first, as `{ level, jes3 }`, with `defaultLevel` and `defaultJes`. |
 | `GET /api/health` | `{ "ok": true }` |
 | `POST /api/usage` | Opt-in CLI usage counts (see Analytics). |
@@ -203,8 +209,22 @@ each DD naming it. Actions are `N` new, `R` read, `M` mod, `P` pass and `D`
 delete. `ast.jobs` lists every job in the stream (it replaced the single
 `ast.job` when several jobs per stream were supported), `ast.procs` the
 procedures and `ast.jobGroups` the JES2 job groups. `stats` has `errors`,
-`warnings`, `info`, `statementCount`, `jobCount`, `stepCount` (across all
-jobs), `procCount` and `valid` (no errors).
+`warnings`, `info`, `suppressed`, `statementCount`, `jobCount`, `stepCount`
+(across all jobs), `procCount` and `valid` (no errors); suppressed diagnostics
+are only counted in `suppressed`.
+
+A site profile looks like this. Every field is optional; patterns use `*`
+for any run of characters and `%` for one:
+
+```json
+{
+  "names": { "job": ["AR*"], "step": "STEP%%", "dd": "*" },
+  "allowed": { "CLASS": ["A", "B"], "MSGCLASS": ["X"] },
+  "dsnPrefixes": ["AR", "SYS1"],
+  "extraKeywords": { "EXEC": ["LOCALKW"] },
+  "severity": { "JCLS014": "off", "JCLK001": "error" }
+}
+```
 
 Example request (`test/readme.test.js` checks it against the real validator):
 
@@ -236,6 +256,7 @@ Response, without `ast`:
     "errors": 0,
     "warnings": 1,
     "info": 0,
+    "suppressed": 0,
     "statementCount": 2,
     "jobCount": 1,
     "stepCount": 1,

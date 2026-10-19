@@ -9,10 +9,11 @@ const WARNINGS = new Set([
     'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',
     'JCLK001', 'JCLK005', 'JCLK006', 'JCLK008',
     'JCLL006',
+    'JCLN002',
     'JCLR001', 'JCLR003', 'JCLR005',
     'JCLS002', 'JCLS003', 'JCLS004', 'JCLS005', 'JCLS009', 'JCLS010', 'JCLS011', 'JCLS012', 'JCLS013'
 ]);
-const INFO = new Set(['JCLD004', 'JCLJ306', 'JCLS014']);
+const INFO = new Set(['JCLD004', 'JCLJ306', 'JCLS014', 'JCLX001', 'JCLX002']);
 
 /** A code's default severity: error, warning or info. */
 export function severityOf(code) {
@@ -125,7 +126,16 @@ export const CODE_GROUPS = [
         prefix: 'JCLN',
         name: 'Names',
         codes: {
-            JCLN001: 'An invalid job, step, DD or procedure step name.'
+            JCLN001: 'An invalid job, step, DD or procedure step name.',
+            JCLN002: 'A name, value or new dataset that breaks a rule in your site profile.'
+        }
+    },
+    {
+        prefix: 'JCLX',
+        name: 'Suppressions',
+        codes: {
+            JCLX001: "A JCLCHECK comment naming a code that doesn't exist, or none.",
+            JCLX002: 'A JCLCHECK comment that hid nothing.'
         }
     },
     {

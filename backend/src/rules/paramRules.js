@@ -17,6 +17,7 @@ const { availability, DEFAULT_ZOS_LEVEL } = require('../levels');
 const { closest, checkValue } = require('../valueRules');
 const { parseCondition, conditionChars } = require('../conditions');
 const { symbolUses } = require('./procRules');
+const { asList } = require('../profile');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
@@ -631,7 +632,13 @@ function checkProcstepKeywords(step, params, diagnostics) {
     }
 }
 
-function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
+// A site profile's extra keywords (feature 37) are accepted with no value rule.
+function withExtra(table, names = []) {
+    return names.length ? new Map([...table, ...names.map(n => [n.toUpperCase(), {}])]) : table;
+}
+
+function checkStepsAndDDs(steps, diagnostics, { zosLevel, extraKeywords = {} } = {}) {
+    const ddAllowed = withExtra(DD_KEYWORDS, asList(extraKeywords.DD));
     for (const step of steps) {
         checkName(
             step.name,
@@ -640,14 +647,14 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
             diagnostics
         );
 
-        let execAllowed = EXEC_KEYWORDS;
+        let execAllowed = withExtra(EXEC_KEYWORDS, asList(extraKeywords.EXEC));
         if (step.resolvedProc) {
             // Any symbol the PROC uses can be set on the EXEC, default or not.
             const symbolNames = new Set([
                 ...step.resolvedProc.params.filter(p => p.kind === 'keyword').map(p => p.key),
                 ...symbolUses(step.resolvedProc).map(u => u.sym)
             ]);
-            execAllowed = new Map([...EXEC_KEYWORDS, ...[...symbolNames].map(name => [name, {}])]);
+            execAllowed = new Map([...execAllowed, ...[...symbolNames].map(name => [name, {}])]);
         }
 
         // keyword.procstep=value is checked as keyword=value.
@@ -686,7 +693,7 @@ function checkStepsAndDDs(steps, diagnostics, { zosLevel } = {}) {
 
             checkKeywords(
                 dd.params,
-                DD_KEYWORDS,
+                ddAllowed,
                 'DD',
                 dd.line,
                 diagnostics,
@@ -761,7 +768,7 @@ function checkWhen(when, stmtLine, diagnostics) {
     }
 }
 
-function checkAllParams(job, diagnostics, { zosLevel } = {}) {
+function checkAllParams(job, diagnostics, { zosLevel, extraKeywords = {} } = {}) {
     if (!job) {
         return;
     }
@@ -775,7 +782,7 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
 
     checkKeywords(
         job.params,
-        JOB_KEYWORDS,
+        withExtra(JOB_KEYWORDS, asList(extraKeywords.JOB)),
         'JOB',
         job.line,
         diagnostics,
@@ -800,7 +807,7 @@ function checkAllParams(job, diagnostics, { zosLevel } = {}) {
         checkNotify(notify, diagnostics, zosLevel);
     }
 
-    checkStepsAndDDs(job.steps, diagnostics, { zosLevel });
+    checkStepsAndDDs(job.steps, diagnostics, { zosLevel, extraKeywords });
 }
 
 module.exports = {

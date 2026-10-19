@@ -19,6 +19,9 @@
       <button class="header-library" :class="{ 'is-open': showLibrary }" @click="toggleLibrary">
         LIBRARY ({{ library.length }})
       </button>
+      <button class="header-library header-profile" :class="{ 'is-open': showProfile }" @click="toggleProfile">
+        PROFILE{{ profileText.trim() ? ' ●' : '' }}
+      </button>
       <div class="header-status">
         <span class="status-dot" :class="statusClass"></span>
         <span class="header-status__text">{{ statusText }}</span>
@@ -31,7 +34,7 @@
     </div>
 
     <main class="main">
-      <section class="pane pane-editor" :class="{ 'has-library': showLibrary }">
+      <section class="pane pane-editor" :class="{ 'has-library': showLibrary || showProfile }">
         <Editor
             ref="editorRef"
             v-model="code"
@@ -43,10 +46,16 @@
             v-if="showLibrary"
             ref="libraryRef"
             :entries="library"
-            :diagnostics="diagnostics"
+            :diagnostics="shownDiagnostics"
             @add="addMember"
             @remove="removeMember"
             @update="updateMember"
+        />
+        <ProfilePanel
+            v-if="showProfile"
+            :model-value="profileText"
+            :rejected="profileRejected"
+            @update="updateProfile"
         />
       </section>
       <section class="pane pane-diag">
@@ -104,6 +113,7 @@ import ErrorPanel from '../components/ErrorPanel.vue';
 import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
 import LibraryPanel from '../components/LibraryPanel.vue';
+import ProfilePanel from '../components/ProfilePanel.vue';
 import { validateJcl, getLevels } from '../api';
 import { shareLink, decodeShare } from '../share';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
@@ -112,10 +122,11 @@ import {
   sizeBucket,
   checksBucket,
   timeBucket,
-  latencyBucket
+  latencyBucket,
+  isAllowed
 } from '../analyticsEvents';
 
-// The user's draft (JCL and library members) stays in this browser between
+// The user's draft (JCL, library members and site profile) stays in this browser between
 // visits. Storage can be blocked or full, so every access is guarded and the
 // workbench carries on without it.
 const DRAFT_KEY = 'jclcheck.draft';
@@ -126,7 +137,8 @@ let draftStatus = null; // 'restored' or 'corrupt', counted once mounted
 function isDraft(d) {
   const text = v => typeof v === 'string';
   return d && text(d.code) && Array.isArray(d.library) &&
-    d.library.every(e => e && text(e.dsn) && text(e.member) && text(e.source));
+    d.library.every(e => e && text(e.dsn) && text(e.member) && text(e.source)) &&
+    (d.profile === undefined || text(d.profile));
 }
 
 function loadDraft() {
@@ -169,6 +181,13 @@ const sampleIdx = ref(0);
 // Catalogued procedures and INCLUDE members the user pastes in.
 const library = ref((draft ? draft.library : []).map((e, i) => ({ id: i + 1, ...e })));
 const showLibrary = ref(false);
+// The site profile (feature 37), as the JSON text the user typed.
+const profileText = ref(draft?.profile || '');
+const showProfile = ref(false);
+const profileRejected = ref('');
+const usedProfileRules = new Set();
+const seenSuppressed = new Set();
+let profileEdited = false;
 const libraryRef = ref(null);
 const errorStatus = ref(null);
 // The z/OS level and JES to check against, from GET /api/levels. If the
@@ -192,8 +211,10 @@ const UNDO_MS = 5000;
 let undoTimer = null;
 let nextMemberId = library.value.length + 1;
 
-// Diagnostics inside a library member are shown in that member's editor.
-const jobDiagnostics = computed(() => diagnostics.value.filter(d => !d.member));
+// Diagnostics inside a library member are shown in that member's editor;
+// suppressed ones are only listed in the panel.
+const jobDiagnostics = computed(() => diagnostics.value.filter(d => !d.member && !d.suppressed));
+const shownDiagnostics = computed(() => diagnostics.value.filter(d => !d.suppressed));
 
 let debounceTimer = null;
 
@@ -227,7 +248,13 @@ function resultKind(resultStats) {
   return resultStats.warnings > 0 ? 'warnings' : 'clean';
 }
 
-function trackDiagnostics(found) {
+function trackDiagnostics(all) {
+  for (const d of all.filter(x => x.suppressed && !seenSuppressed.has(x.code))) {
+    seenSuppressed.add(d.code);
+    track('suppress', d.code);
+  }
+
+  const found = all.filter(d => !d.suppressed);
   const codes = new Set(found.map(d => d.code));
   for (const c of codes) {
     if (!seenCodes.has(c)) {
@@ -277,7 +304,14 @@ async function runValidation(trigger) {
   errored.value = false;
   const startedAt = Date.now();
   try {
-    const result = await validateJcl(source, { library: libraryForApi(), zosLevel: zosLevel.value, jes: jes.value, signal: controller.signal });
+    const profile = profileForApi();
+    const result = await validateJcl(source, {
+      library: libraryForApi(),
+      zosLevel: zosLevel.value,
+      jes: jes.value,
+      ...(profile ? { profile } : {}),
+      signal: controller.signal
+    });
     if (number !== checkNumber) {
       return;
     }
@@ -296,6 +330,7 @@ async function runValidation(trigger) {
 
     errored.value = true;
     errorStatus.value = e.status;
+    profileRejected.value = e.status === 400 && /^profile/.test(e.detail || '') ? e.detail : '';
     console.error(e);
     trackApiProblem(e);
   } finally {
@@ -340,6 +375,7 @@ function scheduleValidation() {
 
 watch(code, scheduleValidation);
 watch(library, scheduleValidation, { deep: true });
+watch(profileText, scheduleValidation);
 
 let saveTimer = null;
 
@@ -349,14 +385,15 @@ function saveDraft() {
   try {
     localStorage.setItem(DRAFT_KEY, JSON.stringify({
       code: code.value,
-      library: library.value.map(({ dsn, member, source }) => ({ dsn, member, source }))
+      library: library.value.map(({ dsn, member, source }) => ({ dsn, member, source })),
+      profile: profileText.value
     }));
   } catch {
     draftNotSaved.value = true;
   }
 }
 
-watch([code, library], () => {
+watch([code, library, profileText], () => {
   if (sharedView.value) {
     return; // a shared job only becomes the draft once the user edits it
   }
@@ -381,6 +418,48 @@ function libraryForApi() {
 
 function toggleLibrary() {
   showLibrary.value = !showLibrary.value;
+  showProfile.value = false;
+}
+
+function toggleProfile() {
+  showProfile.value = !showProfile.value;
+  showLibrary.value = false;
+}
+
+function updateProfile(text) {
+  sharedView.value = false;
+  profileText.value = text;
+  profileRejected.value = '';
+  if (!profileEdited) {
+    profileEdited = true;
+    track('profile', 'edit');
+  }
+}
+
+// The profile as an object, or null when it's empty or isn't valid JSON (the
+// panel says so). Each kind of rule used is counted once a visit.
+function profileForApi() {
+  if (!profileText.value.trim()) {
+    return null;
+  }
+
+  let profile;
+  try {
+    profile = JSON.parse(profileText.value);
+  } catch {
+    return null;
+  }
+
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile)) {
+    return null;
+  }
+
+  for (const rule of Object.keys(profile).filter(k => !usedProfileRules.has(k) && isAllowed('profile/rule', k))) {
+    usedProfileRules.add(rule);
+    track('profile/rule', rule);
+  }
+
+  return profile;
 }
 
 function addMember() {
@@ -552,7 +631,13 @@ async function shareJob() {
     return;
   }
 
-  const link = await shareLink(window.location.origin, { jcl: code.value, library: memberCopies(), zosLevel: zosLevel.value, jes: jes.value });
+  const link = await shareLink(window.location.origin, {
+    jcl: code.value,
+    library: memberCopies(),
+    ...(profileText.value.trim() ? { profile: profileText.value } : {}),
+    zosLevel: zosLevel.value,
+    jes: jes.value
+  });
   if (!link) {
     shareMessage.value = { text: 'This job is too long to share as a link (over 32 KB).' };
     return;
@@ -582,10 +667,11 @@ async function openSharedLink() {
     return;
   }
 
-  draftBeforeShare = { code: code.value, library: memberCopies() };
+  draftBeforeShare = { code: code.value, library: memberCopies(), profile: profileText.value };
   sharedView.value = true;
   code.value = shared.jcl;
   library.value = shared.library.map(e => ({ id: nextMemberId++, ...e }));
+  profileText.value = shared.profile || '';
   lastChangeByUser = false;
   track('share', 'open');
 }
@@ -595,6 +681,7 @@ function backToDraft() {
   sharedView.value = false;
   code.value = draftBeforeShare.code;
   library.value = draftBeforeShare.library.map(e => ({ id: nextMemberId++, ...e }));
+  profileText.value = draftBeforeShare.profile;
   lastChangeByUser = true;
   window.history.replaceState(window.history.state, '', window.location.pathname + window.location.search);
 }
@@ -704,8 +791,12 @@ const statusClass = computed(() => {
 
 const statusText = computed(() => {
   if (errored.value) {
-    // The workbench only sends options the API accepts, apart from the library.
-    return errorStatus.value === 400 ? 'CHECK A LIBRARY MEMBER NAME' : 'API UNREACHABLE';
+    // The workbench only sends options the API accepts, apart from the library and profile.
+    if (errorStatus.value === 400) {
+      return profileRejected.value ? 'CHECK THE SITE PROFILE' : 'CHECK A LIBRARY MEMBER NAME';
+    }
+
+    return 'API UNREACHABLE';
   }
 
   if (loading.value) {

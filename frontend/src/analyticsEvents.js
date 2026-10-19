@@ -51,9 +51,9 @@ export const EVENTS = {
     'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}` },
     'share': { details: ['create', 'open', 'back-to-draft', 'clipboard-blocked'], title: d => `Share: ${d}` },
     'datasets': { details: ['open', 'cell-click'], title: d => `Datasets: ${d}` },
-    'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}`, feature: 37 },
-    'profile': { details: ['edit'], title: () => 'Profile edited', feature: 37 },
-    'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}`, feature: 37 },
+    'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}` },
+    'profile': { details: ['edit'], title: () => 'Profile edited' },
+    'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}` },
     'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}`, feature: 39 },
     // Keyword names come from the API's keyword list once feature 40 is built.
     'hover': { details: ['shortcut'], title: d => `Keyword explanation: ${d}`, feature: 40 }

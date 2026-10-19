@@ -21,6 +21,14 @@ describe('validateJcl', () => {
         expect(options.body).toBe('{"source":"//J JOB"}');
     });
 
+    test('sends the profile when there is one, and gives a 400\'s reason as detail', async () => {
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
+        await validateJcl('//J JOB', { profile: { dsnPrefixes: ['AR'] } });
+        expect(JSON.parse(fetchMock.mock.calls[0][1].body).profile).toEqual({ dsnPrefixes: ['AR'] });
+        fetchMock.mockResolvedValueOnce(new Response(JSON.stringify({ error: 'bad_request', message: 'profile must be an object.' }), { status: 400 }));
+        await expect(validateJcl('//J JOB', { profile: 5 })).rejects.toMatchObject({ status: 400, detail: 'profile must be an object.' });
+    });
+
     test('passes the abort signal to fetch', async () => {
         fetchMock.mockResolvedValue(new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
         const controller = new AbortController();

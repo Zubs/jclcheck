@@ -19,6 +19,13 @@
         <span class="checked-against" v-if="checkedAgainst">{{ checkedAgainst }}</span>
         <span class="stat is-error" v-if="stats">{{ stats.errors }} ERR</span>
         <span class="stat is-warning" v-if="stats">{{ stats.warnings }} WARN</span>
+        <button
+            v-if="suppressedCount"
+            class="stat stat-suppressed"
+            :aria-pressed="showSuppressed"
+            :title="showSuppressed ? 'Hide the suppressed diagnostics' : 'List the diagnostics hidden by JCLCHECK comments'"
+            @click="showSuppressed = !showSuppressed"
+        >{{ suppressedCount }} SUPPRESSED</button>
       </span>
     </div>
 
@@ -56,7 +63,7 @@
 
     <div v-else class="panel-body">
       <div v-if="loading" class="panel-status">VALIDATING…</div>
-      <div v-else-if="!diagnostics.length" class="panel-empty">
+      <div v-else-if="!listed.length" class="panel-empty">
         <div class="panel-empty__glyph">✓</div>
         <div class="panel-empty__text">
           <strong>NO PROBLEMS FOUND</strong>
@@ -68,14 +75,14 @@
 
       <ul v-else class="diag-list">
         <li
-            v-for="(d, idx) in diagnostics"
+            v-for="(d, idx) in listed"
             :key="idx"
             class="diag"
-            :class="`is-${d.severity}`"
+            :class="[`is-${d.severity}`, { 'is-suppressed': d.suppressed }]"
             @click="$emit('select', d)"
         >
           <div class="diag-head">
-            <span class="diag-sev">{{ sevLabel(d.severity) }}</span>
+            <span class="diag-sev">{{ d.suppressed ? 'HIDDEN' : sevLabel(d.severity) }}</span>
             <span class="diag-loc">{{ location(d) }}</span>
             <span class="diag-code">{{ d.code }}</span>
           </div>
@@ -90,9 +97,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
-defineProps({
+const props = defineProps({
   diagnostics: { type: Array, default: () => [] },
   datasets: { type: Array, default: () => [] },
   stats: { type: Object, default: null },
@@ -102,6 +109,10 @@ defineProps({
 const emit = defineEmits(['select', 'select-dataset', 'open-datasets']);
 
 const tab = ref('diagnostics');
+// Diagnostics hidden by JCLCHECK comments are listed only on request.
+const showSuppressed = ref(false);
+const suppressedCount = computed(() => props.diagnostics.filter(d => d.suppressed).length);
+const listed = computed(() => (showSuppressed.value ? props.diagnostics : props.diagnostics.filter(d => !d.suppressed)));
 const ACTION_NAMES = { N: 'new', R: 'read', M: 'mod', P: 'pass', D: 'delete' };
 
 function openDatasets() {
@@ -243,6 +254,24 @@ function sevLabel(sev) {
 
 .stat.is-warning {
   color: var(--warning);
+}
+
+.stat-suppressed {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.stat-suppressed[aria-pressed="true"] {
+  color: var(--text-bright);
+}
+
+.diag.is-suppressed {
+  opacity: 0.6;
 }
 
 .panel-body {

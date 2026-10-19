@@ -27,6 +27,12 @@ describe('share links', () => {
         expect(await decodeShare(fragment)).toEqual({ v: 1, ...PAYLOAD });
     });
 
+    test('a profile round-trips, and one that is not text is rejected (feature 37)', async () => {
+        const withProfile = { ...PAYLOAD, profile: '{"names":{"job":"AR*"}}' };
+        expect(await decodeShare(await encodeShare(withProfile))).toEqual({ v: 1, ...withProfile });
+        await expect(decodeShare(await encodeShare({ ...PAYLOAD, profile: 5 }))).rejects.toThrow();
+    });
+
     test('a cut-off or altered fragment is rejected', async () => {
         const fragment = await encodeShare(PAYLOAD);
         await expect(decodeShare(fragment.slice(0, fragment.length / 2))).rejects.toThrow();

@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const validator = require('./validator');
 const { checkDsn, MEMBER_RE } = require('./rules/paramRules');
+const { profileProblem } = require('./profile');
 
 const MAX_LIBRARY = 50;
 const {
@@ -130,8 +131,8 @@ function createApp({
     app.use(express.json({ limit: '2mb' }));
 
     app.post('/api/validate', countDirectUse(analytics, 'validate'), (req, res) => {
-        const { zosLevel, jes, library } = req.body || {};
-        const problem = optionsProblem(zosLevel, jes) || libraryProblem(library);
+        const { zosLevel, jes, library, profile } = req.body || {};
+        const problem = optionsProblem(zosLevel, jes) || libraryProblem(library) || profileProblem(profile);
         if (problem) {
             return res.status(400).json({ error: 'bad_request', message: problem });
         }
@@ -141,7 +142,8 @@ function createApp({
             const result = validator.validate(source, {
                 zosLevel,
                 jes,
-                library: (library || []).map(({ dsn, member, source: text }) => ({ dsn: dsn || null, member, source: text }))
+                library: (library || []).map(({ dsn, member, source: text }) => ({ dsn: dsn || null, member, source: text })),
+                profile
             });
             res.locals.zosLevel = result.zosLevel;
             res.locals.jes = result.jes;

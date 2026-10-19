@@ -311,6 +311,23 @@ const CATALOG = {
         suggestion: () => `Start the group with a JOBGROUP statement, or remove this statement.`
     },
 
+    // Site profile and suppressions (JCLN002, JCLX0xx)
+    JCLN002: {
+        severity: 'warning',
+        message: (d) => d.message,
+        suggestion: (d) => `This is a rule from your site profile (${d.rule}). Change the JCL, or the profile if the rule is wrong.`
+    },
+    JCLX001: {
+        severity: 'info',
+        message: (d) => d.code ? `JCLCHECK names '${d.code}', which isn't a diagnostic code.` : `JCLCHECK names no diagnostic code.`,
+        suggestion: () => `Name the codes to hide, for example //* JCLCHECK OFF-NEXT JCLK001. Help lists every code.`
+    },
+    JCLX002: {
+        severity: 'info',
+        message: (d) => `The suppression of ${d.code} here hid nothing.`,
+        suggestion: () => `Remove it, or check that it is just before the statement it was meant for.`
+    },
+
     // Validator: dataset flow across steps (JCLF0xx)
     JCLF001: {
         severity: 'error',
