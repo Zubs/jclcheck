@@ -80,7 +80,7 @@ function checkGroup(group, diagnostics, zosLevel) {
                 diagnostics.push(makeDiagnostic(
                     'JCLG008',
                     { name: target.value, group: group.name, jobs: named.map(j => j.name) },
-                    { line: dep.line, column: target.valueCol }
+                    { line: target.valueLine ?? dep.line, column: target.valueCol }
                 ));
             }
 

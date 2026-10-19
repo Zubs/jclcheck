@@ -55,7 +55,7 @@ function checkJes3(stmt, sawJob, sawExec, beforeJob, diagnostics) {
                 diagnostics.push(makeDiagnostic(
                     'JCLJ302',
                     { keyword: p.key, name: stmt.name, closest: closestKeyword(p.key, entry.keywords) },
-                    { line: stmt.line, column: p.col }
+                    { line: p.line ?? stmt.line, column: p.col }
                 ));
             } else if (p.kind === 'keyword') {
                 checkRuleValue(p, entry.keywords, stmt.line, diagnostics);

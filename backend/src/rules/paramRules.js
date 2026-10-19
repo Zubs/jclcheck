@@ -71,7 +71,7 @@ function checkKeywords(
                         closest,
                         proc: procName
                     }, {
-                        line,
+                        line: p.line ?? line,
                         column: p.col
                     }));
             } else {
@@ -86,7 +86,7 @@ function checkKeywords(
                             level: zosLevel,
                             ...missing
                         }, {
-                            line,
+                            line: p.line ?? line,
                             column: p.col
                         }));
                 }
@@ -96,7 +96,7 @@ function checkKeywords(
                 diagnostics.push(makeDiagnostic(
                     'JCLK003',
                     { value: p.value },
-                    { line, column: p.col }
+                    { line: p.line ?? line, column: p.col }
                 ));
             }
         }
@@ -122,7 +122,7 @@ function checkPositionalLimit(params, stmt, line, diagnostics) {
         diagnostics.push(makeDiagnostic(
             'JCLK004',
             { stmt, limit, found: positionals.length, what: POSITIONAL_MEANING[stmt] },
-            { line, column: positionals[limit].col, severity: 'error' }
+            { line: positionals[limit].line ?? line, column: positionals[limit].col, severity: 'error' }
         ));
     }
 }
@@ -138,7 +138,7 @@ function checkJobPositionals(job, diagnostics) {
             diagnostics.push(makeDiagnostic(
                 'JCLS012',
                 { what: 'accounting information', length: inner.length, max: MAX_ACCOUNTING },
-                { line: job.line, column: accounting.col }
+                { line: accounting.line ?? job.line, column: accounting.col }
             ));
         }
     }
@@ -153,12 +153,12 @@ function checkJobPositionals(job, diagnostics) {
         diagnostics.push(makeDiagnostic(
             'JCLS012',
             { what: "programmer's name", length: text.length, max: MAX_PROGRAMMER_NAME },
-            { line: job.line, column: name.col }
+            { line: name.line ?? job.line, column: name.col }
         ));
     }
 
     if (!quoted && /[^A-Za-z0-9$#@.-]/.test(text)) {
-        diagnostics.push(makeDiagnostic('JCLS013', { value: text }, { line: job.line, column: name.col }));
+        diagnostics.push(makeDiagnostic('JCLS013', { value: text }, { line: name.line ?? job.line, column: name.col }));
     }
 }
 
@@ -488,7 +488,7 @@ function checkRuleValue(p, keywordTable, line, diagnostics) {
         diagnostics.push(makeDiagnostic(
             'JCLS009',
             { keyword: p.key, ...problem },
-            { line, column: p.valueCol }
+            { line: p.valueLine ?? line, column: p.valueCol }
         ));
     }
 }
@@ -508,7 +508,7 @@ function checkParamValues(
             case 'DISP':
                 checkDisp(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -517,7 +517,7 @@ function checkParamValues(
             case 'SPACE':
                 checkSpace(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -526,7 +526,7 @@ function checkParamValues(
             case 'DCB':
                 checkDcb(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -535,7 +535,7 @@ function checkParamValues(
             case 'REGION':
                 checkRegion(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -544,7 +544,7 @@ function checkParamValues(
             case 'TIME':
                 checkTime(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -555,10 +555,10 @@ function checkParamValues(
                     diagnostics.push(makeDiagnostic(
                         'JCLS006',
                         { value: p.value, hint: `LIKE names a model dataset, without a member or generation.` },
-                        { line, column: p.valueCol }
+                        { line: p.valueLine ?? line, column: p.valueCol }
                     ));
                 } else {
-                    checkDsn(p.value, line, p.valueCol, diagnostics);
+                    checkDsn(p.value, p.valueLine ?? line, p.valueCol, diagnostics);
                 }
 
                 break;
@@ -566,7 +566,7 @@ function checkParamValues(
             case 'DSNAME':
                 checkDsn(
                     p.value,
-                    line,
+                    p.valueLine ?? line,
                     p.valueCol,
                     diagnostics
                 );
@@ -577,7 +577,7 @@ function checkParamValues(
                     diagnostics.push(makeDiagnostic(
                         'JCLS003',
                         { value: p.value },
-                        { line, column: p.valueCol }
+                        { line: p.valueLine ?? line, column: p.valueCol }
                     ));
                 }
 
@@ -587,7 +587,7 @@ function checkParamValues(
                     diagnostics.push(makeDiagnostic(
                         'JCLS003',
                         { value: p.value },
-                        { line, column: p.valueCol }
+                        { line: p.valueLine ?? line, column: p.valueCol }
                     ));
                 }
 
@@ -601,7 +601,7 @@ function checkParamValues(
 
 function checkProcstepKeywords(step, params, diagnostics) {
     for (const p of params.filter(q => q.procstep !== undefined)) {
-        const at = { line: step.line, column: p.col };
+        const at = { line: p.line ?? step.line, column: p.col };
         if (step.pgm) {
             diagnostics.push(makeDiagnostic('JCLK009', { keyword: p.key, procstep: p.procstep }, { ...at, severity: 'error' }));
             continue;
@@ -713,7 +713,7 @@ function checkJcllib(jcllib, diagnostics, zosLevel) {
     }
 
     for (const library of order.subvalues || [order.value]) {
-        checkDsn(library, jcllib.line, order.valueCol, diagnostics);
+        checkDsn(library, order.valueLine ?? jcllib.line, order.valueCol, diagnostics);
     }
 }
 
@@ -729,17 +729,19 @@ function checkNotify(notify, diagnostics, zosLevel) {
             { line: notify.line, column: 1 }
         ));
     } else if (email && user) {
-        diagnostics.push(makeDiagnostic('JCLK007', {}, { line: notify.line, column: user.col, severity: 'error' }));
+        diagnostics.push(makeDiagnostic('JCLK007', {}, { line: user.line ?? notify.line, column: user.col, severity: 'error' }));
     }
 
     checkWhen(findParam(notify.params, 'WHEN'), notify.line, diagnostics);
 }
 
 // WHEN=(condition) or WHEN='condition': the IF condition syntax, without THEN.
-function checkWhen(when, line, diagnostics) {
+function checkWhen(when, stmtLine, diagnostics) {
     if (!when) {
         return;
     }
+
+    const line = when.valueLine ?? stmtLine;
 
     const inner = when.value.match(/^(\(|')(.*)(\)|')$/);
     if (!inner) {

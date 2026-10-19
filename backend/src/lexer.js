@@ -394,6 +394,9 @@ function lex(source, { jes = 'JES2' } = {}) {
         } = splitFields(statementText(rawLine));
         let { operand, comment } = splitOperandAndComment(rest);
         const operandCol = restCol;
+        // Where each part of the joined operand was written: its offset in
+        // the operand, its line and the column it starts in.
+        const pieces = [{ offset: 0, line: lineNo, col: operandCol }];
         const rawPhysicalLines = [rawLine];
         let nextIdx0 = i + 1; // 0-indexed index of the next unconsumed physical line
         let lastConsumedLineNo = lineNo;
@@ -454,13 +457,17 @@ function lex(source, { jes = 'JES2' } = {}) {
                 }
 
                 split2 = splitOperandAndComment(text.slice(start), cont.openQuote);
-                operand += ' '.repeat(71 - prevText.length) + split2.operand;
+                operand += ' '.repeat(71 - prevText.length);
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: start + 1 });
+                operand += split2.operand;
             } else {
                 // Continuation content: strip leading '//' then leading blanks - the
                 // remainder is the continued operand (conventionally cols 4-16, but
                 // we accept any indent for resilience).
-                const stripped = statementText(contLine).replace(/^\/\//, '').replace(/^\s*/, '');
+                const text = statementText(contLine);
+                const stripped = text.replace(/^\/\//, '').replace(/^\s*/, '');
                 split2 = splitOperandAndComment(stripped, false, Math.max(cont.openParens, 0));
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: text.length - stripped.length + 1 });
                 operand += split2.operand;
             }
 
@@ -477,8 +484,11 @@ function lex(source, { jes = 'JES2' } = {}) {
             while (!/\bTHEN\b/i.test(`${operand} ${comment}`) && continuesCondition(lines[nextIdx0])) {
                 const contLine = lines[nextIdx0];
                 rawPhysicalLines.push(contLine);
-                const split = splitOperandAndComment(statementText(contLine).slice(2).trim());
-                operand += ` ${split.operand}`;
+                const text = statementText(contLine);
+                const split = splitOperandAndComment(text.slice(2).trim());
+                operand += ' ';
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: text.length - text.slice(2).trimStart().length + 1 });
+                operand += split.operand;
                 comment = split.comment || comment;
                 lastConsumedLineNo = nextIdx0 + 1;
                 nextIdx0 += 1;
@@ -521,6 +531,7 @@ function lex(source, { jes = 'JES2' } = {}) {
             nameCol,
             opCol,
             operandCol,
+            pieces,
             line: lineNo,
             endLine: lastConsumedLineNo,
             raw: rawPhysicalLines

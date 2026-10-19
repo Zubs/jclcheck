@@ -56,7 +56,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 30. Accurate copy, help and docs
 - [x] 31. DSN with LIKE
 - [x] 32. Symbols in in-stream PROCs
-- [ ] 33. Positions on continued statements
+- [x] 33. Positions on continued statements
 - [ ] 34. Severity of real JCL errors
 - [ ] 35. Stale results in the workbench
 - [ ] 36. Dataset flow checks
@@ -1553,6 +1553,8 @@ after:
 - **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain. *For now:* nesting up to 15 levels (`MAX_INCLUDE_DEPTH` in `library.js`), and JOB, PROC, PEND and JCLLIB are refused in a member (`NOT_IN_INCLUDE`).
 - **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it. *For now:* feature 31 reports it as `JCLD003`, an error.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
+- **Underline lengths (feature 33).** Feature 33 gives each parameter its own line and column, but not a `length`, since nothing used it yet: most diagnostics still underline one character. Decide whether diagnostics should underline the whole parameter or value, and add the lengths then.
+- **IF and WHEN conditions over several lines (feature 33).** IF conditions keep their own per-character positions. A `WHEN=` condition on a NOTIFY or job group statement that runs onto another line is reported on the line its value starts, with columns counted as if it were one line.
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.
 - **Thanks on the About page (feature 30).** Feature 30 suggested a short "Thanks" line on the About page crediting Nick's review, if he agrees. It hasn't been added. Ask Nick, then add it to `About.vue`.
 - **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).

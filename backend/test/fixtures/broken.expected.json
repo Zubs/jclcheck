@@ -21,16 +21,16 @@
       "column": 1
     },
     {
-      "code": "JCLS001",
-      "severity": "warning",
+      "code": "JCLP003",
+      "severity": "error",
       "line": 5,
       "column": 46
     },
     {
-      "code": "JCLP003",
-      "severity": "error",
+      "code": "JCLS001",
+      "severity": "warning",
       "line": 5,
-      "column": 63
+      "column": 46
     },
     {
       "code": "JCLD001",

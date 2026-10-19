@@ -1,5 +1,6 @@
 const { makeDiagnostic } = require('../errors');
 const { SYSTEM_SYMBOLS } = require('../keywords');
+const { valuePosition } = require('../paramTokenizer');
 
 function buildProcMap(procs) {
     const map = new Map();
@@ -60,9 +61,9 @@ function symbolUses(proc) {
         for (const step of proc.steps) {
             for (const owner of [step, ...step.dds]) {
                 for (const p of owner.params) {
-                    const start = p.kind === 'keyword' ? p.valueCol : p.col;
                     for (const m of (p.value || '').matchAll(SYMBOL_RE)) {
-                        uses.push({ sym: m[1].toUpperCase(), name: m[1], line: owner.line, column: start + m.index });
+                        const at = p.kind === 'keyword' ? valuePosition(p, m.index) : { line: p.line, col: p.col + m.index };
+                        uses.push({ sym: m[1].toUpperCase(), name: m[1], line: at.line ?? owner.line, column: at.col });
                     }
                 }
             }

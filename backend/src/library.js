@@ -51,6 +51,10 @@ function createLibrary(entries = [], context = {}) {
             for (const stmt of statements) {
                 stmt.line += base;
                 stmt.endLine += base;
+                for (const piece of stmt.pieces || []) {
+                    piece.line += base;
+                }
+
                 if (stmt.instreamEndLine) {
                     stmt.instreamEndLine += base;
                 }
@@ -103,7 +107,7 @@ function expandIncludes(statements, library, diagnostics, chain = [], startOrder
         const entry = memberParam && library.find(memberParam.value, order);
         if (!entry) {
             if (memberParam) {
-                diagnostics.push(makeDiagnostic('JCLR005', { name: memberParam.value }, { line: stmt.line, column: memberParam.valueCol, severity: 'warning' }));
+                diagnostics.push(makeDiagnostic('JCLR005', { name: memberParam.value }, { line: memberParam.valueLine ?? stmt.line, column: memberParam.valueCol, severity: 'warning' }));
             }
 
             out.push(stmt);
@@ -114,14 +118,14 @@ function expandIncludes(statements, library, diagnostics, chain = [], startOrder
         if (chain.includes(label)) {
             if (!reportedLoops.has(label)) {
                 reportedLoops.add(label);
-                diagnostics.push(makeDiagnostic('JCLR006', { name: label, chain: [...chain, label] }, { line: stmt.line, column: memberParam.valueCol }));
+                diagnostics.push(makeDiagnostic('JCLR006', { name: label, chain: [...chain, label] }, { line: memberParam.valueLine ?? stmt.line, column: memberParam.valueCol }));
             }
 
             continue;
         }
 
         if (chain.length >= MAX_INCLUDE_DEPTH) {
-            diagnostics.push(makeDiagnostic('JCLR007', { max: MAX_INCLUDE_DEPTH }, { line: stmt.line, column: memberParam.valueCol }));
+            diagnostics.push(makeDiagnostic('JCLR007', { max: MAX_INCLUDE_DEPTH }, { line: memberParam.valueLine ?? stmt.line, column: memberParam.valueCol }));
             continue;
         }
 

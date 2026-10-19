@@ -45,14 +45,14 @@ function attachParams(
     stmt,
     diagnostics
 ) {
-    const { params, errors } = tokenizeParams(stmt.operand, stmt.operandCol);
+    const { params, errors } = tokenizeParams(stmt.operand, stmt.operandCol, stmt.pieces);
     node.params = params;
     for (const e of errors) {
         diagnostics.push(makeDiagnostic(
             e.code,
             {},
             {
-                line: stmt.endLine,
+                line: e.line ?? stmt.line,
                 column: e.column,
                 source: 'parser'
             }

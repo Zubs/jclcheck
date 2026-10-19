@@ -99,7 +99,7 @@ function checkPathOptions(dd, diagnostics) {
     if (!pathParam) {
         const option = ['PATHOPTS', 'PATHMODE', 'PATHDISP'].map(find).find(Boolean);
         if (option) {
-            diagnostics.push(makeDiagnostic('JCLD007', { keyword: option.key }, { line: dd.line, column: option.col, severity: 'warning' }));
+            diagnostics.push(makeDiagnostic('JCLD007', { keyword: option.key }, { line: option.line ?? dd.line, column: option.col, severity: 'warning' }));
         }
 
         return;
@@ -107,13 +107,13 @@ function checkPathOptions(dd, diagnostics) {
 
     const disp = find('DISP');
     if (disp) {
-        diagnostics.push(makeDiagnostic('JCLD006', {}, { line: dd.line, column: disp.col }));
+        diagnostics.push(makeDiagnostic('JCLD006', {}, { line: disp.line ?? dd.line, column: disp.col }));
     }
 
     const opts = find('PATHOPTS');
     const modes = opts ? (opts.subvalues || [opts.value]).filter(o => ACCESS_MODES.includes(o.toUpperCase())) : [];
     if (modes.length > 1) {
-        diagnostics.push(makeDiagnostic('JCLD005', { modes }, { line: dd.line, column: opts.valueCol }));
+        diagnostics.push(makeDiagnostic('JCLD005', { modes }, { line: opts.valueLine ?? dd.line, column: opts.valueCol }));
     }
 }
 
@@ -142,9 +142,9 @@ function checkDelimiter(dd, diagnostics) {
     }
 
     if (!dd.instreamData) {
-        diagnostics.push(makeDiagnostic('JCLK006', {}, { line: dd.line, column: dlm.col }));
+        diagnostics.push(makeDiagnostic('JCLK006', {}, { line: dlm.line ?? dd.line, column: dlm.col }));
     } else if (!parseDelimiter(dlm.value)) {
-        diagnostics.push(makeDiagnostic('JCLS011', { value: dlm.value }, { line: dd.line, column: dlm.valueCol }));
+        diagnostics.push(makeDiagnostic('JCLS011', { value: dlm.value }, { line: dlm.valueLine ?? dd.line, column: dlm.valueCol }));
     }
 }
 

@@ -7,12 +7,17 @@
 //     omitted positional such as the first one in ",'NAME'")
 //   { kind: 'keyword', key, value, col, valueCol }
 //
+// For a continued statement, the lexer's `pieces` say where each part of the
+// joined operand was written, so every parameter also gets the physical
+// `line` (and `valueLine`) it is on, and a value that runs onto another line
+// gets `valueBreaks` for valuePosition().
+//
 // `value` for keyword params retains its raw text (which may itself be a
 // parenthesized sub-list like "(NEW,CATLG,DELETE)"), plus a parsed form
 // `subvalues` if it was parenthesized: array of strings.
 
 function unbalancedParenCheck(text) {
-    let depth = 0;
+    const open = [];
     let inQuote = false;
     for (let i = 0; i < text.length; i++) {
         const ch = text[i];
@@ -35,18 +40,19 @@ function unbalancedParenCheck(text) {
         }
 
         if (ch === '(') {
-            depth++;
+            open.push(i);
         } else if (ch === ')') {
-            depth--;
-            if (depth < 0) {
+            if (!open.length) {
                 return { ok: false, at: i };
             }
+
+            open.pop();
         }
     }
 
     // An unclosed quote alone is the lexer's JCLL003, not a parenthesis error.
-    if (depth > 0) {
-        return { ok: false, at: text.length };
+    if (open.length) {
+        return { ok: false, at: open[0] };
     }
 
     return { ok: true };
@@ -96,17 +102,50 @@ function parseSubvalues(parenText) {
     return splitTopLevel(inner).map(p => p.text.trim()).filter(p => p.length > 0 || true);
 }
 
+// The physical line and column of an offset in the joined operand.
+function positionAt(pieces, baseCol, offset) {
+    if (!pieces) {
+        return { col: baseCol + offset };
+    }
+
+    let piece = pieces[0];
+    for (const p of pieces) {
+        if (p.offset > offset) {
+            break;
+        }
+
+        piece = p;
+    }
+
+    return { line: piece.line, col: piece.col + offset - piece.offset };
+}
+
+/** Where character `index` of a keyword's value is written. */
+function valuePosition(param, index) {
+    let at = { line: param.valueLine, col: param.valueCol + index };
+    for (const b of param.valueBreaks || []) {
+        if (b.at <= index) {
+            at = { line: b.line, col: b.col + index - b.at };
+        }
+    }
+
+    return at;
+}
+
 /**
  * @param {string} operand raw operand text
  * @param {number} baseCol 1-indexed column where operand starts (for single-line stmts)
+ * @param {object[]} [pieces] the lexer's { offset, line, col } for each physical line
  */
-function tokenizeParams(operand, baseCol = 1) {
+function tokenizeParams(operand, baseCol = 1, pieces = null) {
     const parenCheck = unbalancedParenCheck(operand);
     const params = [];
     const errors = [];
+    const at = offset => positionAt(pieces, baseCol, offset);
 
     if (!parenCheck.ok) {
-        errors.push({ code: 'JCLP003', column: baseCol + parenCheck.at });
+        const { line, col } = at(parenCheck.at);
+        errors.push({ code: 'JCLP003', line, column: col });
     }
 
     const parts = splitTopLevel(operand);
@@ -115,12 +154,14 @@ function tokenizeParams(operand, baseCol = 1) {
         const raw = part.text;
         const trimmed = raw.trim();
         const leadingWs = raw.length - raw.trimStart().length;
-        const col = baseCol + part.col + leadingWs;
+        const start = part.col + leadingWs;
+        const { line, col } = at(start);
+        const where = line === undefined ? { col } : { line, col };
         if (trimmed === '') {
             // An omitted positional (",,") still takes a position, so it is
             // kept until the first keyword; later empty parts are just noise.
             if (!sawKeyword && parts.length > 1) {
-                params.push({ kind: 'positional', value: '', empty: true, col });
+                params.push({ kind: 'positional', value: '', empty: true, ...where });
             }
 
             continue;
@@ -131,27 +172,38 @@ function tokenizeParams(operand, baseCol = 1) {
             params.push({
                 kind: 'positional',
                 value: trimmed,
-                col
+                ...where
             });
         } else {
             sawKeyword = true;
             const key = trimmed.slice(0, eqIdx).trim();
-            const valueRaw = trimmed.slice(eqIdx + 1).trim();
-            const valueCol = col + eqIdx + 1;
+            const afterEq = trimmed.slice(eqIdx + 1);
+            const valueRaw = afterEq.trim();
+            const valueStart = start + eqIdx + 1 + (afterEq.length - afterEq.trimStart().length);
+            const value = at(valueStart);
             let subvalues = null;
             if (valueRaw.startsWith('(') && valueRaw.endsWith(')')) {
                 subvalues = parseSubvalues(valueRaw);
             }
 
-            params.push({
+            const param = {
                 kind: 'keyword',
                 key: key.toUpperCase(),
                 rawKey: key,
                 value: valueRaw,
                 subvalues,
-                col,
-                valueCol
-            });
+                ...where,
+                valueCol: value.col
+            };
+            if (pieces) {
+                param.valueLine = value.line;
+                const breaks = pieces.filter(p => p.offset > valueStart && p.offset < valueStart + valueRaw.length);
+                if (breaks.length) {
+                    param.valueBreaks = breaks.map(p => ({ at: p.offset - valueStart, line: p.line, col: p.col }));
+                }
+            }
+
+            params.push(param);
         }
     }
 
@@ -194,6 +246,7 @@ function findTopLevelEquals(text) {
 
 module.exports = {
     tokenizeParams,
+    valuePosition,
     splitTopLevel,
     parseSubvalues,
     unbalancedParenCheck
