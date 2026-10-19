@@ -49,7 +49,14 @@ const quoted = max => ({ type: 'quoted', max });
 const list = (items, { atLeastOne = false } = {}) => ({ type: 'list', items, atLeastOne });
 const oneOf = (...rules) => ({ type: 'oneOf', rules });
 
+// Gives a rule its own wording, for when the generated one would be clumsy.
+const described = (rule, text) => ({ ...rule, describe: text });
+
 function describe(rule) {
+    if (rule.describe) {
+        return `must be ${rule.describe}`;
+    }
+
     switch (rule.type) {
         case 'enum':
             return `must be one of ${rule.values.join(', ')}`;
@@ -61,9 +68,6 @@ function describe(rule) {
             }
 
             return `must be a whole number from ${rule.min} to ${rule.max}`;
-        case 'char':
-        case 'name':
-            return `must be ${rule.describe}`;
         case 'quoted':
             return `must be a quoted string of at most ${rule.max} characters`;
         case 'oneOf':
@@ -152,5 +156,6 @@ module.exports = {
     quoted,
     list,
     oneOf,
+    described,
     checkValue
 };

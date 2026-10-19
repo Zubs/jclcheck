@@ -445,7 +445,8 @@ function checkDsn(
 // Symbolic values and referbacks can't be known until the job runs.
 function checkRuleValue(p, keywordTable, line, diagnostics) {
     const entry = keywordTable && keywordTable.get(p.key);
-    if (!entry || !entry.value || p.value.includes('&') || p.value.startsWith('*.')) {
+    const symbolic = !entry || (!entry.checkSymbols && p.value.includes('&'));
+    if (!entry || !entry.value || symbolic || p.value.startsWith('*.')) {
         return;
     }
 

@@ -39,7 +39,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 13. IF/THEN/ELSE conditions
 - [x] 14. Keyword value rules
 - [x] 15. MSGLEVEL values
-- [ ] 16. NOTIFY= on the JOB statement
+- [x] 16. NOTIFY= on the JOB statement
 - [ ] 17. NOTIFY statement and EMAIL
 - [ ] 18. Keywords qualified with a procedure step
 - [ ] 19. Member names and other dataset name forms
@@ -1536,7 +1536,7 @@ after:
 
 **Questions to confirm**
 - **NOTIFY= user ID length (feature 16).** Nick says 1–8 characters. Some editions of the JCL reference describe TSO/E user IDs as 1–7. Check the current reference and use whatever it says.
-- **NOTIFY=node.userid (feature 16).** Is `NOTIFY=N1.IBMUSER` valid on the JOB statement, or only as `USER=` on the NOTIFY statement? Nick lists it without saying.
+- **NOTIFY=node.userid (feature 16).** Is `NOTIFY=N1.IBMUSER` valid on the JOB statement, or only as `USER=` on the NOTIFY statement? Nick lists it without saying. *For now:* feature 16 accepts `node.userid` on the JOB statement, so this never gives a false warning, and the provisional fixture `nick/07c-notify-node` pins that. If the reference says it isn't valid, remove the `node.userid` form from `NOTIFY_USER` in `keywords.js` and update the fixture.
 - **NOTIFY statement TYPE values (feature 17).** Nick's item 14 uses `TYPE=TSO`. Confirm the allowed values, so his example isn't wrongly flagged or wrongly accepted.
 - **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have.
 - **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message.

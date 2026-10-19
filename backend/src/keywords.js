@@ -6,12 +6,21 @@
 // either exists at every supported level.
 
 const { JES3_LAST_LEVEL } = require('./levels');
-const { oneOfValues, integer, char, list } = require('./valueRules');
+const { oneOfValues, integer, char, name, list, oneOf, described } = require('./valueRules');
 
 // Value rules shared by several statements (see valueRules.js).
 const CLASS_CHAR = char(/^[A-Za-z0-9]$/, 'one character A-Z or 0-9');
 const ADDRSPC_VALUES = oneOfValues('VIRT', 'REAL');
 const RD_VALUES = oneOfValues('R', 'RNC', 'NR', 'NC');
+
+// A TSO user ID: 1-8 characters, a letter or $#@ first (lower case is read as
+// upper case). node.userid is accepted until feature 41 confirms it.
+const USER_ID = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
+const NODE_USER_ID = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}\.[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
+const NOTIFY_USER = described(
+    oneOf(oneOfValues('&SYSUID'), name(USER_ID), name(NODE_USER_ID)),
+    '&SYSUID or a TSO user ID of 1-8 letters, digits or $#@ that starts with a letter or $#@ (or node.userid)'
+);
 
 // Builds a table from a list of names, with level marks for some of them.
 function table(names, marks = {}) {
@@ -78,6 +87,8 @@ const JOB_KEYWORDS = table([
     PRTY: { value: integer(0, 15) },
     ADDRSPC: { value: ADDRSPC_VALUES },
     RD: { value: RD_VALUES },
+    // Only &SYSUID on its own is valid, so values with & are checked too.
+    NOTIFY: { value: NOTIFY_USER, checkSymbols: true },
     // MSGLEVEL=(statements,messages); either may be left out, not both.
     MSGLEVEL: {
         value: list([
@@ -302,6 +313,7 @@ module.exports = {
     DD_KEYWORDS,
     JCLLIB_KEYWORDS,
     POSITIONAL_LIMITS,
+    NOTIFY_USER,
     JES2_STATEMENTS,
     JES3_STATEMENTS,
     ALL_KNOWN_KEYWORDS,
