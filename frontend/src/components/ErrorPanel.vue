@@ -30,7 +30,7 @@
         >
           <div class="diag-head">
             <span class="diag-sev">{{ sevLabel(d.severity) }}</span>
-            <span class="diag-loc">L{{ d.line }}:{{ d.column }}</span>
+            <span class="diag-loc">{{ location(d) }}</span>
             <span class="diag-code">{{ d.code }}</span>
           </div>
           <div class="diag-msg">{{ d.message }}</div>
@@ -50,6 +50,14 @@ defineProps({
   loading: { type: Boolean, default: false }
 });
 defineEmits(['select']);
+
+// A diagnostic in a library member "CAMPBEL.PROCS.JCL(MYPROC2)" is shown
+// as "MYPROC2 L3:5".
+function location(d) {
+  const m = d.member && d.member.match(/\(([^)]*)\)$/);
+  const member = d.member ? `${m ? m[1] : d.member} ` : '';
+  return `${member}L${d.line}:${d.column}`;
+}
 
 function sevLabel(sev) {
   return sev === 'error' ? 'ERR' : sev === 'warning' ? 'WARN' : 'INFO';

@@ -21,6 +21,15 @@ describe('validateJcl', () => {
         expect(options.body).toBe('{"source":"//J JOB"}');
     });
 
+    test('sends the library only when it has members', async () => {
+        fetchMock.mockImplementation(async () => new Response(JSON.stringify({ diagnostics: [] }), { status: 200 }));
+        await validateJcl('//J JOB', { library: [] });
+        expect(fetchMock.mock.calls[0][1].body).toBe('{"source":"//J JOB"}');
+        const library = [{ dsn: 'MY.PROCS', member: 'P1', source: '//S EXEC PGM=X' }];
+        await validateJcl('//J JOB', { library });
+        expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ source: '//J JOB', library });
+    });
+
     test('returns the JSON result on success', async () => {
         const result = { diagnostics: [], stats: { valid: true } };
         fetchMock.mockResolvedValue(new Response(JSON.stringify(result), { status: 200 }));

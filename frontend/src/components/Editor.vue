@@ -1,7 +1,7 @@
 <template>
   <div class="editor">
     <div class="editor-topline">
-      <span class="editor-topline__label">SOURCE</span>
+      <span class="editor-topline__label">{{ label }}</span>
       <span class="editor-topline__meta">{{ lineCount }} LINES · COL 1</span>
     </div>
     <div class="editor-body">
@@ -43,7 +43,8 @@ import {
 
 const props = defineProps({
   modelValue: { type: String, default: '' },
-  diagnostics: { type: Array, default: () => [] }
+  diagnostics: { type: Array, default: () => [] },
+  label: { type: String, default: 'SOURCE' }
 });
 
 const emit = defineEmits(['update:modelValue', 'paste']);

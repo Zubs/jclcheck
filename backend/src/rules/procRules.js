@@ -18,7 +18,8 @@ function procLibraries(jcllib) {
 function resolveProcCalls(
     job,
     procs,
-    diagnostics
+    diagnostics,
+    lookup = () => null // finds a catalogued procedure the user supplied
 ) {
     if (!job) {
         return;
@@ -30,7 +31,7 @@ function resolveProcCalls(
             continue;
         }
 
-        const resolved = procMap.get(step.calledProc.toUpperCase());
+        const resolved = procMap.get(step.calledProc.toUpperCase()) || lookup(step.calledProc, job);
         if (!resolved) {
             diagnostics.push(makeDiagnostic(
                 'JCLR001',

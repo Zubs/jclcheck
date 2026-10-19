@@ -7,14 +7,32 @@ const { checkJesStatements } = require('./rules/jesRules');
 const { checkIfReferences } = require('./rules/ifRules');
 const { checkJobGroups } = require('./rules/groupRules');
 const { DEFAULT_ZOS_LEVEL, DEFAULT_JES, isZosLevel, isJes, jesAvailable } = require('./levels');
+const { createLibrary, expandIncludes, orderOf } = require('./library');
+
+// A catalogued procedure needn't start with PROC or end with PEND; add them
+// so it parses like an in-stream PROC.
+function procStatements(entry, statements) {
+    const stmts = statements.filter(s => s.type === 'STMT');
+    const first = stmts[0];
+    const last = stmts[stmts.length - 1];
+    const synthetic = (op, line) => ({ type: 'STMT', name: op === 'PROC' ? entry.member.toUpperCase() : '', op, operand: '', comment: '', opCol: 1, operandCol: 1, nameCol: 3, line, endLine: line, raw: [] });
+    const base = (first || { line: 0 }).line;
+    return [
+        ...(first && first.op.toUpperCase() === 'PROC' ? [] : [synthetic('PROC', base)]),
+        ...statements,
+        ...(last && last.op.toUpperCase() === 'PEND' ? [] : [synthetic('PEND', last ? last.endLine : base)])
+    ];
+}
 
 /**
  * Runs the full pipeline over raw JCL source text.
  * @param {string} source
- * @param {{ zosLevel?: string, jes?: string }} [options] defaults to the newest z/OS level and JES2
+ * @param {{ zosLevel?: string, jes?: string, library?: object[] }} [options] defaults to the newest
+ *   z/OS level and JES2; `library` holds { dsn, member, source } entries for catalogued procedures
+ *   and INCLUDE members
  * @returns {{ diagnostics: object[], ast: object, stats: object, zosLevel: string, jes: string }}
  */
-function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = {}) {
+function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, library: entries = [] } = {}) {
     // Callers check the level first (the API answers 400), so a bad one here
     // is a bug rather than something to fall back from silently.
     if (!isZosLevel(zosLevel)) {
@@ -26,7 +44,9 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
     }
 
     const context = { zosLevel, jes };
-    const { statements, diagnostics: lexDiags } = lex(source || '', context);
+    const { statements: written, diagnostics: lexDiags } = lex(source || '', context);
+    const library = createLibrary(entries, context);
+    const statements = expandIncludes(written, library, lexDiags);
     const {
         jobs,
         procs,
@@ -34,9 +54,27 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
         diagnostics: parseDiags
     } = parse(statements, context);
     const ruleDiags = [];
+
+    // Catalogued procedures from the library, each parsed once and then
+    // checked with the in-stream ones.
+    const catalogued = new Map();
+    const lookup = (name, job) => {
+        const entry = library.find(name, job.jcllib ? orderOf(job.jcllib.params) : []);
+        if (entry && !catalogued.has(entry)) {
+            const memberStmts = expandIncludes(library.read(entry, lexDiags), library, lexDiags);
+            const parsed = parse(procStatements(entry, memberStmts), context);
+            // A member is a procedure, not a job, so it has no JOB statement.
+            parseDiags.push(...parsed.diagnostics.filter(d => d.code !== 'JCLO001'));
+            catalogued.set(entry, parsed.procs[0] || null);
+            procs.push(...parsed.procs.slice(0, 1));
+        }
+
+        return entry ? catalogued.get(entry) : null;
+    };
+
     // Each job is checked on its own; a step only sees its own job's PROCs.
     for (const job of jobs) {
-        resolveProcCalls(job, job.procs, ruleDiags); // first, so paramRules can see the PROCs
+        resolveProcCalls(job, job.procs, ruleDiags, lookup); // first, so paramRules can see the PROCs
         validateDDOverrides(job, ruleDiags);
         checkAllParams(job, ruleDiags, context);
         checkDDStatements(job, ruleDiags);
@@ -60,6 +98,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES } = 
     ];
 
     all.sort((a, b) => (a.line - b.line) || (a.column - b.column));
+    all.forEach(library.locate);
 
     const stats = {
         errors: all.filter(d => d.severity === 'error').length,

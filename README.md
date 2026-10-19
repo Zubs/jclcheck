@@ -175,8 +175,10 @@ them.
 
 ## Known limitations (by design, given no mainframe access)
 
-- Cataloged procedures and datasets can't be verified to exist — calls to a
-  PROC not defined in-stream are flagged as warnings, not hard errors.
+- Datasets can't be verified to exist. Catalogued procedures and INCLUDE
+  members are checked only when the user pastes them into the Library panel
+  (the API's `library` field); otherwise a call to a PROC not defined
+  in-stream is a warning, not a hard error.
 - IF/THEN/ELSE conditional blocks are validated for balance/nesting but their
   bodies are not conditionally excluded from the AST (this is a static
   validator, not a JCL interpreter with a live symbol table).

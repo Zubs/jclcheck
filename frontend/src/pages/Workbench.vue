@@ -7,6 +7,9 @@
         <span class="header-brand__title">JCLCHECK</span>
         <span class="header-brand__subtitle">JCL VALIDATION WORKBENCH</span>
       </div>
+      <button class="header-library" :class="{ 'is-open': showLibrary }" @click="toggleLibrary">
+        LIBRARY ({{ library.length }})
+      </button>
       <div class="header-status">
         <span class="status-dot" :class="statusClass"></span>
         <span class="header-status__text">{{ statusText }}</span>
@@ -14,13 +17,22 @@
     </header>
 
     <main class="main">
-      <section class="pane pane-editor">
+      <section class="pane pane-editor" :class="{ 'has-library': showLibrary }">
         <Editor
             ref="editorRef"
             v-model="code"
-            :diagnostics="diagnostics"
+            :diagnostics="jobDiagnostics"
             @update:modelValue="onUserEdit"
             @paste="onPaste"
+        />
+        <LibraryPanel
+            v-if="showLibrary"
+            ref="libraryRef"
+            :entries="library"
+            :diagnostics="diagnostics"
+            @add="addMember"
+            @remove="removeMember"
+            @update="updateMember"
         />
       </section>
       <section class="pane pane-diag">
@@ -51,12 +63,14 @@ import {
   computed,
   onMounted,
   onBeforeUnmount,
-  watch
+  watch,
+  nextTick
 } from 'vue';
 import Editor from '../components/Editor.vue';
 import ErrorPanel from '../components/ErrorPanel.vue';
 import PfBar from '../components/PfBar.vue';
 import HelpModal from '../components/HelpModal.vue';
+import LibraryPanel from '../components/LibraryPanel.vue';
 import { validateJcl } from '../api';
 import { SAMPLES, SAMPLE_ORDER } from '../samples';
 import { track } from '../analytics';
@@ -75,6 +89,15 @@ const errored = ref(false);
 const showHelp = ref(false);
 const editorRef = ref(null);
 const sampleIdx = ref(0);
+// Catalogued procedures and INCLUDE members the user pastes in.
+const library = ref([]);
+const showLibrary = ref(false);
+const libraryRef = ref(null);
+const errorStatus = ref(null);
+let nextMemberId = 1;
+
+// Diagnostics inside a library member are shown in that member's editor.
+const jobDiagnostics = computed(() => diagnostics.value.filter(d => !d.member));
 
 let debounceTimer = null;
 
@@ -148,7 +171,7 @@ async function runValidation(trigger) {
   errored.value = false;
   const startedAt = Date.now();
   try {
-    const result = await validateJcl(source);
+    const result = await validateJcl(source, { library: libraryForApi() });
     visit.responseTimes.push(Date.now() - startedAt);
     visit.lastResult = resultKind(result.stats);
     diagnostics.value = result.diagnostics;
@@ -156,6 +179,7 @@ async function runValidation(trigger) {
     trackDiagnostics(result.diagnostics);
   } catch (e) {
     errored.value = true;
+    errorStatus.value = e.status;
     console.error(e);
     trackApiProblem(e);
   } finally {
@@ -190,10 +214,41 @@ function onVisibilityChange() {
   }
 }
 
-watch(code, () => {
+function scheduleValidation() {
   clearTimeout(debounceTimer);
   debounceTimer = setTimeout(runValidation, 450);
-});
+}
+
+watch(code, scheduleValidation);
+watch(library, scheduleValidation, { deep: true });
+
+// Members without a name yet aren't sent; the API would reject them.
+function libraryForApi() {
+  return library.value
+    .filter(e => e.member.trim())
+    .map(e => ({ ...(e.dsn.trim() ? { dsn: e.dsn.trim().toUpperCase() } : {}), member: e.member.trim().toUpperCase(), source: e.source }));
+}
+
+function toggleLibrary() {
+  showLibrary.value = !showLibrary.value;
+}
+
+function addMember() {
+  library.value.push({ id: nextMemberId++, dsn: '', member: '', source: '' });
+  track('library', 'add');
+}
+
+function removeMember(id) {
+  library.value = library.value.filter(e => e.id !== id);
+  track('library', 'remove');
+}
+
+function updateMember(id, field, value) {
+  const entry = library.value.find(e => e.id === id);
+  if (entry) {
+    entry[field] = value;
+  }
+}
 
 onMounted(() => {
   document.addEventListener('visibilitychange', onVisibilityChange);
@@ -207,9 +262,15 @@ onBeforeUnmount(() => {
   sendVisitSummary();
 });
 
-function onSelectDiagnostic(d) {
+async function onSelectDiagnostic(d) {
   track('diag/click', d.code);
-  editorRef.value?.scrollToLine(d.line);
+  if (d.member) {
+    showLibrary.value = true;
+    await nextTick();
+    libraryRef.value?.openMember(d.member, d.line);
+  } else {
+    editorRef.value?.scrollToLine(d.line);
+  }
 }
 
 function onUserEdit() {
@@ -257,7 +318,8 @@ const statusClass = computed(() => {
 
 const statusText = computed(() => {
   if (errored.value) {
-    return 'API UNREACHABLE';
+    // The workbench only sends options the API accepts, apart from the library.
+    return errorStatus.value === 400 ? 'CHECK A LIBRARY MEMBER NAME' : 'API UNREACHABLE';
   }
 
   if (loading.value) {
@@ -408,6 +470,32 @@ const pfKeys = computed(() => ([
 .pane {
   min-height: 0;
   min-width: 0;
+}
+
+.pane-editor.has-library {
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  gap: 12px;
+}
+
+.header-library {
+  margin-left: auto;
+  margin-right: 16px;
+  font-family: var(--font-cond);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+  background: transparent;
+  border: 1px solid var(--grid-line-strong);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  cursor: pointer;
+}
+
+.header-library:hover,
+.header-library.is-open {
+  color: var(--text-bright);
+  border-color: var(--text-dim);
 }
 
 @media (max-width: 900px) {

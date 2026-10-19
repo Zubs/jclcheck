@@ -409,7 +409,7 @@ const CATALOG = {
         message: (d) => `Referenced procedure '${d.name}' is not defined in this job stream.` + (d.libraries && d.libraries.length
             ? ` It may be found in ${d.libraries[0]}${d.libraries.length > 1 ? ` or ${d.libraries.length - 1} other ${d.libraries.length === 2 ? 'library' : 'libraries'}` : ''}.`
             : ''),
-        suggestion: (d) => `Add an in-stream PROC named '${d.name}', reference a cataloged procedure, or check for a typo.`
+        suggestion: (d) => `Add an in-stream PROC named '${d.name}', add the catalogued procedure in the Library panel, or check for a typo.`
     },
     JCLR002: {
         message: (d) => `Symbolic parameter '${d.sym}' is not defined in procedure '${d.proc}'.`,
@@ -418,6 +418,22 @@ const CATALOG = {
     JCLR004: {
         message: (d) => `PROC ${d.proc} has no step '${d.procstep}'.`,
         suggestion: (d) => d.steps.length ? `Its steps are: ${d.steps.join(', ')}.` : `The procedure has no named steps.`
+    },
+    JCLR005: {
+        message: (d) => `INCLUDE member '${d.name}' is not in the library.`,
+        suggestion: () => `Add the member in the Library panel, with the library from the job's JCLLIB, so its statements can be checked.`
+    },
+    JCLR006: {
+        message: (d) => `INCLUDE member '${d.name}' includes itself: ${d.chain.join(' → ')}.`,
+        suggestion: () => `Remove the INCLUDE that leads back to a member already being included.`
+    },
+    JCLR007: {
+        message: (d) => `INCLUDE members are nested more than ${d.max} levels deep.`,
+        suggestion: () => `Flatten the INCLUDE members so fewer of them include others.`
+    },
+    JCLR008: {
+        message: (d) => `A ${d.op} statement is not allowed in an INCLUDE member.`,
+        suggestion: () => `INCLUDE members can't contain JOB, PROC, PEND or JCLLIB statements. Move it into the job itself.`
     },
     JCLR003: {
         message: (d) => `Overriding DD '${d.name}' does not match any DD in procedure step '${d.step}'.`,

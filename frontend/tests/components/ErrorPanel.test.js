@@ -70,4 +70,9 @@ describe('ErrorPanel', () => {
         await w.find('.diag').trigger('click');
         expect(w.emitted('select')).toEqual([[WARNING]]);
     });
+
+    test('shows the member name before the location of a diagnostic in a library member', () => {
+        const w = mount(ErrorPanel, { props: { diagnostics: [{ ...WARNING, line: 3, column: 5, member: 'CAMPBEL.PROCS.JCL(MYPROC2)' }], stats: STATS } });
+        expect(w.find('.diag-loc').text()).toBe('MYPROC2 L3:5');
+    });
 });

@@ -57,6 +57,16 @@ test('no page view or event contains anything from the JCL or the address hash',
     Object.defineProperty(paste, 'clipboardData', { value: { getData: () => `//${MARKER} DD *\n${MARKER}` } });
     textarea.element.dispatchEvent(paste);
 
+    // A library member holding the marker goes to the API, never to analytics.
+    await wrapper.find('.header-library').trigger('click');
+    await wrapper.find('.library-add').trigger('click');
+    await wrapper.find('.library-dsn').setValue(`${MARKER}.PROCS`);
+    await wrapper.find('.library-member').setValue('MEMBER1');
+    await wrapper.findAll('textarea')[1].setValue(`//${MARKER} PROC\n//S EXEC PGM=${MARKER}`);
+    await vi.advanceTimersByTimeAsync(450);
+    await flushPromises();
+    expect(JSON.stringify(validateJcl.mock.calls.at(-1)[1])).toContain(MARKER);
+
     for (const entry of wrapper.findAll('.diag')) {
         await entry.trigger('click');
     }
@@ -79,6 +89,7 @@ test('no page view or event contains anything from the JCL or the address hash',
         'diag/click/JCLS006',
         'editor/paste/1-10',
         'check/button',
+        'library/add',
         'visit/end/errors'
     ]));
     expect(document.cookie).toBe('');

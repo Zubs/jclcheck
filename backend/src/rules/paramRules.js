@@ -783,5 +783,7 @@ module.exports = {
     checkRuleValue,
     checkWhen,
     checkName,
+    checkDsn,
+    MEMBER_RE,
     closestKeyword
 };

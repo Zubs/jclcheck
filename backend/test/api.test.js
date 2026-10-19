@@ -199,6 +199,37 @@ test('JES in /api/validate', async (t) => {
     });
 });
 
+test('library in /api/validate', async (t) => {
+    const request = await serve(t, { analytics: fakeAnalytics() });
+    const entries = n => Array.from({ length: n }, (_, i) => ({ dsn: 'MY.PROCS', member: `P${i}`, source: '//S EXEC PGM=X\n' }));
+
+    await t.test('B: 50 members are accepted and 51 get 400', async () => {
+        assert.equal((await request('/api/validate', { body: { source: '', library: entries(50) } })).status, 200);
+        const res = await request('/api/validate', { body: { source: '', library: entries(51) } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /at most 50/);
+    });
+
+    await t.test('E: an entry with an invalid member name gets 400 naming it', async () => {
+        const res = await request('/api/validate', { body: { source: '', library: [{ member: '1BAD', source: '' }] } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /library entry 1 \(1BAD\)/);
+    });
+
+    await t.test('E: an entry with an invalid library name gets 400 naming it', async () => {
+        const res = await request('/api/validate', { body: { source: '', library: [{ dsn: 'BAD..NAME', member: 'OK', source: '' }] } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /library entry 1 \(OK\) has an invalid library name/);
+    });
+
+    await t.test('O: a member diagnostic comes back with its member field', async () => {
+        const library = [{ member: 'MYPROC2', source: '//MYPROC2 PROC\n//PS EXEC PGM=X,REGON=4M\n' }];
+        const res = await request('/api/validate', { body: { source: '//J JOB\n//S EXEC MYPROC2\n', library } });
+        const [d] = (await res.json()).diagnostics;
+        assert.deepEqual([d.code, d.line, d.member], ['JCLK001', 2, 'MYPROC2']);
+    });
+});
+
 test('/api/usage', async (t) => {
     await t.test('O: a valid batch answers 202 and records each event', async (t) => {
         const analytics = fakeAnalytics();

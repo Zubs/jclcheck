@@ -40,6 +40,15 @@
           </li>
         </ul>
 
+        <h3>Library</h3>
+        <p>
+          Open <strong>LIBRARY</strong> at the top to paste the catalogued procedures and INCLUDE
+          members your job uses, each with the library it lives in. They are found in the order of
+          the job's JCLLIB, then members with no library, and checked along with the job. A problem
+          inside a member is shown with the member's name, such as <code>MYPROC2 L3:5</code>; click
+          it to jump there.
+        </p>
+
         <h3>Columns</h3>
         <p>
           Each line is read like an 80-column card, as z/OS reads it. Columns 1–71 hold the
@@ -108,10 +117,10 @@
 
         <h3>Limitations</h3>
         <p>
-          This tool validates syntax and structure only. It cannot see cataloged
-          procedures or datasets on an actual system, so a call to an unresolved
-          PROC is flagged as a warning (it may be a valid cataloged procedure this
-          tool simply can't see), not a hard error.
+          This tool validates syntax and structure only. It cannot see datasets on
+          an actual system, or catalogued procedures you haven't added to the
+          Library, so a call to an unresolved PROC is flagged as a warning (it may be
+          a valid catalogued procedure this tool simply can't see), not a hard error.
         </p>
       </div>
     </div>

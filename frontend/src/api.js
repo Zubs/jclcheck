@@ -7,7 +7,9 @@ function apiError(message, status) {
     return err;
 }
 
-export async function validateJcl(source) {
+// `library` holds { dsn, member, source } entries for catalogued procedures
+// and INCLUDE members; it's only sent when there is something in it.
+export async function validateJcl(source, { library = [] } = {}) {
     let res;
     try {
         res = await fetch(`${API_BASE}/api/validate`, {
@@ -17,7 +19,7 @@ export async function validateJcl(source) {
                 // Tells the backend this check is already counted in the browser.
                 'X-JCLcheck-Client': 'workbench'
             },
-            body: JSON.stringify({ source })
+            body: JSON.stringify(library.length ? { source, library } : { source })
         });
     } catch (err) {
         throw apiError(`Validation request failed: ${err.message}`, 0);

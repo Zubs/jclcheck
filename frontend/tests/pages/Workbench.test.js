@@ -67,7 +67,7 @@ describe('Workbench', () => {
     test('checks the clean sample once when it opens', async () => {
         await mountWorkbench();
         expect(validateJcl).toHaveBeenCalledTimes(1);
-        expect(validateJcl).toHaveBeenCalledWith(SAMPLES.clean.code);
+        expect(validateJcl).toHaveBeenCalledWith(SAMPLES.clean.code, { library: [] });
     });
 
     test('sends one check 450 ms after the last of several quick edits, with the latest text', async () => {
@@ -84,7 +84,7 @@ describe('Workbench', () => {
 
         await vi.advanceTimersByTimeAsync(1);
         expect(validateJcl).toHaveBeenCalledTimes(1);
-        expect(validateJcl).toHaveBeenCalledWith('//ABC');
+        expect(validateJcl).toHaveBeenCalledWith('//ABC', { library: [] });
     });
 
     test('shows VALIDATING while a check is in flight', async () => {
@@ -350,5 +350,64 @@ describe('Workbench visit summary', () => {
         const w = await mountWorkbench(); // the opening check never finishes
         w.unmount();
         expect(summary()).toEqual([]);
+    });
+});
+
+describe('Workbench library', () => {
+    async function addMember(w, { dsn = '', member, source }) {
+        if (!w.find('.library').exists()) {
+            await w.find('.header-library').trigger('click');
+        }
+
+        await w.find('.library-add').trigger('click');
+        const entries = w.findAll('.library-entry');
+        const entry = entries[entries.length - 1];
+        await entry.find('.library-dsn').setValue(dsn);
+        await entry.find('.library-member').setValue(member);
+        await entry.find('textarea').setValue(source);
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+    }
+
+    test('sends a member once it has a name, and counts adding it', async () => {
+        const w = await mountWorkbench();
+        await addMember(w, { dsn: 'my.procs', member: 'myproc2', source: '//MYPROC2 PROC' });
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, {
+            library: [{ dsn: 'MY.PROCS', member: 'MYPROC2', source: '//MYPROC2 PROC' }]
+        });
+        expect(track).toHaveBeenCalledWith('library', 'add');
+    });
+
+    test('stops sending a removed member, and counts removing it', async () => {
+        const w = await mountWorkbench();
+        await addMember(w, { member: 'INC1', source: '//D DD DUMMY' });
+        await w.find('.library-remove').trigger('click');
+        await vi.advanceTimersByTimeAsync(450);
+        await flushPromises();
+        expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [] });
+        expect(track).toHaveBeenCalledWith('library', 'remove');
+    });
+
+    test('opens the library at the member and line when a member diagnostic is clicked', async () => {
+        validateJcl.mockResolvedValue({
+            diagnostics: [{ code: 'JCLK001', severity: 'warning', line: 2, column: 1, message: 'm', suggestion: null, member: 'MY.PROCS(MYPROC2)' }],
+            stats: { errors: 0, warnings: 1, statementCount: 3, stepCount: 1, procCount: 0, valid: true }
+        });
+        const w = await mountWorkbench();
+        await addMember(w, { dsn: 'MY.PROCS', member: 'MYPROC2', source: '//MYPROC2 PROC\n//S EXEC PGM=X,REGON=4M' });
+        await w.find('.header-library').trigger('click'); // close it again
+        expect(w.find('.library').exists()).toBe(false);
+        await w.find('.diag').trigger('click');
+        await flushPromises();
+        const memberText = w.findAll('textarea')[1].element;
+        expect(memberText.value.slice(memberText.selectionStart, memberText.selectionEnd)).toBe('//S EXEC PGM=X,REGON=4M');
+        expect(w.find('.diag-loc').text()).toBe('MYPROC2 L2:1');
+    });
+
+    test('says when a library member name is rejected', async () => {
+        const w = await mountWorkbench();
+        validateJcl.mockRejectedValue(Object.assign(new Error('bad'), { status: 400 }));
+        await addMember(w, { member: '1BAD', source: '' });
+        expect(statusText(w)).toBe('CHECK A LIBRARY MEMBER NAME');
     });
 });

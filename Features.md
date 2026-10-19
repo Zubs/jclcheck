@@ -46,7 +46,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 20. Duplicate DD names
 - [x] 21. DD data sources, including PATH
 - [x] 22. Job groups (JOBGROUP)
-- [ ] 23. Catalogued PROCs and INCLUDE members
+- [x] 23. Catalogued PROCs and INCLUDE members
 - [ ] 24. Cursor line and column
 - [ ] 25. Syntax highlighting
 - [ ] 26. Keyboard shortcuts
@@ -1133,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`–`JCLD007`, `JCLK004`–`JCLK009`, `JCLR004`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS014`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`–`JCLD007`, `JCLK004`–`JCLK009`, `JCLR004`–`JCLR008`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS014`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
@@ -1550,7 +1550,7 @@ after:
 - **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).
 - **NOT sign in IF conditions (feature 13).** Only `¬` and the word `NOT` are accepted. Some PC keyboards and code pages turn `¬` into `^` or `!`. Decide whether to accept those as aliases.
 - **Job group keywords (feature 22).** The keyword tables for JOBGROUP, GJOB, JOBSET, SJOB, AFTER, BEFORE, CONCURRENT and SCHEDULE in `keywords.js` (`GROUP_KEYWORDS`) were written from memory of the JES2 job group section. Confirm them against the reference, and add value rules (for example `ACTION`, `OTHERWISE`, `FLUSHTYP`).
-- **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain.
+- **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain. *For now:* nesting up to 15 levels (`MAX_INCLUDE_DEPTH` in `library.js`), and JOB, PROC, PEND and JCLLIB are refused in a member (`NOT_IN_INCLUDE`).
 - **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
 - **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
 - **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.

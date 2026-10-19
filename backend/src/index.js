@@ -1,6 +1,9 @@
 const express = require('express');
 const cors = require('cors');
 const validator = require('./validator');
+const { checkDsn, MEMBER_RE } = require('./rules/paramRules');
+
+const MAX_LIBRARY = 50;
 const {
     ZOS_LEVELS,
     DEFAULT_ZOS_LEVEL,
@@ -61,6 +64,43 @@ function countDirectUse(analytics, endpoint) {
     };
 }
 
+// Why a request's library can't be used, or null when it can.
+function libraryProblem(library) {
+    if (library === undefined) {
+        return null;
+    }
+
+    if (!Array.isArray(library)) {
+        return 'library must be a list of { dsn, member, source } entries.';
+    }
+
+    if (library.length > MAX_LIBRARY) {
+        return `The library can hold at most ${MAX_LIBRARY} members; found ${library.length}.`;
+    }
+
+    for (const [i, entry] of library.entries()) {
+        const name = `library entry ${i + 1}${entry && typeof entry.member === 'string' ? ` (${entry.member})` : ''}`;
+        if (!entry || typeof entry.source !== 'string' || typeof entry.member !== 'string' || !MEMBER_RE.test(entry.member)) {
+            return `${name} needs a member name of 1-8 letters, digits or $#@ starting with a letter or $#@, and its text.`;
+        }
+
+        const dsnProblems = [];
+        if (entry.dsn !== undefined && entry.dsn !== '' && entry.dsn !== null) {
+            if (typeof entry.dsn !== 'string') {
+                return `${name} has a library name that isn't text.`;
+            }
+
+            checkDsn(entry.dsn, 1, 1, dsnProblems);
+        }
+
+        if (dsnProblems.length) {
+            return `${name} has an invalid library name '${entry.dsn}'.`;
+        }
+    }
+
+    return null;
+}
+
 // Why a request's zosLevel/jes can't be used, or null when they can.
 function optionsProblem(zosLevel, jes) {
     if (zosLevel !== undefined && !isZosLevel(zosLevel)) {
@@ -89,15 +129,19 @@ function createApp({
     app.use(express.json({ limit: '2mb' }));
 
     app.post('/api/validate', countDirectUse(analytics, 'validate'), (req, res) => {
-        const { zosLevel, jes } = req.body || {};
-        const problem = optionsProblem(zosLevel, jes);
+        const { zosLevel, jes, library } = req.body || {};
+        const problem = optionsProblem(zosLevel, jes) || libraryProblem(library);
         if (problem) {
             return res.status(400).json({ error: 'bad_request', message: problem });
         }
 
         try {
             const source = req.body && typeof req.body.source === 'string' ? req.body.source : '';
-            const result = validator.validate(source, { zosLevel, jes });
+            const result = validator.validate(source, {
+                zosLevel,
+                jes,
+                library: (library || []).map(({ dsn, member, source: text }) => ({ dsn: dsn || null, member, source: text }))
+            });
             res.locals.zosLevel = result.zosLevel;
             res.locals.jes = result.jes;
             res.json(result);
