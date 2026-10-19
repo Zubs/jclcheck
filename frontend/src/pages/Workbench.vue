@@ -26,6 +26,9 @@
     </header>
 
     <div v-if="pickerNotice" class="picker-notice" role="status">{{ pickerNotice }}</div>
+    <div v-if="draftNotSaved" class="picker-notice draft-notice" role="status">
+      Your JCL isn't being saved in this browser, so it will be gone when you leave.
+    </div>
 
     <main class="main">
       <section class="pane pane-editor" :class="{ 'has-library': showLibrary }">
@@ -98,7 +101,49 @@ import {
   latencyBucket
 } from '../analyticsEvents';
 
-const code = ref(SAMPLES.clean.code);
+// The user's draft (JCL and library members) stays in this browser between
+// visits. Storage can be blocked or full, so every access is guarded and the
+// workbench carries on without it.
+const DRAFT_KEY = 'jclcheck.draft';
+const SAVE_DELAY_MS = 500;
+const draftNotSaved = ref(false);
+let draftStatus = null; // 'restored' or 'corrupt', counted once mounted
+
+function isDraft(d) {
+  const text = v => typeof v === 'string';
+  return d && text(d.code) && Array.isArray(d.library) &&
+    d.library.every(e => e && text(e.dsn) && text(e.member) && text(e.source));
+}
+
+function loadDraft() {
+  let raw;
+  try {
+    raw = localStorage.getItem(DRAFT_KEY);
+  } catch {
+    draftNotSaved.value = true;
+    return null;
+  }
+
+  if (raw === null) {
+    return null;
+  }
+
+  try {
+    const draft = JSON.parse(raw);
+    if (isDraft(draft)) {
+      draftStatus = 'restored';
+      return draft;
+    }
+  } catch {
+    // Unreadable: treated like a draft that doesn't fit, below.
+  }
+
+  draftStatus = 'corrupt';
+  return null;
+}
+
+const draft = loadDraft();
+const code = ref(draft ? draft.code : SAMPLES.clean.code);
 const diagnostics = ref([]);
 const stats = ref(null);
 const loading = ref(false);
@@ -107,7 +152,7 @@ const showHelp = ref(false);
 const editorRef = ref(null);
 const sampleIdx = ref(0);
 // Catalogued procedures and INCLUDE members the user pastes in.
-const library = ref([]);
+const library = ref((draft ? draft.library : []).map((e, i) => ({ id: i + 1, ...e })));
 const showLibrary = ref(false);
 const libraryRef = ref(null);
 const errorStatus = ref(null);
@@ -124,7 +169,7 @@ const PICKER_KEY = 'jclcheck.picker';
 const undoState = ref(null);
 const UNDO_MS = 5000;
 let undoTimer = null;
-let nextMemberId = 1;
+let nextMemberId = library.value.length + 1;
 
 // Diagnostics inside a library member are shown in that member's editor.
 const jobDiagnostics = computed(() => diagnostics.value.filter(d => !d.member));
@@ -146,7 +191,8 @@ const fixedCodes = new Set();
 let previousCodes = new Set();
 // True when the latest change came from typing, not Clear or a sample, so a
 // code that disappears counts as fixed.
-let lastChangeByUser = false;
+// A restored draft is the user's own text, so replacing it can be undone.
+let lastChangeByUser = Boolean(draft);
 
 function lineCount(text) {
   return text === '' ? 0 : text.split('\n').length;
@@ -252,6 +298,33 @@ function scheduleValidation() {
 
 watch(code, scheduleValidation);
 watch(library, scheduleValidation, { deep: true });
+
+let saveTimer = null;
+
+function saveDraft() {
+  clearTimeout(saveTimer);
+  saveTimer = null;
+  try {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({
+      code: code.value,
+      library: library.value.map(({ dsn, member, source }) => ({ dsn, member, source }))
+    }));
+  } catch {
+    draftNotSaved.value = true;
+  }
+}
+
+watch([code, library], () => {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveDraft, SAVE_DELAY_MS);
+}, { deep: true });
+
+// A change still waiting to be saved isn't lost when the page goes.
+function flushDraft() {
+  if (saveTimer) {
+    saveDraft();
+  }
+}
 
 // Members without a name yet aren't sent; the API would reject them.
 function libraryForApi() {
@@ -368,6 +441,11 @@ function onJesChange(e) {
 }
 
 onMounted(async () => {
+  if (draftStatus) {
+    track('draft', draftStatus);
+  }
+
+  window.addEventListener('pagehide', flushDraft);
   window.addEventListener('keydown', onKeydown);
   document.addEventListener('visibilitychange', onVisibilityChange);
   window.addEventListener('pagehide', sendVisitSummary);
@@ -376,6 +454,8 @@ onMounted(async () => {
 });
 
 onBeforeUnmount(() => {
+  flushDraft();
+  window.removeEventListener('pagehide', flushDraft);
   window.removeEventListener('keydown', onKeydown);
   clearTimeout(undoTimer);
   document.removeEventListener('visibilitychange', onVisibilityChange);

@@ -32,7 +32,7 @@ function resultFor(source) {
 test('no page view or event contains anything from the JCL or the address hash', async () => {
     vi.useFakeTimers();
     validateJcl.mockImplementation(async source => resultFor(source));
-    const storageBefore = Object.keys(localStorage).length;
+    const storageBefore = new Set(Object.keys(localStorage));
 
     const fakeDocument = document.implementation.createHTMLDocument('fake');
     const win = {};
@@ -96,5 +96,8 @@ test('no page view or event contains anything from the JCL or the address hash',
         'visit/end/errors'
     ]));
     expect(document.cookie).toBe('');
-    expect(Object.keys(localStorage).length).toBe(storageBefore);
+    // The draft (feature 28) and the level choice (feature 27) stay in this
+    // browser by design; nothing else may be stored.
+    const added = Object.keys(localStorage).filter(k => !storageBefore.has(k));
+    expect(added.every(k => ['jclcheck.draft', 'jclcheck.picker'].includes(k))).toBe(true);
 });

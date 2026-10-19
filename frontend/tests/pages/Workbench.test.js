@@ -77,6 +77,7 @@ beforeEach(() => {
 afterEach(() => {
     wrapper?.unmount();
     vi.useRealTimers();
+    localStorage.clear(); // drafts saved by one test mustn't open the next
 });
 
 describe('Workbench', () => {
@@ -634,5 +635,83 @@ describe('Workbench level and JES picker', () => {
         const w = await mountWorkbench();
         expect(w.find('.level-picker').exists()).toBe(false);
         expect(validateJcl).toHaveBeenLastCalledWith(SAMPLES.clean.code, { library: [], zosLevel: null, jes: null });
+    });
+});
+
+describe('Workbench drafts', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
+    const saved = () => JSON.parse(localStorage.getItem('jclcheck.draft'));
+
+    async function remount() {
+        wrapper.unmount();
+        return mountWorkbench();
+    }
+
+    test('Z: with nothing saved the clean sample is shown', async () => {
+        const w = await mountWorkbench();
+        expect(w.find('textarea').element.value).toBe(SAMPLES.clean.code);
+        expect(w.find('.draft-notice').exists()).toBe(false);
+    });
+
+    test('O: a typed job comes back after the page is opened again', async () => {
+        let w = await mountWorkbench();
+        await edit(w, '//MINE JOB');
+        await vi.advanceTimersByTimeAsync(500);
+        expect(saved().code).toBe('//MINE JOB');
+        w = await remount();
+        expect(w.find('textarea').element.value).toBe('//MINE JOB');
+        expect(track).toHaveBeenCalledWith('draft', 'restored');
+    });
+
+    test('Z: a cleared editor comes back empty, not the sample', async () => {
+        let w = await mountWorkbench();
+        await w.findAll('.pfkey').find(b => b.text().includes('CLEAR')).trigger('click');
+        await vi.advanceTimersByTimeAsync(500);
+        w = await remount();
+        expect(w.find('textarea').element.value).toBe('');
+    });
+
+    test('M: a job and three library members come back', async () => {
+        localStorage.setItem('jclcheck.draft', JSON.stringify({
+            code: '//J JOB',
+            library: [1, 2, 3].map(n => ({ dsn: 'MY.PROCS', member: `P${n}`, source: `//S${n} EXEC PGM=X` }))
+        }));
+        const w = await mountWorkbench();
+        expect(w.find('textarea').element.value).toBe('//J JOB');
+        expect(w.find('.header-library').text()).toBe('LIBRARY (3)');
+        expect(validateJcl.mock.calls[0][1].library.map(e => e.member)).toEqual(['P1', 'P2', 'P3']);
+    });
+
+    test('B: a change is saved on leaving even inside the half second', async () => {
+        const w = await mountWorkbench();
+        await edit(w, '//LAST JOB');
+        w.unmount();
+        expect(saved().code).toBe('//LAST JOB');
+    });
+
+    test('E: blocked storage shows the sample, checks, and says once that nothing is saved', async () => {
+        vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+            throw new Error('blocked');
+        });
+        vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
+            throw new Error('blocked');
+        });
+        const w = await mountWorkbench();
+        expect(w.find('textarea').element.value).toBe(SAMPLES.clean.code);
+        expect(validateJcl).toHaveBeenCalled();
+        expect(w.findAll('.draft-notice')).toHaveLength(1);
+        await edit(w, '//X JOB');
+        await vi.advanceTimersByTimeAsync(500);
+        expect(w.findAll('.draft-notice')).toHaveLength(1);
+    });
+
+    test('E: a corrupted draft is ignored and the sample shown', async () => {
+        localStorage.setItem('jclcheck.draft', '{not json');
+        const w = await mountWorkbench();
+        expect(w.find('textarea').element.value).toBe(SAMPLES.clean.code);
+        expect(track).toHaveBeenCalledWith('draft', 'corrupt');
     });
 });

@@ -51,7 +51,7 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 - [x] 25. Syntax highlighting
 - [x] 26. Keyboard shortcuts
 - [x] 27. z/OS level and JES picker
-- [ ] 28. Remembering JCL between visits
+- [x] 28. Remembering JCL between visits
 - [ ] 29. Shareable links
 - [ ] 30. Accurate copy, help and docs
 - [ ] 31. DSN with LIKE

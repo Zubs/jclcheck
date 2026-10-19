@@ -48,7 +48,7 @@ export const EVENTS = {
     // Later features
     'level': { details: ['2.3', '2.4', '2.5', '3.1', '3.2'], title: d => `z/OS level ${d}` },
     'jes': { details: ['JES2', 'JES3'], title: d => `JES: ${d}` },
-    'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}`, feature: 28 },
+    'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}` },
     'share': { details: ['create', 'open', 'back-to-draft', 'clipboard-blocked'], title: d => `Share: ${d}`, feature: 29 },
     'datasets': { details: ['open', 'cell-click'], title: d => `Datasets: ${d}`, feature: 36 },
     'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}`, feature: 37 },
