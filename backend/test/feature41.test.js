@@ -77,3 +77,38 @@ test('underlines cover the whole parameter or value', async (t) => {
         assert.deepEqual(at('//J JOB\n//S EXEC PGM=X\n//D DD DISP=SHR\n'), [['JCLD002', 1, 1]]);
     });
 });
+
+test('dataset flow: unqualified overrides and DCB referbacks', async (t) => {
+    const flow = source => validate(source).diagnostics.filter(d => d.code.startsWith('JCLF')).map(d => [d.code, d.line]);
+
+    await t.test('an override with no procedure step name applies to the first PROC step', () => {
+        const jcl = [
+            '//J JOB',
+            '//P PROC',
+            '//PS EXEC PGM=X',
+            '//OUT DD DSN=&&A,DISP=(NEW,PASS)',
+            '//PS2 EXEC PGM=Y',
+            '// PEND',
+            '//S1 EXEC P',
+            '//OUT DD DSN=&&B',
+            '//S2 EXEC PGM=R',
+            '//I DD DSN=&&B,DISP=(OLD,DELETE)'
+        ].join('\n');
+        assert.deepEqual(flow(jcl), []);
+        assert.deepEqual(validate(jcl).datasets[0].datasets.map(d => d.name), ['&&B']);
+    });
+
+    await t.test('DCB=*.STEP.DD is checked like a DSN referback', () => {
+        const jcl = [
+            '//J JOB',
+            '//S1 EXEC PGM=A',
+            '//OUT DD DSN=MY.OUT,DISP=SHR',
+            '//S2 EXEC PGM=B',
+            '//A DD DSN=MY.A,DISP=SHR,DCB=*.S1.OUT',
+            '//B DD DSN=MY.B,DISP=SHR,DCB=(*.S9.OUT,LRECL=80)'
+        ].join('\n');
+        const found = validate(jcl).diagnostics.filter(d => d.code === 'JCLF005');
+        assert.deepEqual(found.map(d => [d.line, d.column]), [[6, 31]]);
+        assert.ok(!validate(jcl).diagnostics.some(d => d.code === 'JCLS003'));
+    });
+});

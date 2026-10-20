@@ -39,10 +39,14 @@ function conditionalLines(container) {
 }
 
 // A DD override named PROCSTEP.DD on the calling step replaces that DD's
-// keywords one by one; an override naming no DD adds one.
-function withOverrides(procStep, call) {
+// keywords one by one; an override naming no DD adds one. An override with no
+// procedure step name applies to the PROC's first step, as z/OS does.
+function withOverrides(procStep, call, first) {
     const prefix = `${(procStep.name || '').toUpperCase()}.`;
-    const overrides = call.dds.filter(d => d.name && d.name.toUpperCase().startsWith(prefix));
+    const named = d => d.name && d.name.toUpperCase().startsWith(prefix);
+    const unqualified = d => first && d.name && !d.name.includes('.');
+    const overrides = call.dds.filter(d => named(d) || unqualified(d))
+        .map(d => (named(d) ? d : { ...d, name: prefix + d.name }));
     const used = new Set();
     const dds = procStep.dds.map(dd => {
         const override = overrides.find(o => dd.name && o.name.toUpperCase() === prefix + dd.name.toUpperCase());
@@ -80,7 +84,7 @@ function jobFlowSteps(job) {
                     name,
                     procStep: (ps.name || '').toUpperCase(),
                     call: step,
-                    dds: withOverrides(ps, step),
+                    dds: withOverrides(ps, step, ps === proc.steps[0]),
                     symbols,
                     conditional: conditional.has(step.line) || procConditional.has(ps.line)
                 });
@@ -193,11 +197,14 @@ function followSteps(steps, diagnostics) {
     steps.forEach((step, i) => {
         const endOfStep = [];
         step.dds.forEach((dd, j) => {
-            for (const p of dd.params.filter(q => q.kind === 'keyword' && ['VOL', 'VOLUME'].includes(q.key))) {
-                const m = p.value.match(/REF=(\*\.[A-Za-z0-9$#@.]+)/i);
+            // VOL=REF=*.STEP.DD and DCB=*.STEP.DD (or DCB=(*.STEP.DD,...)).
+            const refs = [['VOL', /REF=(\*\.[A-Za-z0-9$#@.]+)/i, 4], ['VOLUME', /REF=(\*\.[A-Za-z0-9$#@.]+)/i, 4], ['DCB', /^\(?(\*\.[A-Za-z0-9$#@.]+)/, 0]];
+            for (const [key, pattern, skip] of refs) {
+                const p = keyword(dd.params, key);
+                const m = p && p.value.match(pattern);
                 const target = m && resolveReferback(m[1].toUpperCase(), steps, i, j);
                 if (target && target.detail) {
-                    report('JCLF005', { ref: m[1], detail: target.detail }, at(p, dd, m.index + 4));
+                    report('JCLF005', { ref: m[1], detail: target.detail }, at(p, dd, m.index + skip + (m[0].startsWith('(') ? 1 : 0)));
                 }
             }
 

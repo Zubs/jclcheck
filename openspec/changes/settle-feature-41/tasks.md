@@ -6,7 +6,7 @@
 - [x] 1.2 PROC before the first JOB is an error; fix the "PROC + SYMBOLICS" sample and its expected results; verify tests
 - [x] 1.3 `^` and `!` as NOT with a warning; job group value rules; verify tests
 - [x] 1.4 Whole-parameter lengths on diagnostics; WHEN positions over several lines; verify tests
-- [ ] 1.5 Dataset flow: unqualified overrides and DCB referbacks; verify tests
+- [x] 1.5 Dataset flow: unqualified overrides and DCB referbacks; verify tests
 - [ ] 1.6 Check internal reader JCL as its own job stream; verify tests
 - [ ] 1.7 Level marks from the JCL Reference; verify tests
 
