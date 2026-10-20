@@ -56,6 +56,16 @@ test('jclcheck command', async (t) => {
         assert.deepEqual(JSON.parse(r.out).files.map(f => f.file), ['jcl/a.jcl', 'jcl/b.jcl']);
     });
 
+    await t.test('** and ? reach every matching file, in order, and a pattern matching nothing is reported', async (tt) => {
+        const dir = workspace(tt, { 'jcl/a.jcl': CLEAN, 'jcl/deep/er/b.jcl': CLEAN, 'jcl/c1.jcl': CLEAN, 'jcl/c22.jcl': CLEAN, 'jcl/notes.txt': 'x', 'jcl/.hidden/d.jcl': CLEAN });
+        const files = async pattern => JSON.parse((await cli(dir, [pattern, '--format', 'json'])).out).files.map(f => f.file);
+        assert.deepEqual(await files('jcl/**/*.jcl'), ['jcl/a.jcl', 'jcl/c1.jcl', 'jcl/c22.jcl', 'jcl/deep/er/b.jcl']);
+        assert.deepEqual(await files('jcl/c?.jcl'), ['jcl/c1.jcl']);
+        const missing = await cli(dir, ['jcl/*.cbl']);
+        assert.equal(missing.code, 2);
+        assert.match(missing.err, /can't read jcl\/\*\.cbl: no such file/);
+    });
+
     await t.test('B: --max-warnings 2 passes with two warnings and fails with three', async (tt) => {
         const dir = workspace(tt, { 'two.jcl': warnings(2), 'three.jcl': warnings(3) });
         assert.equal((await cli(dir, ['two.jcl', '--max-warnings', '2'])).code, 0);
@@ -122,6 +132,14 @@ test('jclcheck command', async (t) => {
         assert.match(r.err, /profile\.names\.job/);
     });
 
+    await t.test('the command loads nothing but Node\'s modules and the validator', () => {
+        const script = "require('./src/cli'); console.log(JSON.stringify(Object.keys(require.cache)))";
+        const loaded = JSON.parse(execFileSync(process.execPath, ['-e', script], { cwd: path.join(__dirname, '..') }).toString());
+        const root = path.join(__dirname, '..') + path.sep;
+        assert.ok(loaded.length > 5);
+        assert.deepEqual(loaded.filter(f => !f.startsWith(root) || f.includes(`${path.sep}node_modules${path.sep}`)), []);
+    });
+
     await t.test('the bin script runs and sets the exit code', (tt) => {
         const dir = workspace(tt, { 'b.jcl': ERROR });
         const bin = path.join(__dirname, '..', 'bin', 'jclcheck.js');
@@ -154,8 +172,6 @@ test('jclcheck usage counting', async (t) => {
         assert.deepEqual(events.filter(e => !/^cli\/(version|node|os)\//.test(e)), [
             'cli/run', 'cli/files/1', 'cli/result/errors', 'cli/format/text', 'cli/option/zos', 'cli/ci/github', 'cli/diag/JCLS001'
         ]);
-        const { isAllowedCliEvent } = require('../src/analytics');
-        assert.ok(events.every(isAllowedCliEvent), events.join());
     });
 
     await t.test('I: JCLCHECK_TELEMETRY=debug prints the events and sends nothing', async (tt) => {

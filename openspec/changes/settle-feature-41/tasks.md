@@ -17,7 +17,7 @@
 
 ## 3. Packaging
 
-- [ ] 3.1 Validator package used by the API and CLI; built-in glob matcher; verify tests
+- [x] 3.1 Validator package used by the API and CLI; built-in glob matcher; verify tests
 
 ## 4. Checks and docs
 

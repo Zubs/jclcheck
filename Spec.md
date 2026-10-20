@@ -111,7 +111,7 @@ Each code has its own default severity, set in the catalogue in `errors.js`; the
 
 ### 4.5 Command line
 
-`backend/bin/jclcheck.js <files or globs>` checks JCL files with the same validator as the API and prints `file:line:column  severity  code  message`, JSON or SARIF 2.1.0 (`--format`). Options: `--zos`, `--jes`, `--library <dir>`, `--profile <file>` and `--max-warnings <n>`. It exits with 0 (no errors), 1 (errors, or too many warnings) or 2 (it couldn't run). Usage is counted only when the user opts in (`JCLCHECK_TELEMETRY=1` or `--telemetry`), never with `DO_NOT_TRACK=1`, through `POST /api/usage`.
+`validator/bin/jclcheck.js <files or globs>` checks JCL files with the same validator as the API and prints `file:line:column  severity  code  message`, JSON or SARIF 2.1.0 (`--format`). Options: `--zos`, `--jes`, `--library <dir>`, `--profile <file>` and `--max-warnings <n>`. It exits with 0 (no errors), 1 (errors, or too many warnings) or 2 (it couldn't run). Usage is counted only when the user opts in (`JCLCHECK_TELEMETRY=1` or `--telemetry`), never with `DO_NOT_TRACK=1`, through `POST /api/usage`.
 
 ---
 
@@ -139,9 +139,9 @@ These are by design, since the tool has no access to a mainframe:
 | Frontend | Vue 3 with Vite, single-page app |
 | Routing | Vue Router (`/`, `/about`, `/app`) with per-route SEO meta |
 | Backend | Node.js with Express and CORS |
-| Validation engine | Our own lexer → parameter tokeniser → parser (AST) → rule modules (`ddRules`, `paramRules`, `procRules`). Messages come from a central diagnostic catalogue (`errors.js`) |
+| Validation engine | The `validator/` package, with no dependencies: our own lexer → parameter tokeniser → parser (AST) → rule modules, plus the formatter and the `jclcheck` command. Messages come from a central diagnostic catalogue (`errors.js`) |
 | Keyword data | Tables based on the IBM JCL Reference (`keywords.js`) |
-| Tests | Fixture-based smoke tests (`npm test` in `backend/`), with no test framework |
+| Tests | Node's built-in test runner in `validator/` (rules, fixtures, formatter, command) and `backend/` (API); Vitest in `frontend/` |
 | Frontend hosting | Netlify (SPA fallback, security headers, www → apex redirect) |
 | API hosting | Separate service. The frontend reaches it through `VITE_API_BASE` (proxied to `:4000` in development) |
 | Domain | jclcheck.xyz |

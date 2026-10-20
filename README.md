@@ -7,32 +7,45 @@ a Vue 3 frontend.
 
 ```
 jcl-checker/
-├── backend/     Node.js/Express validation engine + HTTP API
+├── validator/   the validation engine and the jclcheck command (no dependencies)
 │   ├── src/
+│   │   ├── index.js           the package's API (validate, format, keywordHelp, ...)
 │   │   ├── lexer.js           physical lines → logical statements (columns, continuations, in-stream data, JES)
 │   │   ├── paramTokenizer.js  operand string → positional/keyword params (paren/quote aware)
 │   │   ├── parser.js          statements → AST (jobs, steps, DDs, PROCs, IFs, job groups) + order checks
 │   │   ├── conditions.js      IF/WHEN condition parser
 │   │   ├── ast.js             AST node factories
 │   │   ├── keywords.js        keyword, statement and value tables from the IBM JCL Reference
+│   │   ├── descriptions.js    plain-English keyword descriptions and reference links (hover)
 │   │   ├── valueRules.js      reusable value rules (enum, integer, list, ...) and their checker
 │   │   ├── levels.js          supported z/OS levels and JES choice
 │   │   ├── library.js         catalogued PROCs and INCLUDE members supplied by the user
-│   │   ├── errors.js          central diagnostic catalog (code, message, suggestion)
+│   │   ├── profile.js         site profile checks and wildcard matching
+│   │   ├── suppressions.js    //* JCLCHECK OFF/ON comments
+│   │   ├── formatter.js       lays JCL out in the usual columns
+│   │   ├── errors.js          central diagnostic catalog (code, severity, message, suggestion)
 │   │   ├── validator.js       pipeline orchestrator
-│   │   ├── rules/
-│   │   │   ├── ddRules.js     DD data sources, duplicates, delimiters, PATH
-│   │   │   ├── paramRules.js  keywords, values, positionals, JCLLIB, NOTIFY, dataset names
-│   │   │   ├── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
-│   │   │   ├── ifRules.js     step references in IF conditions
-│   │   │   ├── jesRules.js    JES2 and JES3 control statements
-│   │   │   └── groupRules.js  JES2 job groups
-│   │   └── index.js           Express API (POST /api/validate, GET /api/levels, POST /api/usage)
+│   │   ├── cli.js             the jclcheck command (text, JSON, SARIF, format)
+│   │   └── rules/
+│   │       ├── ddRules.js     DD data sources, duplicates, delimiters, PATH, internal reader
+│   │       ├── paramRules.js  keywords, values, positionals, JCLLIB, NOTIFY, dataset names
+│   │       ├── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
+│   │       ├── flowRules.js   datasets followed through a job's steps
+│   │       ├── profileRules.js site profile rules
+│   │       ├── ifRules.js     step references in IF conditions
+│   │       ├── jesRules.js    JES2 and JES3 control statements
+│   │       └── groupRules.js  JES2 job groups
+│   ├── bin/jclcheck.js        command-line entry point
 │   └── test/                  regression suite (node:test): exact diagnostics for every fixture
 │       ├── fixtures/          .jcl fixtures + .expected.json results (fixtures/nick/: Nick's review examples)
 │       ├── samples/           expected results for the workbench samples
 │       ├── helpers/           comparison, fixture discovery and todo rules
 │       └── inspect.js         prints full validator output (npm run inspect)
+├── backend/     Express HTTP API around the validator
+│   ├── src/
+│   │   ├── index.js           POST /api/validate, /api/format, /api/usage; GET /api/levels, /api/keywords
+│   │   └── analytics.js       anonymous GoatCounter counting
+│   └── test/                  API, analytics and shutdown tests
 └── frontend/    Vue 3 + Vite SPA (Vue Router, 3 pages)
     └── src/
         ├── App.vue                 root shell (just <router-view/>)
@@ -66,7 +79,7 @@ The site has three pages:
 ## Running it
 
 ```bash
-# Terminal 1 — API
+# Terminal 1 — API (it uses ../validator, which has no dependencies to install)
 cd backend
 npm install
 npm start          # http://localhost:4000
@@ -79,12 +92,12 @@ npm run dev         # http://localhost:5173 (proxies /api to :4000)
 
 ## Command line and CI
 
-`backend/bin/jclcheck.js` checks JCL files from a terminal or a pipeline. It
-uses only Node's built-in modules and the validator (never Express), so its
-results are the same as the API's.
+`validator/bin/jclcheck.js` checks JCL files from a terminal or a pipeline.
+The validator package has no dependencies (it isn't published to npm yet), so
+the command needs nothing installed, and its results are the same as the API's.
 
 ```bash
-cd backend
+cd validator
 node bin/jclcheck.js ../jcl/*.jcl                      # file:line:column  severity  code  message
 node bin/jclcheck.js jcl/*.jcl --format sarif > jclcheck.sarif
 node bin/jclcheck.js format jcl/payroll.jcl            # print it laid out in the usual columns
@@ -123,7 +136,7 @@ jobs:
         with:
           repository: Zubs/jclcheck
           path: .jclcheck
-      - run: node .jclcheck/backend/bin/jclcheck.js "jcl/**/*.jcl" --format sarif > jclcheck.sarif
+      - run: node .jclcheck/validator/bin/jclcheck.js "jcl/**/*.jcl" --format sarif > jclcheck.sarif
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -156,20 +169,24 @@ Hits from the backend are sent in batches every 10 seconds, and when the service
 
 ## Tests
 
-### Backend
+### Validator and backend
 
-The backend tests use Node's built-in test runner (Node 22 or later) and need no extra packages.
+Both use Node's built-in test runner (Node 22 or later). The validator's tests
+cover the rules, fixtures, formatter and command; the backend's cover the API.
 
 ```bash
-cd backend
+cd validator
 npm test           # exits non-zero if any test fails
 npm run lint       # ESLint: bugs and formatting (npm run lint:fix fixes most)
 npm run inspect    # prints full validator output (with messages and fixes) for the bundled fixtures
+
+cd ../backend
+npm test && npm run lint
 ```
 
 Each fixture is checked against its exact diagnostics: code, severity, line and column. A missing or extra diagnostic fails the test, and so does a diagnostic that moves by one column. Messages and fixes aren't compared, so their wording can change freely. The workbench samples are read straight from `frontend/src/samples.js` and checked the same way, against `test/samples/<name>.expected.json`.
 
-To add a fixture, put two files side by side anywhere under `backend/test/fixtures/`:
+To add a fixture, put two files side by side anywhere under `validator/test/fixtures/`:
 
 - `my-case.jcl`: the JCL
 - `my-case.expected.json`: what the validator should report
@@ -245,7 +262,7 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
 
 Every diagnostic carries `{ code, severity, line, column, length, message,
 suggestion, source }`, plus `member` when it was found inside a library
-member. See `backend/src/errors.js` for the full catalog: `JCLL` reading
+member. See `validator/src/errors.js` for the full catalog: `JCLL` reading
 lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
 keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
 JES statements, `JCLC` IF conditions, `JCLG` job groups, `JCLF` dataset

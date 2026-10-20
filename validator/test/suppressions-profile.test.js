@@ -3,7 +3,6 @@
 const test = require('node:test');
 const assert = require('node:assert');
 const { validate } = require('../src/validator');
-const { createApp } = require('../src/index');
 const { matches } = require('../src/profile');
 
 const shown = (jcl, options) => validate(jcl, options).diagnostics.filter(d => !d.suppressed).map(d => [d.code, d.line]);
@@ -157,26 +156,5 @@ test('site profile', async (t) => {
         assert.equal(matches('A%C', 'AC'), false);
         assert.equal(matches('*B*', 'ABC'), true);
         assert.equal(matches('ab', 'AB'), true);
-    });
-
-    await t.test('E: the API answers 400 for a bad profile and checks with a good one', async (tt) => {
-        const app = createApp({ analytics: { enabled: false, record() {}, async flush() {}, stop() {} } });
-        const server = await new Promise(resolve => {
-            const s = app.listen(0, '127.0.0.1', () => resolve(s));
-        });
-        tt.after(() => new Promise(resolve => server.close(resolve)));
-        const post = body => fetch(`http://127.0.0.1:${server.address().port}/api/validate`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-
-        const bad = await post({ source: '//J JOB\n', profile: { names: { job: 5 } } });
-        assert.equal(bad.status, 400);
-        assert.match((await bad.json()).message, /profile\.names\.job/);
-
-        const good = await post({ source: '//PAYROLL1 JOB\n//S EXEC PGM=X\n', profile });
-        assert.equal(good.status, 200);
-        assert.deepEqual((await good.json()).diagnostics.map(d => d.code), ['JCLN002']);
     });
 });

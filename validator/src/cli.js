@@ -72,10 +72,69 @@ function readOptions(argv) {
     return { ...values, jes, maxWarnings: max === undefined ? null : Number(max), patterns: positionals };
 }
 
+// One path segment of a glob as a regular expression: * is any run of
+// characters and ? one character, neither crossing a /.
+function segmentPattern(segment) {
+    const escaped = segment.replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*').replace(/\?/g, '[^/]');
+    return new RegExp(`^${escaped}$`);
+}
+
+const listDir = dir => {
+    try {
+        return fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+        return [];
+    }
+};
+
+/** The files a glob with *, ** and ? matches, relative to `cwd` as written. */
+function glob(pattern, cwd) {
+    const segments = pattern.split(/[\\/]/);
+    const found = new Set();
+    const walk = (dir, shown, i) => {
+        const join = name => (shown === null ? name : shown === '' ? `/${name}` : `${shown}/${name}`);
+        if (i === segments.length) {
+            return;
+        }
+
+        const segment = segments[i];
+        const last = i === segments.length - 1;
+        if (segment === '' && i === 0) {
+            walk(path.parse(path.resolve(cwd, pattern)).root, '', 1); // an absolute pattern
+        } else if (segment === '**') {
+            walk(dir, shown, i + 1);
+            for (const entry of listDir(dir).filter(e => e.isDirectory() && !e.name.startsWith('.'))) {
+                walk(path.join(dir, entry.name), join(entry.name), i);
+            }
+        } else if (!/[*?]/.test(segment)) {
+            walk(path.join(dir, segment), join(segment), i + 1);
+            if (last && fs.existsSync(path.join(dir, segment))) {
+                found.add(join(segment));
+            }
+        } else {
+            const matches = segmentPattern(segment);
+            for (const entry of listDir(dir).filter(e => matches.test(e.name) && !e.name.startsWith('.'))) {
+                if (last && entry.isFile()) {
+                    found.add(join(entry.name));
+                } else if (!last && entry.isDirectory()) {
+                    walk(path.join(dir, entry.name), join(entry.name), i + 1);
+                }
+            }
+        }
+    };
+
+    walk(cwd, null, 0);
+    return [...found].sort();
+}
+
 // Shells expand globs; this covers the ones they pass through (on Windows,
-// or quoted).
+// or quoted). A pattern that matches nothing is kept, so it is reported as a
+// file that can't be read.
 function expand(patterns, cwd) {
-    return patterns.flatMap(p => (/[*?[]/.test(p) && fs.globSync ? fs.globSync(p, { cwd }).sort() : [p]));
+    return patterns.flatMap(p => {
+        const matches = /[*?]/.test(p) ? glob(p, cwd) : [];
+        return matches.length ? matches : [p];
+    });
 }
 
 function readLibrary(dir) {
@@ -377,4 +436,4 @@ async function run(argv, {
     return errors > 0 || tooManyWarnings ? 1 : 0;
 }
 
-module.exports = { run, sarifReport, usageEvents };
+module.exports = { run, sarifReport, usageEvents, glob };

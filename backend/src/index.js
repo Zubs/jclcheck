@@ -1,10 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-const validator = require('./validator');
-const { checkDsn, MEMBER_RE } = require('./rules/paramRules');
-const { profileProblem } = require('./profile');
-const { format } = require('./formatter');
-const { keywordHelp } = require('./descriptions');
+// The validator is its own package, in ../validator, with no dependencies.
+const validator = require('../../validator');
+const { checkDsn, MEMBER_RE, profileProblem, format, keywordHelp } = validator;
 
 const MAX_LIBRARY = 50;
 const {
@@ -16,7 +14,7 @@ const {
     isZosLevel,
     isJes,
     jesAvailable
-} = require('./levels');
+} = validator;
 const {
     GOATCOUNTER_SITE_URL,
     MAX_USAGE_EVENTS,

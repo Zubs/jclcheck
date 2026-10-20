@@ -7,7 +7,7 @@ import { CODE_GROUPS, severityOf } from '../../src/diagnosticCodes.js';
 
 // The codes the backend can report: the keys of CATALOG in errors.js.
 // (Tests run from the frontend folder.)
-const catalogCodes = () => [...readFileSync(resolve('../backend/src/errors.js'), 'utf8')
+const catalogCodes = () => [...readFileSync(resolve('../validator/src/errors.js'), 'utf8')
     .matchAll(/^ {4}(JCL[A-Z][0-9]{3}): \{/gm)].map(m => m[1]).sort();
 
 describe('HelpModal', () => {
@@ -46,7 +46,7 @@ describe('HelpModal', () => {
     });
 
     test('shows each code with the catalog\'s default severity', () => {
-        const catalog = [...readFileSync(resolve('../backend/src/errors.js'), 'utf8')
+        const catalog = [...readFileSync(resolve('../validator/src/errors.js'), 'utf8')
             .matchAll(/^ {4}(JCL[A-Z][0-9]{3}): \{\n(?: {8}\/\/.*\n)? {8}severity: '(\w+)'/gm)];
         expect(catalog.length).toBe(catalogCodes().length);
         for (const [, code, severity] of catalog) {

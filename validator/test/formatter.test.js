@@ -7,7 +7,6 @@ const os = require('node:os');
 const path = require('node:path');
 const { format } = require('../src/formatter');
 const { validate } = require('../src/validator');
-const { createApp } = require('../src/index');
 const { run } = require('../src/cli');
 
 const BEFORE = "//STEP1 EXEC PGM=IEBGENER,REGION=0M,PARM='SOME LONG PARM',COND=(4,LT),TIME=5";
@@ -103,22 +102,7 @@ test('formatter', async (t) => {
     });
 });
 
-test('format through the API and the CLI', async (t) => {
-    await t.test('POST /api/format returns the text and the changed lines', async (tt) => {
-        const app = createApp({ analytics: { enabled: false, record() {}, async flush() {}, stop() {} } });
-        const server = await new Promise(resolve => {
-            const s = app.listen(0, '127.0.0.1', () => resolve(s));
-        });
-        tt.after(() => new Promise(resolve => server.close(resolve)));
-        const post = body => fetch(`http://127.0.0.1:${server.address().port}/api/format`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(body)
-        });
-        const res = await post({ source: BEFORE });
-        assert.deepEqual(await res.json(), { text: AFTER, changed: [1, 2], notes: [], refused: null });
-        assert.equal((await post({})).status, 400);
-    });
+test('format through the CLI', async (t) => {
 
     await t.test('jclcheck format prints one file, and --write rewrites several', async (tt) => {
         const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jclcheck-format-'));

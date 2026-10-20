@@ -1,6 +1,6 @@
 // Every diagnostic code the validator can report, with a one-line description
 // for the Help dialog. A test keeps this list identical to the CATALOG in
-// backend/src/errors.js, so a new code can't ship without being explained,
+// validator/src/errors.js, so a new code can't ship without being explained,
 // and keeps each code's default severity the same as the catalog's.
 
 const WARNINGS = new Set([
