@@ -66,7 +66,7 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 | **Reading lines** | 80-column records (columns 1–71 hold the statement, column 72 continues a comment, 73–80 are ignored), `//*` comments, continuations (including quoted strings resuming in column 16), unterminated quotes, overlong lines, in-stream data with `DLM=` |
 | **Level and JES** | Keywords and statements available at the chosen z/OS level; JES2 and JES3 control statements |
 | **Structure** | Several jobs per stream, JOB/EXEC/DD order, JCLLIB and NOTIFY placement, balanced IF/ENDIF and PROC/PEND, IF conditions and their step references, JES2 job groups |
-| **DD statements** | One data source per DD (including PATH, SUBSYS, DDNAME and new temporary datasets), z/OS UNIX file keywords, duplicate DD names (a warning), in-stream JCL sent to the internal reader |
+| **DD statements** | One data source per DD (including PATH, SUBSYS, DDNAME and new temporary datasets), z/OS UNIX file keywords, duplicate DD names (a warning), and in-stream JCL sent to the internal reader, which is checked as a job of its own |
 | **Keywords and values** | JOB, EXEC, DD, JCLLIB and NOTIFY keywords with "Did you mean…?", positional limits, keywords qualified with a procedure step, value rules (CLASS, TYPRUN, PRTY, MSGLEVEL, NOTIFY, EMAIL, …), DISP, SPACE, DCB, REGION, TIME and dataset names (members, generations, temporary and quoted names) |
 | **Names** | Job, step, DD and procedure step names are 1–8 characters and start with a letter or `$ # @` |
 | **Dataset flow** | Each dataset followed through the job's steps and called PROCs: temporary datasets read before they exist, passes nobody reads, datasets catalogued twice, reads after a delete, and referbacks to nothing |

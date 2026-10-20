@@ -217,8 +217,8 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
   ENDGROUP), with dependency loops reported.
 - **DD statements**: one data source per DD (DSN, DUMMY, SYSOUT, in-stream
   data, PATH, or a SUBSYS/DDNAME/new temporary dataset), z/OS UNIX file
-  keywords, duplicate DD names (a warning), and a note for JCL sent to the
-  internal reader.
+  keywords, duplicate DD names (a warning), and JCL sent to the internal
+  reader, which is checked as a job of its own on the lines where it is written.
 - **Keywords and values**: JOB, EXEC, DD, JCLLIB and NOTIFY keywords against
   tables from the IBM JCL Reference, with "did you mean" suggestions;
   positional parameter limits; keywords qualified with a procedure step

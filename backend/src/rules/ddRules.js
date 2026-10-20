@@ -118,7 +118,8 @@ function checkPathOptions(dd, diagnostics) {
 const JOB_LINE_RE = /^\/\/\S*\s+JOB(\s|$)/i;
 
 // A job carried as in-stream data and written to the internal reader is
-// submitted on its own; say so, since its JCL isn't checked here.
+// submitted on its own. It is marked here and checked as its own job stream
+// by the validator.
 function checkInternalReader(step, diagnostics) {
     const toIntrdr = step.dds.some(dd => dd.params.some(p => p.kind === 'keyword' && p.key === 'SYSOUT' &&
         p.subvalues && (p.subvalues[1] || '').toUpperCase() === 'INTRDR'));
@@ -129,6 +130,7 @@ function checkInternalReader(step, diagnostics) {
     for (const dd of step.dds) {
         if (dd.instreamData && dd.instreamData.some(line => JOB_LINE_RE.test(line))) {
             diagnostics.push(makeDiagnostic('JCLD004', {}, { line: dd.line, column: 1 }));
+            dd.internalReader = true;
         }
     }
 }

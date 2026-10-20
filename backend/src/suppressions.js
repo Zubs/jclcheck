@@ -30,6 +30,9 @@ function namedCodes(match) {
 function applySuppressions(source, statements, diagnostics) {
     const lines = (source || '').replace(/\r/g, '').split('\n');
     const written = statements.filter(s => s.type !== 'COMMENT');
+    // Comments inside in-stream data belong to that data (such as a job sent
+    // to the internal reader, which is checked on its own).
+    const dataLines = new Set(written.filter(s => s.instreamData).flatMap(s => s.instreamData.map((_, k) => s.endLine + 1 + k)));
     const startsAt = new Map(written.map(s => [s.line, s]));
     const ranges = []; // { code, from, to, use }
     const uses = []; // { code, line, column, hid }
@@ -55,7 +58,7 @@ function applySuppressions(source, statements, diagnostics) {
             inJob = stmt.type === 'STMT';
         }
 
-        const match = statementText(raw).match(DIRECTIVE_RE);
+        const match = !dataLines.has(n) && statementText(raw).match(DIRECTIVE_RE);
         if (!match) {
             return;
         }

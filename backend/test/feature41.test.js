@@ -112,3 +112,45 @@ test('dataset flow: unqualified overrides and DCB referbacks', async (t) => {
         assert.ok(!validate(jcl).diagnostics.some(d => d.code === 'JCLS003'));
     });
 });
+
+test('JCL sent to the internal reader is checked as its own job', async (t) => {
+    const SUBMIT = [
+        '//J JOB',
+        '//S EXEC PGM=IEBGENER',
+        '//SYSUT1 DD DATA,DLM=$$',
+        '//INNER JOB',
+        '//STEP1 EXEC REGION=4M',
+        '//DD1 DD DSN=A.B,DISP=SHX',
+        '$$',
+        '//SYSUT2 DD SYSOUT=(A,INTRDR)',
+        '//SYSPRINT DD SYSOUT=*',
+        '//SYSIN DD DUMMY'
+    ].join('\n');
+
+    await t.test('its problems are on the lines where it is written', () => {
+        const found = validate(SUBMIT).diagnostics.map(d => [d.code, d.line]);
+        assert.deepEqual(found, [['JCLD004', 3], ['JCLK002', 5], ['JCLS001', 6]]);
+        assert.equal(validate(SUBMIT).stats.errors, 2);
+    });
+
+    await t.test('a suppression inside it applies to it alone', () => {
+        const jcl = SUBMIT.replace('//STEP1 EXEC REGION=4M', '//* JCLCHECK OFF-NEXT JCLK002\n//STEP1 EXEC REGION=4M');
+        const found = validate(jcl).diagnostics;
+        assert.deepEqual(found.filter(d => !d.suppressed).map(d => [d.code, d.line]), [['JCLD004', 3], ['JCLS001', 7]]);
+        assert.deepEqual(found.filter(d => d.suppressed).map(d => [d.code, d.line]), [['JCLK002', 6]]);
+    });
+
+    await t.test('a reader job that sends another is checked too, to a limit', () => {
+        const nest = depth => (depth === 0 ? '//LAST JOB\n//S EXEC REGION=1M' : [
+            `//J${depth} JOB`,
+            '//S EXEC PGM=IEBGENER',
+            `//SYSUT1 DD DATA,DLM=${String.fromCharCode(64 + depth).repeat(2)}`,
+            nest(depth - 1),
+            String.fromCharCode(64 + depth).repeat(2),
+            '//SYSUT2 DD SYSOUT=(A,INTRDR)'
+        ].join('\n'));
+        const codes = validate(nest(2)).diagnostics.map(d => d.code);
+        assert.deepEqual(codes.filter(c => c === 'JCLK002'), ['JCLK002']);
+        assert.doesNotThrow(() => validate(nest(8)));
+    });
+});

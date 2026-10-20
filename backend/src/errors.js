@@ -387,8 +387,8 @@ const CATALOG = {
 
     JCLD004: {
         severity: 'info',
-        message: () => `This in-stream JCL will be submitted as a separate job and is not checked here.`,
-        suggestion: () => `To check the nested job, paste it into the workbench on its own.`
+        message: () => `This in-stream JCL will be submitted as a separate job, so it is checked as a job of its own.`,
+        suggestion: () => `Problems in it are shown on its own lines.`
     },
 
     JCLD005: {

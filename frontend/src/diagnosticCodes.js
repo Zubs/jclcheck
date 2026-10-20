@@ -72,7 +72,7 @@ export const CODE_GROUPS = [
             JCLD001: 'The same DD name twice in a step (a warning: both are allocated, the first is used).',
             JCLD002: 'A DD with no data source.',
             JCLD003: 'A DD with two data sources that can\'t go together.',
-            JCLD004: 'In-stream JCL sent to the internal reader isn\'t checked here (information).',
+            JCLD004: 'In-stream JCL sent to the internal reader, checked as a job of its own (information).',
             JCLD005: 'PATHOPTS with more than one of ORDONLY, OWRONLY and ORDWR.',
             JCLD006: 'DISP used with PATH (use PATHDISP).',
             JCLD007: 'Path options without PATH.'

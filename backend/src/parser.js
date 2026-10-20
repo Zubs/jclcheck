@@ -262,6 +262,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
 
                 if (stmt.instreamData) {
                     dd.instreamData = stmt.instreamData;
+                    dd.instreamLine = stmt.endLine + 1;
                 }
 
                 currentStep.dds.push(dd);

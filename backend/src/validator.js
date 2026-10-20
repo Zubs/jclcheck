@@ -66,7 +66,32 @@ function paramSpans(roots) {
  *   catalogued procedures and INCLUDE members; `profile` is a site profile (see profile.js)
  * @returns {{ diagnostics: object[], ast: object, datasets: object[], stats: object, zosLevel: string, jes: string }}
  */
-function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, library: entries = [], profile = null } = {}) {
+// A job sent to the internal reader can itself send one; this is deep enough.
+const MAX_READER_DEPTH = 5;
+
+// Checks the in-stream JCL of each DD sent to the internal reader as its own
+// job stream, and moves its diagnostics onto the lines where it is written.
+function checkInternalReaderJobs(jobs, options, depth) {
+    const found = [];
+    for (const dd of jobs.flatMap(job => job.steps.flatMap(step => step.dds)).filter(d => d.internalReader)) {
+        if (depth >= MAX_READER_DEPTH) {
+            continue;
+        }
+
+        const inner = validate(dd.instreamData.join('\n'), { ...options, depth: depth + 1 });
+        for (const d of inner.diagnostics) {
+            if (!d.member) {
+                d.line += dd.instreamLine - 1;
+            }
+
+            found.push(d);
+        }
+    }
+
+    return found;
+}
+
+function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, library: entries = [], profile = null, depth = 0 } = {}) {
     // Callers check the level first (the API answers 400), so a bad one here
     // is a bug rather than something to fall back from silently.
     if (!isZosLevel(zosLevel)) {
@@ -125,6 +150,7 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, lib
     validateSymbolicParams(jobs, procs, ruleDiags);
     const datasets = checkDatasetFlow(jobs, procs, ruleDiags);
     checkProfile(jobs, procs, profile, ruleDiags);
+    ruleDiags.push(...checkInternalReaderJobs(jobs, { zosLevel, jes, library: entries, profile }, depth));
     checkJesStatements(statements, ruleDiags, context);
     // Also validate parameters inside in-stream PROC bodies themselves.
     for (const proc of procs) {
