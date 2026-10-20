@@ -312,9 +312,50 @@ const TABLES = {
     ...GROUP_KEYWORDS
 };
 
-// IBM Docs pages have no address that can be worked out from a keyword, so
-// the link searches IBM Docs for the keyword on its statement at this level.
+// Each keyword's page in the MVS JCL Reference, from its table of contents
+// (https://www.ibm.com/docs/SSLTBW_2.1.0/com.ibm.zos.v2r1.ieab600/toc.htm). The
+// same page names are used for every release. A job group keyword links to
+// its statement's page; anything not listed links to a search instead.
+const PAGES = {
+    JOB: {
+        CLASS: 'xjbclass', MSGCLASS: 'xjbmsgcl', MSGLEVEL: 'xjbmsgle', PRTY: 'xjbprty', REGION: 'xjbreg',
+        TIME: 'xjbtime', TYPRUN: 'xjbtypr', USER: 'xjbuser', PASSWORD: 'xjbpassw', NOTIFY: 'xjbnotif',
+        COND: 'xjbcond', RESTART: 'xjbresta', ADDRSPC: 'xjbaddrs', PERFORM: 'xjbperf', GROUP: 'xjbgroup',
+        MEMLIMIT: 'jbmeml', BYTES: 'jbbytes', CARDS: 'jbcards', LINES: 'jblines', PAGES: 'jbpages',
+        SYSAFF: 'xjbsysaff', SCHENV: 'xjbsche', JOBRC: 'xjbjobrc', RD: 'xjbrd', SECLABEL: 'xjbsecl'
+    },
+    EXEC: {
+        PGM: 'xexpgm', PROC: 'xexproc', PARM: 'xexparm', COND: 'xexcond', REGION: 'xexreg', TIME: 'xextime',
+        ADDRSPC: 'xexaddrs', ACCT: 'xexacct', PERFORM: 'xexperf', RD: 'xexrd'
+    },
+    DD: {
+        DSN: 'xdddsn', DSNAME: 'xdddsn', DISP: 'xdddisp', SPACE: 'xddspace', UNIT: 'xddunit', VOL: 'xddvol',
+        VOLUME: 'xddvol', DCB: 'xdddcb', SYSOUT: 'xddsysot', DUMMY: 'xdddummy', DATA: 'xdddata',
+        SUBSYS: 'xddsubsy', DDNAME: 'ddname', AVGREC: 'xddavgr', RECFM: 'xddrecfm', LRECL: 'xddlrecl',
+        BLKSIZE: 'xddblksz', LABEL: 'xddlabel', RETPD: 'xddretpd', EXPDT: 'xddexpdt', FREE: 'xddfree',
+        HOLD: 'xddhold', OUTPUT: 'xddoutp', COPIES: 'xddcopy', DEST: 'xdddest', KEYLEN: 'xddkeyl',
+        KEYOFF: 'xddkeyo', LIKE: 'xddlike', MGMTCLAS: 'xddmgmtc', STORCLAS: 'xddstorc', DATACLAS: 'xdddatac',
+        REFDD: 'xddrefdd', AMP: 'xddamp', SEGMENT: 'xddseg', MODIFY: 'xddmod', ACCODE: 'xddaccod',
+        PROTECT: 'xddprot', CHKPT: 'xddchkpt', DLM: 'xdddlm', PATH: 'hddpath', PATHOPTS: 'ddpoptc',
+        PATHMODE: 'ddpmoda', PATHDISP: 'hddpisp', FILEDATA: 'xddfile'
+    },
+    JOBGROUP: 'iea3b6_jobgroup_statement',
+    GJOB: 'iea3b6_gjob_statement',
+    JOBSET: 'iea3b6_jobset_statement',
+    SJOB: 'iea3b6_sjob_statement',
+    AFTER: 'iea3b6_after_statement',
+    BEFORE: 'iea3b6_before_statement',
+    CONCURRENT: 'iea3b6_concurrent_statement'
+};
+
 function referenceLink(stmt, keyword, level) {
+    const pages = PAGES[stmt];
+    const page = typeof pages === 'string' ? pages : pages && pages[keyword];
+    if (page) {
+        const [major, minor] = level.split('.');
+        return `https://www.ibm.com/docs/en/SSLTBW_${level}.0/com.ibm.zos.v${major}r${minor}.ieab600/${page}.htm`;
+    }
+
     return `https://www.ibm.com/docs/en/search/${encodeURIComponent(`z/OS ${level} JCL ${stmt} statement ${keyword} parameter`)}`;
 }
 

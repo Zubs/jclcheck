@@ -13,7 +13,7 @@
 ## 2. Workbench and links
 
 - [x] 2.1 Profile form with a JSON view; verify tests
-- [ ] 2.2 Exact IBM reference links; verify tests
+- [x] 2.2 Exact IBM reference links; verify tests
 
 ## 3. Packaging
 
