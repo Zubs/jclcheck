@@ -1548,21 +1548,19 @@ after:
 - 102 keywords link to their exact page in the JCL Reference; 27 with no page in its table of contents (for example `EMAIL`, `REGIONX`, `ABDISPCC`, JCLLIB `ORDER`, the NOTIFY statement and SCHEDULE keywords) still link to a search.
 - The validator and the `jclcheck` command are their own dependency-free package in `validator/`, used by the API by relative path; the command expands `*`, `**` and `?` itself.
 
-**Still open**
-- **ABDISPCC description (feature 40).** Its description was written from IBM's summary of changes, not its own page; check it when reading the descriptions through.
-- **Keyword descriptions (feature 40).** The descriptions in `validator/src/descriptions.js` were written from memory of the JCL Reference and should be read through, especially the rarer DD keywords (`ACCODE`, `QNAME`, `MODIFY`, `RLS`) and the job group keywords. JES2/JES3 statements, the Library panel's member editors and values whose keyword is on an earlier line aren't explained; these were left for later.
+**Left for later** (20 October 2026): the keyword descriptions are accepted as written and will be adjusted when needed; JES2/JES3 statements, the Library panel's member editors and values whose keyword is on an earlier line aren't explained on hover yet.
 
 **Settled, no change** (19 October 2026): NOTIFY `TYPE` stays `MSG` and `EMAIL` (`nick/14b-notify-email` is final); the JES3 tables are accepted as written; JES3 stops at z/OS 2.5 (no JES3plus); a quote closing in column 71 with a quote in column 16 stays a doubled quote; levels stay 2.3–3.2; the IF nesting limit stays 15; INCLUDE keeps 15 levels and its refused statements; `LIKE` with SYSOUT or in-stream data stays an error; the system symbol list stays always defined; the severity list in `test/severities.test.js` is accepted; no thanks line on the About page; a NEW dataset with no disposition counts as deleted; a profile's `off` removes a code while a suppression keeps it; the formatter keeps columns 12 and 16 and its breaking rules; the SARIF output is checked once by hand (upload a sample to GitHub code scanning or the SARIF validator).
 
 **Final checks**
 - Every fixture from Nick's notes passes `npm test`, and none is still `todo`.
 - The three workbench samples still give the same results they gave before, or the change is explained.
-- The cross-browser behaviour of features 23–29 and of the workbench parts of features 2, 35–37, 39 and 40 is tried by hand in current Firefox, Chrome, Safari and Edge. Everything else is covered by the frontend tests.
+- After merging into `main`, the cross-browser behaviour of features 23–29 and of the workbench parts of features 2, 35–37, 39 and 40 is tried by hand in current Firefox, Chrome, Safari and Edge. Everything else is covered by the frontend tests.
 - Help and the README cover what features 2 and 31–40 added, following feature 30: the `JCLF` and `JCLX` groups, `JCLN002`, `profile`, `datasets`, `POST /api/format`, `GET /api/keywords`, the CLI, `POST /api/usage`, the `VITE_GOATCOUNTER_URL` and `GOATCOUNTER_TOKEN` settings, and the CLI's `JCLCHECK_TELEMETRY` and `DO_NOT_TRACK` settings.
 - After deploy, the GoatCounter dashboard shows page views and events from the production site, and none from previews or localhost.
 - `npx jclcheck` gives the same results as the API on every fixture.
 - Render still deploys the API now that it requires `../validator`: the service must check out the whole repository, not only `backend/`.
 - The production site is checked after deploy: the workbench reaches the API, the level picker loads, a draft survives a reload, and a shared link opens correctly in another browser.
-- Nick is sent a short reply listing each of his items and what changed.
+- Nick is asked to test the site again.
 
 **Done when:** Every question above has been answered and its feature updated, and every final check has passed.
