@@ -12,8 +12,8 @@ JCLcheck (https://jclcheck.xyz) is a free online checker for JCL (Job Control La
 
 | Area | Choice |
 |---|---|
-| Backend | Node.js 22 or later, Express 4, CommonJS (`backend/`), using the validator package by relative path |
-| Validator | Our own lexer, parser and rule engine, formatter and `jclcheck` command in `validator/`, a package with no dependencies |
+| Backend | Node.js 22 or later, Express 4, CommonJS (`backend/`), using the `jclcheck` package from npm |
+| Validator | Our own lexer, parser and rule engine, formatter and `jclcheck` command in `validator/`, published to npm as `jclcheck`, with no dependencies |
 | Frontend | Vue 3 with `<script setup>`, Vue Router 4, Vite 5, ES modules (`frontend/`) |
 | Styling | Our own CSS: `style.css` for theme tokens, and scoped styles in each component |
 | Validator and backend tests | Node's built-in test runner (`node:test`), with fixtures in `validator/test/fixtures/` |

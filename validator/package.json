@@ -1,8 +1,30 @@
 {
   "name": "jclcheck",
   "version": "1.0.0",
-  "private": true,
-  "description": "The JCLcheck validator (lexer, parser, rules, formatter) and the jclcheck command. No dependencies.",
+  "description": "Check z/OS JCL without a mainframe: a lexer, parser and rule engine based on the IBM JCL Reference, a formatter, and the jclcheck command (text, JSON and SARIF output). No dependencies.",
+  "keywords": [
+    "jcl",
+    "zos",
+    "z/os",
+    "mainframe",
+    "ibm",
+    "linter",
+    "validator",
+    "formatter",
+    "sarif",
+    "cli"
+  ],
+  "homepage": "https://jclcheck.xyz",
+  "bugs": {
+    "url": "https://github.com/Zubs/jclcheck/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zubs/jclcheck.git",
+    "directory": "validator"
+  },
+  "license": "MIT",
+  "author": "Zubs <zubairidrisaweda@gmail.com>",
   "main": "src/index.js",
   "bin": {
     "jclcheck": "bin/jclcheck.js"

@@ -1559,7 +1559,7 @@ after:
 - Help and the README cover what features 2 and 31–40 added, following feature 30: the `JCLF` and `JCLX` groups, `JCLN002`, `profile`, `datasets`, `POST /api/format`, `GET /api/keywords`, the CLI, `POST /api/usage`, the `VITE_GOATCOUNTER_URL` and `GOATCOUNTER_TOKEN` settings, and the CLI's `JCLCHECK_TELEMETRY` and `DO_NOT_TRACK` settings.
 - After deploy, the GoatCounter dashboard shows page views and events from the production site, and none from previews or localhost.
 - `npx jclcheck` gives the same results as the API on every fixture.
-- Render still deploys the API now that it requires `../validator`: the service must check out the whole repository, not only `backend/`.
+- `npm publish` in `validator/` has been run, then `npm install` in `backend/` (to record `jclcheck` in its lockfile), and Render deploys the API with `npm install` and `npm run start`.
 - The production site is checked after deploy: the workbench reaches the API, the level picker loads, a draft survives a reload, and a shared link opens correctly in another browser.
 - Nick is asked to test the site again.
 

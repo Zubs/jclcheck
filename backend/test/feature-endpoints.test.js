@@ -6,8 +6,8 @@ const test = require('node:test');
 const assert = require('node:assert');
 const { createApp } = require('../src/index');
 const { isAllowedCliEvent } = require('../src/analytics');
-const { keywordHelp } = require('../../validator');
-const { usageEvents } = require('../../validator/src/cli');
+const { keywordHelp } = require('jclcheck');
+const { usageEvents } = require('jclcheck/src/cli');
 
 // Starts an app on a free port; returns its base address.
 async function serve(t) {

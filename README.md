@@ -7,7 +7,7 @@ a Vue 3 frontend.
 
 ```
 jcl-checker/
-├── validator/   the validation engine and the jclcheck command (no dependencies)
+├── validator/   the validation engine and the jclcheck command (published to npm as jclcheck; no dependencies)
 │   ├── src/
 │   │   ├── index.js           the package's API (validate, format, keywordHelp, ...)
 │   │   ├── lexer.js           physical lines → logical statements (columns, continuations, in-stream data, JES)
@@ -41,7 +41,7 @@ jcl-checker/
 │       ├── samples/           expected results for the workbench samples
 │       ├── helpers/           comparison, fixture discovery and todo rules
 │       └── inspect.js         prints full validator output (npm run inspect)
-├── backend/     Express HTTP API around the validator
+├── backend/     Express HTTP API around the jclcheck package
 │   ├── src/
 │   │   ├── index.js           POST /api/validate, /api/format, /api/usage; GET /api/levels, /api/keywords
 │   │   └── analytics.js       anonymous GoatCounter counting
@@ -79,7 +79,7 @@ The site has three pages:
 ## Running it
 
 ```bash
-# Terminal 1 — API (it uses ../validator, which has no dependencies to install)
+# Terminal 1 — API (it uses the jclcheck package from npm)
 cd backend
 npm install
 npm start          # http://localhost:4000
@@ -92,16 +92,15 @@ npm run dev         # http://localhost:5173 (proxies /api to :4000)
 
 ## Command line and CI
 
-`validator/bin/jclcheck.js` checks JCL files from a terminal or a pipeline.
-The validator package has no dependencies (it isn't published to npm yet), so
-the command needs nothing installed, and its results are the same as the API's.
+The `jclcheck` package on npm (built from `validator/`) checks JCL files from a
+terminal or a pipeline. It has no dependencies, and its results are the same
+as the API's. `validator/README.md` is its npm page.
 
 ```bash
-cd validator
-node bin/jclcheck.js ../jcl/*.jcl                      # file:line:column  severity  code  message
-node bin/jclcheck.js jcl/*.jcl --format sarif > jclcheck.sarif
-node bin/jclcheck.js format jcl/payroll.jcl            # print it laid out in the usual columns
-node bin/jclcheck.js format --write jcl/*.jcl          # or rewrite the files
+npx jclcheck jcl/*.jcl                       # file:line:column  severity  code  message
+npx jclcheck jcl/*.jcl --format sarif > jclcheck.sarif
+npx jclcheck format jcl/payroll.jcl          # print it laid out in the usual columns
+npx jclcheck format --write jcl/*.jcl        # or rewrite the files
 ```
 
 | Option | What it does |
@@ -132,11 +131,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - uses: actions/checkout@v4
-        with:
-          repository: Zubs/jclcheck
-          path: .jclcheck
-      - run: node .jclcheck/validator/bin/jclcheck.js "jcl/**/*.jcl" --format sarif > jclcheck.sarif
+      - run: npx jclcheck "jcl/**/*.jcl" --format sarif > jclcheck.sarif
       - uses: github/codeql-action/upload-sarif@v3
         if: always()
         with:
@@ -172,7 +167,16 @@ Hits from the backend are sent in batches every 10 seconds, and when the service
 ### Validator and backend
 
 Both use Node's built-in test runner (Node 22 or later). The validator's tests
-cover the rules, fixtures, formatter and command; the backend's cover the API.
+cover the rules, fixtures, formatter and command; the backend's cover the API,
+using the published `jclcheck` package.
+
+To try validator changes in the API before publishing them, link the local copy:
+`cd validator && npm link`, then `cd ../backend && npm link jclcheck` (and
+`npm install` in `backend/` to go back to the published version).
+
+To release validator changes: raise `version` in `validator/package.json`, run
+`npm publish` in `validator/`, then `npm install jclcheck@latest` in `backend/`,
+and commit both.
 
 ```bash
 cd validator

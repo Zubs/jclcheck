@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
-// The validator is its own package, in ../validator, with no dependencies.
-const validator = require('../../validator');
+// The validator is its own package (jclcheck on npm, built from ../validator).
+const validator = require('jclcheck');
 const { checkDsn, MEMBER_RE, profileProblem, format, keywordHelp } = validator;
 
 const MAX_LIBRARY = 50;
