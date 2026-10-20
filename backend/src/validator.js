@@ -28,6 +28,36 @@ function procStatements(entry, statements) {
     ];
 }
 
+// Where each parameter and value is written, and how long it is on that
+// line, so a diagnostic at one underlines all of it.
+function paramSpans(roots) {
+    const spans = new Map();
+    const seen = new Set();
+    const walk = value => {
+        if (!value || typeof value !== 'object' || seen.has(value)) {
+            return;
+        }
+
+        seen.add(value);
+        if (Array.isArray(value.params)) {
+            for (const p of value.params) {
+                if (p.line !== undefined) {
+                    spans.set(`${p.line}:${p.col}`, p.length);
+                }
+
+                if (p.valueLine !== undefined) {
+                    spans.set(`${p.valueLine}:${p.valueCol}`, p.valueLength);
+                }
+            }
+        }
+
+        Object.values(value).forEach(walk);
+    };
+
+    walk(roots);
+    return spans;
+}
+
 /**
  * Runs the full pipeline over raw JCL source text.
  * @param {string} source
@@ -115,6 +145,11 @@ function validate(source, { zosLevel = DEFAULT_ZOS_LEVEL, jes = DEFAULT_JES, lib
     }
 
     applySuppressions(source, written, all);
+    const spans = paramSpans({ jobs, procs, jobGroups });
+    for (const d of all.filter(x => x.length === 1)) {
+        d.length = spans.get(`${d.line}:${d.column}`) || 1;
+    }
+
     all.sort((a, b) => (a.line - b.line) || (a.column - b.column));
     all.forEach(library.locate);
     datasets.forEach(job => job.datasets.forEach(d => d.touches.forEach(library.locate)));

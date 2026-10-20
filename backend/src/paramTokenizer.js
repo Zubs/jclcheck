@@ -142,6 +142,11 @@ function tokenizeParams(operand, baseCol = 1, pieces = null) {
     const params = [];
     const errors = [];
     const at = offset => positionAt(pieces, baseCol, offset);
+    // A length that stops at the end of the line the text starts on.
+    const onFirstLine = (offset, length) => {
+        const next = pieces && pieces.find(p => p.offset > offset);
+        return Math.max(Math.min(length, (next ? next.offset : operand.length) - offset), 1);
+    };
 
     if (!parenCheck.ok) {
         const { line, col } = at(parenCheck.at);
@@ -157,6 +162,7 @@ function tokenizeParams(operand, baseCol = 1, pieces = null) {
         const start = part.col + leadingWs;
         const { line, col } = at(start);
         const where = line === undefined ? { col } : { line, col };
+        where.length = onFirstLine(start, Math.max(trimmed.length, 1));
         if (trimmed === '') {
             // An omitted positional (",,") still takes a position, so it is
             // kept until the first keyword; later empty parts are just noise.
@@ -177,6 +183,7 @@ function tokenizeParams(operand, baseCol = 1, pieces = null) {
         } else {
             sawKeyword = true;
             const key = trimmed.slice(0, eqIdx).trim();
+            where.length = onFirstLine(start, Math.max(key.length, 1));
             const afterEq = trimmed.slice(eqIdx + 1);
             const valueRaw = afterEq.trim();
             const valueStart = start + eqIdx + 1 + (afterEq.length - afterEq.trimStart().length);
@@ -193,7 +200,8 @@ function tokenizeParams(operand, baseCol = 1, pieces = null) {
                 value: valueRaw,
                 subvalues,
                 ...where,
-                valueCol: value.col
+                valueCol: value.col,
+                valueLength: onFirstLine(valueStart, Math.max(valueRaw.length, 1))
             };
             if (pieces) {
                 param.valueLine = value.line;

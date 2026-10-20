@@ -60,3 +60,20 @@ test('WHEN= over several lines', async (t) => {
         assert.deepEqual([d.code, d.line, d.column], ['JCLC001', 3, 12]);
     });
 });
+
+test('underlines cover the whole parameter or value', async (t) => {
+    const at = source => validate(source).diagnostics.map(d => [d.code, d.column, d.length]);
+
+    await t.test('an unknown keyword covers the keyword, a bad value the whole value', () => {
+        assert.deepEqual(at('//J JOB\n//S EXEC PGM=X,REGON=4M\n//D DD DSN=A.B,DISP=(BAD,KEEP)\n'), [['JCLK001', 16, 5], ['JCLS001', 21, 10]]);
+    });
+
+    await t.test('a value that runs onto the next line is covered up to the end of its first line', () => {
+        const [d] = validate('//J JOB\n//S EXEC PGM=X\n//D DD DSN=A.B,DISP=(BAD,\n//         KEEP)\n').diagnostics;
+        assert.deepEqual([d.code, d.line, d.column, d.length], ['JCLS001', 3, 21, 5]);
+    });
+
+    await t.test('diagnostics about a whole statement still cover one character', () => {
+        assert.deepEqual(at('//J JOB\n//S EXEC PGM=X\n//D DD DISP=SHR\n'), [['JCLD002', 1, 1]]);
+    });
+});

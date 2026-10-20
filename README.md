@@ -308,7 +308,7 @@ Response, without `ast`:
       "severity": "warning",
       "line": 2,
       "column": 26,
-      "length": 1,
+      "length": 5,
       "message": "'REGON' is not a recognized keyword for a EXEC statement.",
       "suggestion": "Did you mean 'REGION'?",
       "source": "validator"
