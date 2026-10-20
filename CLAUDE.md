@@ -12,11 +12,11 @@ JCLcheck (https://jclcheck.xyz) is a free online checker for JCL (Job Control La
 
 | Area | Choice |
 |---|---|
-| Backend | Node.js 22 or later, Express 4, CommonJS (`backend/`) |
-| Validator | Our own lexer, parser and rule engine in `backend/src/`, with no dependencies |
+| Backend | Node.js 22 or later, Express 4, CommonJS (`backend/`), using the `jclcheck` package from npm |
+| Validator | Our own lexer, parser and rule engine, formatter and `jclcheck` command in `validator/`, published to npm as `jclcheck`, with no dependencies |
 | Frontend | Vue 3 with `<script setup>`, Vue Router 4, Vite 5, ES modules (`frontend/`) |
 | Styling | Our own CSS: `style.css` for theme tokens, and scoped styles in each component |
-| Backend tests | Node's built-in test runner (`node:test`), with fixtures in `backend/test/fixtures/` |
+| Validator and backend tests | Node's built-in test runner (`node:test`), with fixtures in `validator/test/fixtures/` |
 | Frontend tests | Vitest with Vue Test Utils and jsdom, in `frontend/tests/` |
 | Linting and formatting | ESLint 9 with its flat config (`eslint.config.js` in each package): the recommended JavaScript rules, `@stylistic/eslint-plugin` for formatting, and `eslint-plugin-vue` on the frontend |
 | Analytics | GoatCounter, through `frontend/src/analytics.js` and `backend/src/analytics.js` only |
@@ -36,7 +36,7 @@ JCLcheck (https://jclcheck.xyz) is a free online checker for JCL (Job Control La
 - **Comments explain why, not what.** Keep a file's opening comment and comments on non-obvious decisions. Don't narrate what the code already says.
 - **Keep it simple.** Write the simplest code that meets the requirement. Don't add abstractions, layers or options that aren't needed yet.
 - **Use what's built in first.** Use Node, Express, Vue and the browser before writing custom logic. Don't add a dependency without asking. The validator stays dependency-free.
-- **Diagnostics go through the catalog.** Every diagnostic is created with `makeDiagnostic` from a code in the `CATALOG` in `backend/src/errors.js`, with a plain-English message and a fix.
+- **Diagnostics go through the catalog.** Every diagnostic is created with `makeDiagnostic` from a code in the `CATALOG` in `validator/src/errors.js`, with a plain-English message and a fix.
 - **Privacy is enforced in code.** Never send JCL text, anything typed, or the part of the address after `#` to analytics or any third party. Analytics events must be on the allowed list in `frontend/src/analyticsEvents.js`.
 
 ## Tests
@@ -52,10 +52,11 @@ JCLcheck (https://jclcheck.xyz) is a free online checker for JCL (Job Control La
 Once a plan has been applied, run these checks and fix every issue they report:
 
 ```bash
+cd validator && npm run lint && npm test
 cd backend && npm run lint && npm test
 cd frontend && npm run lint && npm test && npm run build
 ```
 
-Repeat until lint, both test suites and the build all pass with no errors. Fix lint problems in the code rather than turning rules off. Only turn a rule off for a project-wide convention, with a comment in `eslint.config.js` saying why. Don't consider the work finished until they do.
+Repeat until lint, the three test suites and the build all pass with no errors. Fix lint problems in the code rather than turning rules off. Only turn a rule off for a project-wide convention, with a comment in `eslint.config.js` saying why. Don't consider the work finished until they do.
 
-Run `npm` commands from inside `backend/` or `frontend/`, never from the repository root. Running `npx vitest` at the root fetches a different Vitest and leaves a stray `node_modules/` behind.
+Run `npm` commands from inside `validator/`, `backend/` or `frontend/`, never from the repository root. Running `npx vitest` at the root fetches a different Vitest and leaves a stray `node_modules/` behind.

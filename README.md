@@ -7,25 +7,45 @@ a Vue 3 frontend.
 
 ```
 jcl-checker/
-├── backend/     Node.js/Express validation engine + HTTP API
+├── validator/   the validation engine and the jclcheck command (published to npm as jclcheck; no dependencies)
 │   ├── src/
-│   │   ├── lexer.js           physical lines → logical statements (continuations, comments)
+│   │   ├── index.js           the package's API (validate, format, keywordHelp, ...)
+│   │   ├── lexer.js           physical lines → logical statements (columns, continuations, in-stream data, JES)
 │   │   ├── paramTokenizer.js  operand string → positional/keyword params (paren/quote aware)
-│   │   ├── parser.js          statements → AST (Job/Step/DD/Proc/If), ordering + structural checks
+│   │   ├── parser.js          statements → AST (jobs, steps, DDs, PROCs, IFs, job groups) + order checks
+│   │   ├── conditions.js      IF/WHEN condition parser
 │   │   ├── ast.js             AST node factories
-│   │   ├── keywords.js        keyword/value tables distilled from the IBM JCL Reference
-│   │   ├── errors.js          central diagnostic catalog (code, message, suggestion)
+│   │   ├── keywords.js        keyword, statement and value tables from the IBM JCL Reference
+│   │   ├── descriptions.js    plain-English keyword descriptions and reference links (hover)
+│   │   ├── valueRules.js      reusable value rules (enum, integer, list, ...) and their checker
+│   │   ├── levels.js          supported z/OS levels and JES choice
+│   │   ├── library.js         catalogued PROCs and INCLUDE members supplied by the user
+│   │   ├── profile.js         site profile checks and wildcard matching
+│   │   ├── suppressions.js    //* JCLCHECK OFF/ON comments
+│   │   ├── formatter.js       lays JCL out in the usual columns
+│   │   ├── errors.js          central diagnostic catalog (code, severity, message, suggestion)
 │   │   ├── validator.js       pipeline orchestrator
-│   │   ├── rules/
-│   │   │   ├── ddRules.js     duplicate DD names, data-source conflicts
-│   │   │   ├── paramRules.js  keyword legality, required params, DISP/SPACE/DCB/REGION/TIME/DSN syntax
-│   │   │   └── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
-│   │   └── index.js           Express API (POST /api/validate)
+│   │   ├── cli.js             the jclcheck command (text, JSON, SARIF, format)
+│   │   └── rules/
+│   │       ├── ddRules.js     DD data sources, duplicates, delimiters, PATH, internal reader
+│   │       ├── paramRules.js  keywords, values, positionals, JCLLIB, NOTIFY, dataset names
+│   │       ├── procRules.js   PROC resolution, symbolic (&SYM) validation, DD-override matching
+│   │       ├── flowRules.js   datasets followed through a job's steps
+│   │       ├── profileRules.js site profile rules
+│   │       ├── ifRules.js     step references in IF conditions
+│   │       ├── jesRules.js    JES2 and JES3 control statements
+│   │       └── groupRules.js  JES2 job groups
+│   ├── bin/jclcheck.js        command-line entry point
 │   └── test/                  regression suite (node:test): exact diagnostics for every fixture
 │       ├── fixtures/          .jcl fixtures + .expected.json results (fixtures/nick/: Nick's review examples)
 │       ├── samples/           expected results for the workbench samples
 │       ├── helpers/           comparison, fixture discovery and todo rules
 │       └── inspect.js         prints full validator output (npm run inspect)
+├── backend/     Express HTTP API around the jclcheck package
+│   ├── src/
+│   │   ├── index.js           POST /api/validate, /api/format, /api/usage; GET /api/levels, /api/keywords
+│   │   └── analytics.js       anonymous GoatCounter counting
+│   └── test/                  API, analytics and shutdown tests
 └── frontend/    Vue 3 + Vite SPA (Vue Router, 3 pages)
     └── src/
         ├── App.vue                 root shell (just <router-view/>)
@@ -38,10 +58,14 @@ jcl-checker/
         │   └── Workbench.vue        the actual JCLCHECK validation workbench
         ├── components/
         │   ├── marketing/           Navbar, Footer, FeatureCard, CodePreview (hero visual)
-        │   ├── Editor.vue           line-numbered source editor w/ diagnostic gutter markers
+        │   ├── Editor.vue           source editor: highlighting, underlines, gutter markers, cursor position
+        │   ├── LibraryPanel.vue     catalogued PROCs and INCLUDE members pasted by the user
         │   ├── ErrorPanel.vue       diagnostics list (code, message, plain-English fix)
-        │   ├── PfBar.vue            3270-style PF-key action bar (F1 Help / F5 Validate / F9 Sample / F12 Clear)
+        │   ├── PfBar.vue            3270-style PF-key bar (F1 Help, F5 Validate, F6 Share, F9 Sample, F12 Clear)
         │   └── HelpModal.vue        in-app documentation for learners
+        ├── highlight.js             JCL syntax highlighting for the editor
+        ├── share.js                 shareable links (compressed JCL after #jcl=)
+        ├── diagnosticCodes.js       every diagnostic code, explained in Help
         └── samples.js               bundled example JCL (clean / broken / proc+symbolics)
     └── tests/                       component tests (Vitest + Vue Test Utils + jsdom), mirroring src/
 ```
@@ -55,7 +79,7 @@ The site has three pages:
 ## Running it
 
 ```bash
-# Terminal 1 — API
+# Terminal 1 — API (it uses the jclcheck package from npm)
 cd backend
 npm install
 npm start          # http://localhost:4000
@@ -65,6 +89,62 @@ cd frontend
 npm install
 npm run dev         # http://localhost:5173 (proxies /api to :4000)
 ```
+
+## Command line and CI
+
+The `jclcheck` package on npm (built from `validator/`) checks JCL files from a
+terminal or a pipeline. It has no dependencies, and its results are the same
+as the API's. `validator/README.md` is its npm page.
+
+```bash
+npx jclcheck jcl/*.jcl                       # file:line:column  severity  code  message
+npx jclcheck jcl/*.jcl --format sarif > jclcheck.sarif
+npx jclcheck format jcl/payroll.jcl          # print it laid out in the usual columns
+npx jclcheck format --write jcl/*.jcl        # or rewrite the files
+```
+
+| Option | What it does |
+|---|---|
+| `--zos <level>`, `--jes <JES2\|JES3>` | The z/OS level and JES to check against. |
+| `--library <dir>` | Catalogued PROCs and INCLUDE members, one file per member (`MYPROC.jcl`). A subdirectory named like a library (`MY.PROCS.JCL/`) is that library. |
+| `--profile <file>` | A site profile, as JSON (see the API section). |
+| `--format text\|json\|sarif` | Text (the default), JSON (`{ files: [{ file, diagnostics, stats }] }`) or SARIF 2.1.0. |
+| `--max-warnings <n>` | Also fail when there are more warnings than this. |
+
+It exits with 0 when there are no errors, 1 when a file has an error or there
+are too many warnings, and 2 when it can't run (a bad option, or a file it
+can't read; the other files are still checked). Suppressed diagnostics aren't
+printed in text and are marked `inSource` in SARIF.
+
+GitHub Actions, showing each diagnostic on its line of the pull request:
+
+```yaml
+name: JCL
+on: [pull_request]
+jobs:
+  jclcheck:
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npx jclcheck "jcl/**/*.jcl" --format sarif > jclcheck.sarif
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: jclcheck.sarif
+```
+
+Usage counting is off unless you opt in with `JCLCHECK_TELEMETRY=1` or
+`--telemetry`, and `DO_NOT_TRACK=1` always turns it off. An opted-in run sends
+one small list of events (the version, Node major version, OS, CI system,
+number of files, result, format, options used and diagnostic codes, never any
+JCL or file names) to `POST /api/usage`, with a 1-second limit; a failure
+changes nothing. `JCLCHECK_TELEMETRY=debug` prints that list and sends nothing.
+`JCLCHECK_API` points it at another API.
 
 ## Analytics
 
@@ -84,20 +164,33 @@ Hits from the backend are sent in batches every 10 seconds, and when the service
 
 ## Tests
 
-### Backend
+### Validator and backend
 
-The backend tests use Node's built-in test runner (Node 22 or later) and need no extra packages.
+Both use Node's built-in test runner (Node 22 or later). The validator's tests
+cover the rules, fixtures, formatter and command; the backend's cover the API,
+using the published `jclcheck` package.
+
+To try validator changes in the API before publishing them, link the local copy:
+`cd validator && npm link`, then `cd ../backend && npm link jclcheck` (and
+`npm install` in `backend/` to go back to the published version).
+
+To release validator changes: raise `version` in `validator/package.json`, run
+`npm publish` in `validator/`, then `npm install jclcheck@latest` in `backend/`,
+and commit both.
 
 ```bash
-cd backend
+cd validator
 npm test           # exits non-zero if any test fails
 npm run lint       # ESLint: bugs and formatting (npm run lint:fix fixes most)
 npm run inspect    # prints full validator output (with messages and fixes) for the bundled fixtures
+
+cd ../backend
+npm test && npm run lint
 ```
 
 Each fixture is checked against its exact diagnostics: code, severity, line and column. A missing or extra diagnostic fails the test, and so does a diagnostic that moves by one column. Messages and fixes aren't compared, so their wording can change freely. The workbench samples are read straight from `frontend/src/samples.js` and checked the same way, against `test/samples/<name>.expected.json`.
 
-To add a fixture, put two files side by side anywhere under `backend/test/fixtures/`:
+To add a fixture, put two files side by side anywhere under `validator/test/fixtures/`:
 
 - `my-case.jcl`: the JCL
 - `my-case.expected.json`: what the validator should report
@@ -129,46 +222,145 @@ Tests live in `frontend/tests/`, mirroring `src/`. A known bug that a later feat
 
 ## What's validated
 
-- **Lexing**: `//` record format, comment lines (`//*`), continuation lines
-  (trailing comma or open parenthesis), unterminated quotes, 80-column
-  overflow, in-stream data (`DD *` / `DD DATA` through the delimiter).
-- **Parsing / structure**: statement recognition (JOB, EXEC, DD, PROC, PEND,
-  SET, IF/THEN/ELSE/ENDIF, INCLUDE), unmatched parentheses, IF/ENDIF and
-  PROC/PEND balancing and nesting.
-- **Ordering**: JOB must come first; EXEC before its DDs; only one JOB per job
-  stream.
-- **DD statements**: duplicate ddnames within a step; a DD must have exactly
-  one data source (DSN / DUMMY / SYSOUT / instream data), not zero or several.
-- **Keywords**: every keyword on JOB/EXEC/DD is checked against tables
-  distilled from the IBM JCL Reference, with Levenshtein-distance "did you
-  mean…" suggestions for typos. EXEC also checks for a required PGM or PROC.
-- **Parameter value syntax**: DISP status/normal/abnormal dispositions, SPACE
-  unit/quantities, DCB sub-parameters (RECFM/DSORG/LRECL/BLKSIZE), REGION
-  (nnnnK/nnnnM), TIME, and DSN qualifier rules (≤8 chars/qualifier, ≤22
-  qualifiers, ≤44 chars total, valid starting characters).
-- **Procedures**: in-stream PROC/PEND bodies are parsed and validated the same
-  way as the main job stream; EXEC PROC= calls are resolved against in-stream
-  PROCs (unresolved calls are a *warning*, since they may be valid cataloged
-  procedures this tool can't see); symbolic parameters (`&SYM`) referenced in
-  a PROC body are checked against the PROC's declared defaults; DD overrides
-  on a calling EXEC (bare `ddname` or `stepname.ddname`) are matched against
-  the procedure's actual DDs.
+- **Reading lines**: 80-column records as z/OS reads them (columns 1-71 hold
+  the statement, a mark in column 72 continues a comment, 73-80 are ignored),
+  `//*` comments, continuations (trailing comma, open parenthesis, or a
+  quoted string resuming in column 16), unterminated quotes, overlong lines,
+  and in-stream data (`DD *` and `DD DATA`, with `DLM=` delimiters).
+- **z/OS level and JES**: every check is made against a z/OS release (2.3 to
+  3.2, default 3.2) and JES2 or JES3 (JES3 only at 2.5 and earlier). JES2
+  (`/*ROUTE`, `/*JOBPARM`, ...) and JES3 (`//*MAIN`, `//*FORMAT`, ...)
+  control statements are recognised and checked.
+- **Structure**: several jobs per stream, each checked on its own (`//`
+  ends a job); JOB, EXEC and DD order; JCLLIB and NOTIFY placement; balanced
+  IF/ENDIF and PROC/PEND; IF conditions parsed, with their step references
+  checked and their THEN/ELSE steps recorded; JES2 job groups (JOBGROUP to
+  ENDGROUP), with dependency loops reported.
+- **DD statements**: one data source per DD (DSN, DUMMY, SYSOUT, in-stream
+  data, PATH, or a SUBSYS/DDNAME/new temporary dataset), z/OS UNIX file
+  keywords, duplicate DD names (a warning), and JCL sent to the internal
+  reader, which is checked as a job of its own on the lines where it is written.
+- **Keywords and values**: JOB, EXEC, DD, JCLLIB and NOTIFY keywords against
+  tables from the IBM JCL Reference, with "did you mean" suggestions;
+  positional parameter limits; keywords qualified with a procedure step
+  (`COND.STEP1=`); value rules (CLASS, TYPRUN, PRTY, MSGLEVEL, NOTIFY, EMAIL
+  and more) alongside the DISP, SPACE, DCB, REGION, TIME and dataset name
+  checks, which understand members, generations, temporary and quoted names.
+- **Procedures and INCLUDE**: in-stream PROCs are resolved and checked
+  (symbolic parameters, DD overrides, procedure steps). Catalogued procedures
+  and INCLUDE members are found and checked when supplied in the `library`
+  (the workbench's Library panel), in the job's JCLLIB order.
+- **Dataset flow**: each dataset is followed through the job's steps,
+  including the steps of called PROCs: a temporary dataset read before any
+  step creates or passes it, a pass no later step reads, a dataset
+  catalogued twice, a read after a delete, and referbacks (`*.STEP.DD`) to
+  nothing. Known symbol values are filled in; names that stay symbolic and
+  relative generations are skipped. The workbench's DATASETS tab shows the
+  flow as a grid.
+- **Suppressions and site profile**: `//* JCLCHECK OFF-NEXT code[,code]`
+  hides those codes on the next statement, and `//* JCLCHECK OFF code` hides
+  them until `//* JCLCHECK ON code` or the end of the job. Suppressed
+  diagnostics come back with `suppressed: true` and aren't counted. A site
+  `profile` adds name patterns, allowed values, prefixes for new datasets,
+  extra keywords and per-code severities (`JCLN002` for a broken rule).
 
-Every diagnostic carries `{ code, severity, line, column, message,
-suggestion }` — see `backend/src/errors.js` for the full catalog (grouped as
-`JCLLxxx` lexer, `JCLPxxx` parser, `JCLOxxx` ordering, `JCLDxxx` DD rules,
-`JCLKxxx` keyword rules, `JCLSxxx` value syntax, `JCLNxxx` name syntax,
-`JCLRxxx` procedure resolution).
+Every diagnostic carries `{ code, severity, line, column, length, message,
+suggestion, source }`, plus `member` when it was found inside a library
+member. See `validator/src/errors.js` for the full catalog: `JCLL` reading
+lines, `JCLP` structure, `JCLO` order, `JCLD` DD statements, `JCLK`
+keywords, `JCLS` values, `JCLN` names, `JCLR` procedures and INCLUDE, `JCLJ`
+JES statements, `JCLC` IF conditions, `JCLG` job groups, `JCLF` dataset
+flow, `JCLX` suppressions. The workbench's
+Help lists every code with its default severity, which each catalog entry sets.
+
+## API
+
+| Endpoint | What it does |
+|---|---|
+| `POST /api/validate` | Checks `source`. Optional: `zosLevel` (`2.3`-`3.2`, default `3.2`), `jes` (`JES2` or `JES3`; JES3 only at 2.5 and earlier) `library` (up to 50 `{ dsn, member, source }` entries) and `profile` (a site profile, below). Unknown levels, JES values, bad library entries or an invalid profile get a 400 response that says why. |
+| `POST /api/format` | Lays out `source` in the usual columns (name in 3, operation in 12, continuations in 16, nothing past 71). Returns `{ text, changed, notes, refused }`: the lines of `text` that changed, the statements left as they are and why, and why nothing was changed if the result wouldn't mean the same. |
+| `GET /api/keywords?zos=<level>` | Plain-English descriptions of every keyword available at that level (default 3.2), by statement, with their values described one by one (by position for DISP, SPACE and MSGLEVEL), the level each first appeared in when that is a supported level, and a link that searches the IBM JCL Reference. The workbench's hover explanations use it. |
+| `GET /api/levels` | The supported levels, oldest first, as `{ level, jes3 }`, with `defaultLevel` and `defaultJes`. |
+| `GET /api/health` | `{ "ok": true }` |
+| `POST /api/usage` | Opt-in CLI usage counts (see Analytics). |
+
+The response from `/api/validate` is `{ diagnostics, ast, datasets, stats,
+zosLevel, jes }`. `datasets` has an entry for each job that names a dataset:
+`{ job, steps, datasets }`, where `steps` are the job's steps in order (a step
+calling a PROC appears as `STEP.PROCSTEP`) and each dataset is `{ name,
+temporary, touches }`, with a touch `{ step, dd, line, column, actions }` for
+each DD naming it. Actions are `N` new, `R` read, `M` mod, `P` pass and `D`
+delete. `ast.jobs` lists every job in the stream (it replaced the single
+`ast.job` when several jobs per stream were supported), `ast.procs` the
+procedures and `ast.jobGroups` the JES2 job groups. `stats` has `errors`,
+`warnings`, `info`, `suppressed`, `statementCount`, `jobCount`, `stepCount`
+(across all jobs), `procCount` and `valid` (no errors); suppressed diagnostics
+are only counted in `suppressed`.
+
+A site profile looks like this. Every field is optional; patterns use `*`
+for any run of characters and `%` for one:
+
+```json
+{
+  "names": { "job": ["AR*"], "step": "STEP%%", "dd": "*" },
+  "allowed": { "CLASS": ["A", "B"], "MSGCLASS": ["X"] },
+  "dsnPrefixes": ["AR", "SYS1"],
+  "extraKeywords": { "EXEC": ["LOCALKW"] },
+  "severity": { "JCLS014": "off", "JCLK001": "error" }
+}
+```
+
+Example request (`test/readme.test.js` checks it against the real validator):
+
+```json readme-request
+{
+  "source": "//PAYROLL JOB (ACCT),'J SMITH',CLASS=A\n//STEP1 EXEC PGM=IEFBR14,REGON=4M\n",
+  "zosLevel": "2.5"
+}
+```
+
+Response, without `ast`:
+
+```json readme-response
+{
+  "diagnostics": [
+    {
+      "code": "JCLK001",
+      "severity": "warning",
+      "line": 2,
+      "column": 26,
+      "length": 5,
+      "message": "'REGON' is not a recognized keyword for a EXEC statement.",
+      "suggestion": "Did you mean 'REGION'?",
+      "source": "validator"
+    }
+  ],
+  "datasets": [],
+  "stats": {
+    "errors": 0,
+    "warnings": 1,
+    "info": 0,
+    "suppressed": 0,
+    "statementCount": 2,
+    "jobCount": 1,
+    "stepCount": 1,
+    "procCount": 0,
+    "valid": true
+  },
+  "zosLevel": "2.5",
+  "jes": "JES2"
+}
+```
 
 ## Known limitations (by design, given no mainframe access)
 
-- Cataloged procedures and datasets can't be verified to exist — calls to a
-  PROC not defined in-stream are flagged as warnings, not hard errors.
-- IF/THEN/ELSE conditional blocks are validated for balance/nesting but their
-  bodies are not conditionally excluded from the AST (this is a static
-  validator, not a JCL interpreter with a live symbol table).
-- Continuation-column conventions (classic cols 4-16) are accepted loosely
-  rather than strictly enforced, matching how most modern shops write JCL.
+- Datasets can't be verified to exist, and catalogued procedures and INCLUDE
+  members are checked only when they are pasted into the Library panel;
+  otherwise a call to a PROC that isn't in-stream is a warning.
+- IF/THEN/ELSE conditions are checked and their branches recorded, but no
+  return codes are simulated, so every step is checked whichever branch it is in.
+- Symbols are only resolved for in-stream and supplied procedures; values that
+  depend on them can't be checked.
 
 ## Extending it
 

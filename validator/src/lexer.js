@@ -1,0 +1,584 @@
+// Turns raw JCL source text into a stream of "logical statements".
+// A logical statement is one or more physical lines joined via continuation.
+//
+// Each physical JCL line is an 80-column record:
+//   cols 1-2   : "//"
+//   cols 3-10  : name field (optional)
+//   col  11    : blank
+//   cols 12-15 : operation (JOB/EXEC/DD/...)  -- free-ish in practice
+//   operand field, then comments after a blank, up to column 71
+//   col  72    : continuation column - non-blank continues a comment
+//   cols 73-80 : sequence numbers, ignored
+//
+// Only columns 1-71 are read as statement text, as z/OS does; in-stream
+// data lines are kept whole. We are lenient about the positions of the
+// name, operation and operand fields (as most modern shops are) but flag
+// lines that are too long, and detect operand continuations via a
+// trailing comma or an open parenthesis/quote.
+
+const { makeDiagnostic } = require('./errors');
+const { JES3_STATEMENTS, STATEMENT_TYPES } = require('./keywords');
+
+function isCommentLine(line) {
+    return /^\/\/\*/.test(line);
+}
+
+function isJclLine(line) {
+    return /^\/\//.test(line);
+}
+
+function statementText(line) {
+    return line.slice(0, 71);
+}
+
+function continuationMark(line) {
+    return line.length > 71 && line[71] !== ' ';
+}
+
+/**
+ * Splits a raw physical "//name OP operand comment" line into fields.
+ * Returns { name, op, rest, nameCol, opCol, restCol }
+ */
+function splitFields(line) {
+    // line starts with '//'
+    let i = 2;
+    const len = line.length;
+
+    // name field: non-blank chars right after //
+    const nameStart = i;
+    while (i < len && line[i] !== ' ') {
+        i++;
+    }
+
+    const name = line.slice(nameStart, i);
+    const nameCol = nameStart + 1; // 1-indexed
+
+    // skip blanks
+    while (i < len && line[i] === ' ') {
+        i++;
+    }
+
+    const opStart = i;
+    while (i < len && line[i] !== ' ') {
+        i++;
+    }
+
+    const op = line.slice(opStart, i);
+    const opCol = opStart + 1;
+
+    // skip blanks
+    while (i < len && line[i] === ' ') {
+        i++;
+    }
+
+    const restStart = i;
+    const rest = line.slice(restStart);
+    const restCol = restStart + 1;
+
+    return {
+        name,
+        op,
+        rest,
+        nameCol,
+        opCol,
+        restCol
+    };
+}
+
+/**
+ * Given the operand+comment remainder of a line, find where the operand
+ * field ends and a trailing comment begins: the first blank that is
+ * outside of any parentheses/quotes.
+ */
+function splitOperandAndComment(rest, startInQuote = false, startDepth = 0) {
+    let depth = startDepth;
+    let inQuote = startInQuote;
+    for (let i = 0; i < rest.length; i++) {
+        const ch = rest[i];
+        if (inQuote) {
+            if (ch === "'") {
+                if (rest[i + 1] === "'") {
+                    i++;
+                    continue;
+                }
+
+                inQuote = false;
+            }
+
+            continue;
+        }
+
+        if (ch === "'") {
+            inQuote = true;
+            continue;
+        }
+
+        if (ch === '(') {
+            depth++;
+        } else if (ch === ')') {
+            depth--;
+        } else if (ch === ' ' && depth <= 0) {
+            return { operand: rest.slice(0, i), comment: rest.slice(i).trim() };
+        }
+    }
+
+    return { operand: rest, comment: '' };
+}
+
+/**
+ * Determines whether the operand text (trimmed of trailing comment) ends
+ * in a way that requires a continuation: a trailing comma, or unbalanced
+ * open paren / open quote.
+ */
+function needsContinuation(operand) {
+    let depth = 0;
+    let inQuote = false;
+    for (let i = 0; i < operand.length; i++) {
+        const ch = operand[i];
+        if (inQuote) {
+            if (ch === "'") {
+                if (operand[i + 1] === "'") {
+                    i++;
+                    continue;
+                }
+
+                inQuote = false;
+            }
+
+            continue;
+        }
+
+        if (ch === "'") {
+            inQuote = true;
+            continue;
+        }
+
+        if (ch === '(') {
+            depth++;
+        } else if (ch === ')') {
+            depth--;
+        }
+    }
+
+    const trimmed = operand.replace(/\s+$/, '');
+    const trailingComma = trimmed.endsWith(',');
+    return {
+        continues: trailingComma || depth > 0 || inQuote,
+        openParens: depth,
+        openQuote: inQuote,
+        trailingComma
+    };
+}
+
+/**
+ * The two-character in-stream delimiter a DLM= value names, or null when the
+ * value isn't valid. Letters, digits and $#@ may be written as they are; any
+ * other characters must be quoted, with '' for a quote.
+ */
+function parseDelimiter(value) {
+    if (/^[A-Za-z0-9$#@]{2}$/.test(value)) {
+        return value;
+    }
+
+    const quoted = value.match(/^'((?:[^']|'')*)'$/);
+    if (quoted) {
+        const delim = quoted[1].replace(/''/g, "'");
+        return delim.length === 2 ? delim : null;
+    }
+
+    return null;
+}
+
+/**
+ * A string closed exactly in column 71 followed by a quote in column 16 of the
+ * next line is a doubled quote ('') split over the break, not two strings.
+ */
+function splitsDoubledQuote(line, next) {
+    const text = statementText(line);
+    return next !== undefined && text.length === 71 && text[70] === "'" &&
+        isJclLine(next) && statementText(next).slice(2, 15).trim() === '' && next[15] === "'";
+}
+
+/**
+ * With JES3, "//**" is a command and "//*NAME" followed by a blank, for a
+ * known JES3 statement, is a statement; any other "//*" line stays a comment.
+ * @returns {object|null} a JES3 entry, or null for a comment
+ */
+function jes3Statement(rawLine, lineNo) {
+    const text = statementText(rawLine);
+    const entry = { type: 'JES3', line: lineNo, endLine: lineNo, raw: [rawLine] };
+    if (text.startsWith('//**')) {
+        return { ...entry, name: '*', operand: text.slice(4).trim(), operandCol: 5 };
+    }
+
+    const m = text.match(/^\/\/\*([A-Za-z]+)( +|$)/);
+    if (!m || !JES3_STATEMENTS.has(m[1].toUpperCase())) {
+        return null;
+    }
+
+    return {
+        ...entry,
+        name: m[1].toUpperCase(),
+        nameCol: 4,
+        operand: text.slice(m[0].length).trimEnd(),
+        operandCol: m[0].length + 1
+    };
+}
+
+function continuesCondition(line) {
+    if (line === undefined || !isJclLine(line) || isCommentLine(line) || line[2] !== ' ') {
+        return false;
+    }
+
+    const { name, op } = splitFields(statementText(line));
+    return !name && op !== '' && !STATEMENT_TYPES.has(op.toUpperCase());
+}
+
+/**
+ * Main lexer entry point.
+ * @param {string} source raw JCL text
+ * @returns {{ statements: LogicalStatement[], diagnostics: Diagnostic[] }}
+ */
+function lex(source, { jes = 'JES2' } = {}) {
+    const lines = source.replace(/\r\n/g, '\n').split('\n');
+    const diagnostics = [];
+    const statements = [];
+    let i = 0;
+    let inInstreamData = false;
+    let instreamDelim = null; // the DLM= delimiter, or null for the default rules
+    let instreamKind = 'star'; // 'star' (DD *) or 'data' (DD DATA)
+    let instreamOwner = null;
+    let jes3Dataset = null; // an open //*DATASET, whose lines are data until //*ENDDATASET
+
+    while (i < lines.length) {
+        const rawLine = lines[i];
+        const lineNo = i + 1;
+
+        if (inInstreamData) {
+            // Pass through raw data lines until the delimiter. With DLM= only
+            // the delimiter in column 1 ends the data; otherwise "/*" followed by
+            // a blank does, and for DD * so does the next statement.
+            const isDelim = instreamDelim
+                ? rawLine.startsWith(instreamDelim)
+                : /^\/\*( |$)/.test(statementText(rawLine));
+            const endsAtStatement = !instreamDelim && instreamKind === 'star' && isJclLine(rawLine) && !isCommentLine(rawLine);
+            if (isDelim || endsAtStatement) {
+                if (isDelim) {
+                    instreamOwner.instreamEndLine = lineNo;
+                    inInstreamData = false;
+                    i++;
+                    continue;
+                }
+
+                // A new JCL statement appeared without an explicit delimiter - IBM
+                // allows this for DD * data; treat current line as end.
+                inInstreamData = false;
+                continue; // re-process this line as JCL
+            } else {
+                instreamOwner.instreamData.push(rawLine);
+                i++;
+                continue;
+            }
+        }
+
+        if (jes3Dataset) {
+            if (/^\/\/\*ENDDATASET( |$)/.test(statementText(rawLine))) {
+                jes3Dataset.unclosed = false;
+                jes3Dataset = null;
+            } else {
+                jes3Dataset.data.push(rawLine);
+                i++;
+                continue;
+            }
+        }
+
+        if (rawLine.trim() === '') {
+            i++;
+            continue;
+        }
+
+        // "/*" straight followed by a letter, or "$" for a command, is a JES2
+        // control statement rather than a malformed line.
+        if (/^\/\*[A-Za-z$]/.test(rawLine)) {
+            const text = statementText(rawLine);
+            const isCommand = text[2] === '$';
+            const nameMatch = text.slice(2).match(/^\S*/);
+            const afterName = 2 + nameMatch[0].length;
+            const operandStart = afterName + (text.slice(afterName).length - text.slice(afterName).trimStart().length);
+            statements.push({
+                type: 'JES2',
+                name: isCommand ? '$' : nameMatch[0].toUpperCase(),
+                operand: isCommand ? text.slice(2).trimEnd() : text.slice(operandStart).trimEnd(),
+                nameCol: 3,
+                operandCol: isCommand ? 3 : operandStart + 1,
+                line: lineNo,
+                endLine: lineNo,
+                raw: [rawLine]
+            });
+
+            i++;
+            continue;
+        }
+
+        if (!isJclLine(rawLine)) {
+            diagnostics.push(makeDiagnostic(
+                'JCLL001',
+                {},
+                {
+                    line: lineNo,
+                    column: 1,
+                    source: 'lexer'
+                }
+            ));
+
+            i++;
+            continue;
+        }
+
+        const jes3 = jes === 'JES3' && isCommentLine(rawLine) && jes3Statement(rawLine, lineNo);
+        if (jes3) {
+            statements.push(jes3);
+            if (jes3.name === 'DATASET') {
+                jes3Dataset = Object.assign(jes3, { data: [], unclosed: true });
+            }
+
+            i++;
+            continue;
+        }
+
+        if (isCommentLine(rawLine)) {
+            statements.push({
+                type: 'COMMENT',
+                text: rawLine.slice(2),
+                line: lineNo,
+                endLine: lineNo,
+                raw: [rawLine]
+            });
+
+            i++;
+            continue;
+        }
+
+        if (statementText(rawLine).trimEnd() === '//') {
+            // null statement - end of job stream marker
+            statements.push({
+                type: 'NULL',
+                line: lineNo,
+                endLine: lineNo,
+                raw: [rawLine]
+            });
+
+            i++;
+            continue;
+        }
+
+        if (rawLine.length > 80) {
+            diagnostics.push(makeDiagnostic(
+                'JCLL002',
+                {},
+                {
+                    line: lineNo,
+                    column: 81,
+                    source: 'lexer'
+                }
+            ));
+        }
+
+        const {
+            name,
+            op,
+            rest,
+            nameCol,
+            opCol,
+            restCol
+        } = splitFields(statementText(rawLine));
+        let { operand, comment } = splitOperandAndComment(rest);
+        const operandCol = restCol;
+        // Where each part of the joined operand was written: its offset in
+        // the operand, its line and the column it starts in.
+        const pieces = [{ offset: 0, line: lineNo, col: operandCol }];
+        const rawPhysicalLines = [rawLine];
+        let nextIdx0 = i + 1; // 0-indexed index of the next unconsumed physical line
+        let lastConsumedLineNo = lineNo;
+
+        // Handle continuations
+        let cont = needsContinuation(operand);
+        let quoted = cont.openQuote || splitsDoubledQuote(rawLine, lines[nextIdx0]);
+        let operandComplete = true;
+        while (cont.continues || quoted) {
+            const looksLikeNewStatement = nextIdx0 < lines.length && isJclLine(lines[nextIdx0]) && !isCommentLine(lines[nextIdx0]) && lines[nextIdx0].length > 2 && lines[nextIdx0][2] !== ' ';
+            if (nextIdx0 >= lines.length || !isJclLine(lines[nextIdx0]) || isCommentLine(lines[nextIdx0]) || looksLikeNewStatement) {
+                if (cont.openQuote) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLL003',
+                        {},
+                        {
+                            line: lastConsumedLineNo,
+                            column: 1,
+                            source: 'lexer'
+                        }
+                    ));
+                } else {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLP004',
+                        {},
+                        {
+                            line: lastConsumedLineNo,
+                            column: 1,
+                            source: 'parser'
+                        }
+                    ));
+                }
+
+                operandComplete = false;
+                break;
+            }
+
+            const contLine = lines[nextIdx0];
+            rawPhysicalLines.push(contLine);
+            let split2;
+            if (quoted) {
+                // A quoted string runs through column 71 (a short line is padded
+                // with blanks, as on a card) and resumes in column 16.
+                const prevText = statementText(lines[lastConsumedLineNo - 1]);
+                const text = statementText(contLine);
+                const firstText = text.slice(2).search(/\S/);
+                const start = firstText === -1 ? text.length : firstText + 2;
+                if (start !== 15) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLL005',
+                        { column: start + 1 },
+                        {
+                            line: nextIdx0 + 1,
+                            column: start + 1,
+                            source: 'lexer'
+                        }
+                    ));
+                }
+
+                split2 = splitOperandAndComment(text.slice(start), cont.openQuote);
+                operand += ' '.repeat(71 - prevText.length);
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: start + 1 });
+                operand += split2.operand;
+            } else {
+                // Continuation content: strip leading '//' then leading blanks - the
+                // remainder is the continued operand (conventionally cols 4-16, but
+                // we accept any indent for resilience).
+                const text = statementText(contLine);
+                const stripped = text.replace(/^\/\//, '').replace(/^\s*/, '');
+                split2 = splitOperandAndComment(stripped, false, Math.max(cont.openParens, 0));
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: text.length - stripped.length + 1 });
+                operand += split2.operand;
+            }
+
+            comment = split2.comment || comment;
+            lastConsumedLineNo = nextIdx0 + 1;
+            nextIdx0 += 1;
+            cont = needsContinuation(operand);
+            quoted = cont.openQuote || splitsDoubledQuote(contLine, lines[nextIdx0]);
+        }
+
+        // An IF condition runs until THEN, so it continues onto following
+        // "//" lines with a blank column 3 that don't start another statement.
+        if (operandComplete && op.toUpperCase() === 'IF') {
+            while (!/\bTHEN\b/i.test(`${operand} ${comment}`) && continuesCondition(lines[nextIdx0])) {
+                const contLine = lines[nextIdx0];
+                rawPhysicalLines.push(contLine);
+                const text = statementText(contLine);
+                const split = splitOperandAndComment(text.slice(2).trim());
+                operand += ' ';
+                pieces.push({ offset: operand.length, line: nextIdx0 + 1, col: text.length - text.slice(2).trimStart().length + 1 });
+                operand += split.operand;
+                comment = split.comment || comment;
+                lastConsumedLineNo = nextIdx0 + 1;
+                nextIdx0 += 1;
+            }
+        }
+
+        // A marked column 72 after a complete operand continues the comment
+        // onto following "//" lines with a blank column 3; they're never parsed.
+        let marked = operandComplete && continuationMark(lines[lastConsumedLineNo - 1]);
+        while (marked) {
+            const next = lines[nextIdx0];
+            if (next === undefined || !isJclLine(next) || isCommentLine(next) || (next.length > 2 && next[2] !== ' ')) {
+                diagnostics.push(makeDiagnostic(
+                    'JCLL004',
+                    {},
+                    {
+                        line: lastConsumedLineNo,
+                        column: 72,
+                        source: 'lexer'
+                    }
+                ));
+
+                break;
+            }
+
+            rawPhysicalLines.push(next);
+            const text = statementText(next).slice(2).trim();
+            comment = comment ? `${comment} ${text}` : text;
+            lastConsumedLineNo = nextIdx0 + 1;
+            nextIdx0 += 1;
+            marked = continuationMark(next);
+        }
+
+        statements.push({
+            type: 'STMT',
+            name,
+            op,
+            operand,
+            comment,
+            nameCol,
+            opCol,
+            operandCol,
+            pieces,
+            line: lineNo,
+            endLine: lastConsumedLineNo,
+            raw: rawPhysicalLines
+        });
+
+        i = nextIdx0; // advance past all consumed physical lines
+
+        // Track instream data start: DD * or DD DATA
+        const upperOp = op.toUpperCase();
+        if (upperOp === 'DD') {
+            const opUpper = operand.toUpperCase();
+            const isStar = /^\*/.test(opUpper.trim());
+            if (isStar || /(^|,)DATA(\b|,|\()/.test(opUpper)) {
+                inInstreamData = true;
+                instreamKind = isStar ? 'star' : 'data';
+                const dlmMatch = operand.match(/(?:^|,)DLM=('(?:[^']|'')*'|[^,\s]*)/i);
+                instreamDelim = dlmMatch ? parseDelimiter(dlmMatch[1]) : null;
+                instreamOwner = statements[statements.length - 1];
+                instreamOwner.instreamData = [];
+            }
+        }
+    }
+
+    // DD DATA and DLM= data need their delimiter; DD * may end with the input.
+    if (inInstreamData && (instreamDelim || instreamKind === 'data')) {
+        diagnostics.push(makeDiagnostic(
+            'JCLL006',
+            { delim: instreamDelim || '/*' },
+            {
+                line: instreamOwner.line,
+                column: 1,
+                source: 'lexer'
+            }
+        ));
+    }
+
+    return { statements, diagnostics };
+}
+
+module.exports = {
+    lex,
+    splitFields,
+    splitOperandAndComment,
+    needsContinuation,
+    isCommentLine,
+    isJclLine,
+    statementText,
+    continuationMark,
+    parseDelimiter
+};

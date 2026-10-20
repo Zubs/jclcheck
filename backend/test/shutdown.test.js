@@ -73,5 +73,5 @@ test('SIGTERM sends queued hits before exiting', async (t) => {
     assert.equal(goat.requests.length, 1);
     assert.equal(goat.requests[0].url, '/api/v0/count');
     assert.equal(goat.requests[0].auth, 'Bearer test-token');
-    assert.deepEqual(goat.requests[0].body.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok']);
+    assert.deepEqual(goat.requests[0].body.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/3.2', 'api/jes/JES2']);
 });

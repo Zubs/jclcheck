@@ -1,8 +1,0 @@
-{
-  "source": "Nick's item 4 (Features.md feature 10)",
-  "todo": {
-    "feature": 10,
-    "reason": "Only one JOB statement is allowed per job stream"
-  },
-  "diagnostics": []
-}

@@ -1,0 +1,51 @@
+{
+  "name": "jclcheck",
+  "version": "1.0.0",
+  "description": "Check z/OS JCL without a mainframe: a lexer, parser and rule engine based on the IBM JCL Reference, a formatter, and the jclcheck command (text, JSON and SARIF output). No dependencies.",
+  "keywords": [
+    "jcl",
+    "zos",
+    "z/os",
+    "mainframe",
+    "ibm",
+    "linter",
+    "validator",
+    "formatter",
+    "sarif",
+    "cli"
+  ],
+  "homepage": "https://jclcheck.xyz",
+  "bugs": {
+    "url": "https://github.com/Zubs/jclcheck/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Zubs/jclcheck.git",
+    "directory": "validator"
+  },
+  "license": "MIT",
+  "author": "Zubs <zubairidrisaweda@gmail.com>",
+  "main": "src/index.js",
+  "bin": {
+    "jclcheck": "bin/jclcheck.js"
+  },
+  "files": [
+    "src",
+    "bin"
+  ],
+  "scripts": {
+    "test": "node --test \"test/**/*.test.js\"",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "inspect": "node test/inspect.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^9.39.5",
+    "globals": "^17.13.0"
+  }
+}

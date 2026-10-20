@@ -1,8 +1,0 @@
-{
-  "source": "Nick's item 10 (Features.md feature 3), clean at the default z/OS level",
-  "todo": {
-    "feature": 3,
-    "reason": "EMAIL= on the JOB statement is not a known keyword"
-  },
-  "diagnostics": []
-}

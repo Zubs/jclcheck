@@ -1,8 +1,7 @@
 // Every analytics event the site may send, and the details each one allows.
 // An event is counted as `<name>/<detail>`, and only when the detail passes
 // its rule, so free text (JCL, dataset names, anything typed) can never reach
-// GoatCounter. Entries marked `feature` belong to features from Features.md
-// that aren't built yet; they send nothing until that feature calls track().
+// GoatCounter.
 
 export const CODE_PATTERN = /^JCL[A-Z][0-9]{3}$/;
 
@@ -26,7 +25,8 @@ export const EVENTS = {
     'clear': { details: ['f12', 'button', 'shortcut'], title: d => `Clear editor (${d})` },
     'help/open': { details: ['f1', 'button', 'shortcut'], title: d => `Open help (${d})` },
     'editor/paste': { details: SIZE_BUCKETS, title: d => `Paste JCL (${d} lines)` },
-    'undo': { details: ['f9', 'f12'], title: d => `Undo after ${d}`, feature: 26 },
+    'undo': { details: ['f4', 'f9', 'f12'], title: d => `Undo after ${d}` },
+    'library': { details: ['add', 'remove'], title: d => `Library member ${d}` },
 
     // Results
     'diag/seen': { details: CODE_PATTERN, title: d => `Diagnostic seen: ${d}` },
@@ -44,19 +44,17 @@ export const EVENTS = {
     'visit/latency': { details: ['0-250ms', '250ms-1s', '1s+'], title: d => `Visit: typical response ${d}` },
     'visit/end': { details: ['clean', 'errors', 'warnings'], title: d => `Visit ended ${d}` },
 
-    // Later features
-    'level': { details: ['2.3', '2.4', '2.5', '3.1', '3.2'], title: d => `z/OS level ${d}`, feature: 27 },
-    'jes': { details: ['JES2', 'JES3'], title: d => `JES: ${d}`, feature: 27 },
-    'library': { details: ['add', 'remove'], title: d => `Library member ${d}`, feature: 23 },
-    'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}`, feature: 28 },
-    'share': { details: ['create', 'open', 'back-to-draft', 'clipboard-blocked'], title: d => `Share: ${d}`, feature: 29 },
-    'datasets': { details: ['open', 'cell-click'], title: d => `Datasets: ${d}`, feature: 36 },
-    'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}`, feature: 37 },
-    'profile': { details: ['edit'], title: () => 'Profile edited', feature: 37 },
-    'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}`, feature: 37 },
-    'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}`, feature: 39 },
-    // Keyword names come from the API's keyword list once feature 40 is built.
-    'hover': { details: ['shortcut'], title: d => `Keyword explanation: ${d}`, feature: 40 }
+    // Level, drafts, sharing, datasets, profile, formatter and explanations
+    'level': { details: ['2.3', '2.4', '2.5', '3.1', '3.2'], title: d => `z/OS level ${d}` },
+    'jes': { details: ['JES2', 'JES3'], title: d => `JES: ${d}` },
+    'draft': { details: ['restored', 'corrupt'], title: d => `Draft ${d}` },
+    'share': { details: ['create', 'open', 'back-to-draft', 'clipboard-blocked'], title: d => `Share: ${d}` },
+    'datasets': { details: ['open', 'cell-click'], title: d => `Datasets: ${d}` },
+    'suppress': { details: CODE_PATTERN, title: d => `Suppressed: ${d}` },
+    'profile': { details: ['edit'], title: () => 'Profile edited' },
+    'profile/rule': { details: ['names', 'allowed', 'dsnPrefixes', 'extraKeywords', 'severity'], title: d => `Profile rule used: ${d}` },
+    'format': { details: ['f4', 'button', 'shortcut', 'applied', 'cancelled', 'refused'], title: d => `Format: ${d}` },
+    'hover': { details: ['mouse', 'shortcut'], title: d => `Keyword explanation: ${d}` }
 };
 
 /** Whether `detail` is allowed for the event `name`. */

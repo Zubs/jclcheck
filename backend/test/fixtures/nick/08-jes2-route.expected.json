@@ -1,8 +1,0 @@
-{
-  "source": "Nick's item 8 (Features.md feature 8)",
-  "todo": {
-    "feature": 8,
-    "reason": "JES2 control statements are read as invalid lines"
-  },
-  "diagnostics": []
-}

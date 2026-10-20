@@ -1,16 +1,69 @@
 <template>
   <div class="panel">
     <div class="panel-topline">
-      <span class="panel-topline__label">DIAGNOSTICS</span>
+      <span class="panel-tabs" role="tablist">
+        <button
+            role="tab"
+            class="panel-tab panel-tab--diagnostics"
+            :aria-selected="tab === 'diagnostics'"
+            @click="tab = 'diagnostics'"
+        >DIAGNOSTICS</button>
+        <button
+            role="tab"
+            class="panel-tab panel-tab--datasets"
+            :aria-selected="tab === 'datasets'"
+            @click="openDatasets"
+        >DATASETS</button>
+      </span>
       <span class="panel-topline__meta">
+        <span class="checked-against" v-if="checkedAgainst">{{ checkedAgainst }}</span>
         <span class="stat is-error" v-if="stats">{{ stats.errors }} ERR</span>
         <span class="stat is-warning" v-if="stats">{{ stats.warnings }} WARN</span>
+        <button
+            v-if="suppressedCount"
+            class="stat stat-suppressed"
+            :aria-pressed="showSuppressed"
+            :title="showSuppressed ? 'Hide the suppressed diagnostics' : 'List the diagnostics hidden by JCLCHECK comments'"
+            @click="showSuppressed = !showSuppressed"
+        >{{ suppressedCount }} SUPPRESSED</button>
       </span>
     </div>
 
-    <div class="panel-body">
+    <div v-if="tab === 'datasets'" class="panel-body">
+      <div v-if="!datasets.length" class="panel-status">
+        NO DATASETS. Datasets named with DSN= show here, step by step.
+      </div>
+      <div v-for="job in datasets" :key="job.job + job.steps.join()" class="flow">
+        <div v-if="datasets.length > 1" class="flow-job">JOB {{ job.job }}</div>
+        <table class="flow-grid">
+          <thead>
+            <tr>
+              <th scope="col">DATASET</th>
+              <th v-for="step in job.steps" :key="step" scope="col">{{ step }}</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in job.datasets" :key="row.name">
+              <th scope="row" class="flow-name">{{ row.name }}</th>
+              <td v-for="step in job.steps" :key="step">
+                <button
+                    v-for="(touch, i) in row.touches.filter(t => t.step === step)"
+                    :key="i"
+                    class="flow-cell"
+                    :title="`${touch.dd} DD: ${describe(touch.actions)}`"
+                    @click="$emit('select-dataset', touch)"
+                >{{ touch.actions.join('') }}</button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div v-if="datasets.length" class="flow-key">N new · R read · M mod · P pass · D delete</div>
+    </div>
+
+    <div v-else class="panel-body">
       <div v-if="loading" class="panel-status">VALIDATING…</div>
-      <div v-else-if="!diagnostics.length" class="panel-empty">
+      <div v-else-if="!listed.length" class="panel-empty">
         <div class="panel-empty__glyph">✓</div>
         <div class="panel-empty__text">
           <strong>NO PROBLEMS FOUND</strong>
@@ -22,15 +75,15 @@
 
       <ul v-else class="diag-list">
         <li
-            v-for="(d, idx) in diagnostics"
+            v-for="(d, idx) in listed"
             :key="idx"
             class="diag"
-            :class="`is-${d.severity}`"
+            :class="[`is-${d.severity}`, { 'is-suppressed': d.suppressed }]"
             @click="$emit('select', d)"
         >
           <div class="diag-head">
-            <span class="diag-sev">{{ sevLabel(d.severity) }}</span>
-            <span class="diag-loc">L{{ d.line }}:{{ d.column }}</span>
+            <span class="diag-sev">{{ d.suppressed ? 'HIDDEN' : sevLabel(d.severity) }}</span>
+            <span class="diag-loc">{{ location(d) }}</span>
             <span class="diag-code">{{ d.code }}</span>
           </div>
           <div class="diag-msg">{{ d.message }}</div>
@@ -44,12 +97,42 @@
 </template>
 
 <script setup>
-defineProps({
+import { ref, computed } from 'vue';
+
+const props = defineProps({
   diagnostics: { type: Array, default: () => [] },
+  datasets: { type: Array, default: () => [] },
   stats: { type: Object, default: null },
-  loading: { type: Boolean, default: false }
+  loading: { type: Boolean, default: false },
+  checkedAgainst: { type: String, default: '' }
 });
-defineEmits(['select']);
+const emit = defineEmits(['select', 'select-dataset', 'open-datasets']);
+
+const tab = ref('diagnostics');
+// Diagnostics hidden by JCLCHECK comments are listed only on request.
+const showSuppressed = ref(false);
+const suppressedCount = computed(() => props.diagnostics.filter(d => d.suppressed).length);
+const listed = computed(() => (showSuppressed.value ? props.diagnostics : props.diagnostics.filter(d => !d.suppressed)));
+const ACTION_NAMES = { N: 'new', R: 'read', M: 'mod', P: 'pass', D: 'delete' };
+
+function openDatasets() {
+  if (tab.value !== 'datasets') {
+    tab.value = 'datasets';
+    emit('open-datasets');
+  }
+}
+
+function describe(actions) {
+  return actions.map(a => ACTION_NAMES[a]).join(', ');
+}
+
+// A diagnostic in a library member "CAMPBEL.PROCS.JCL(MYPROC2)" is shown
+// as "MYPROC2 L3:5".
+function location(d) {
+  const m = d.member && d.member.match(/\(([^)]*)\)$/);
+  const member = d.member ? `${m ? m[1] : d.member} ` : '';
+  return `${member}L${d.line}:${d.column}`;
+}
 
 function sevLabel(sev) {
   return sev === 'error' ? 'ERR' : sev === 'warning' ? 'WARN' : 'INFO';
@@ -80,9 +163,84 @@ function sevLabel(sev) {
   color: var(--text-dim);
 }
 
-.panel-topline__label {
+.panel-tabs {
+  display: flex;
+  gap: 12px;
+}
+
+.panel-tab {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.panel-tab[aria-selected="true"] {
   color: var(--field-turquoise);
   font-weight: 600;
+}
+
+.flow {
+  padding: 10px 12px;
+  overflow-x: auto;
+}
+
+.flow-job {
+  margin-bottom: 6px;
+  font-family: var(--font-cond);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+
+.flow-grid {
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.flow-grid th,
+.flow-grid td {
+  padding: 4px 8px;
+  border: 1px solid var(--grid-line);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.flow-grid thead th {
+  font-family: var(--font-cond);
+  font-weight: 600;
+  color: var(--field-blue);
+}
+
+.flow-grid .flow-name {
+  text-align: left;
+  font-weight: 400;
+  color: var(--text-bright);
+}
+
+.flow-cell {
+  padding: 0 2px;
+  background: none;
+  border: 0;
+  font: inherit;
+  color: var(--field-turquoise);
+  cursor: pointer;
+}
+
+.flow-cell:hover,
+.flow-cell:focus-visible {
+  text-decoration: underline;
+}
+
+.flow-key {
+  padding: 0 12px 12px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--text-faint);
 }
 
 .panel-topline__meta {
@@ -96,6 +254,24 @@ function sevLabel(sev) {
 
 .stat.is-warning {
   color: var(--warning);
+}
+
+.stat-suppressed {
+  padding: 0;
+  background: none;
+  border: 0;
+  font: inherit;
+  letter-spacing: inherit;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+
+.stat-suppressed[aria-pressed="true"] {
+  color: var(--text-bright);
+}
+
+.diag.is-suppressed {
+  opacity: 0.6;
 }
 
 .panel-body {

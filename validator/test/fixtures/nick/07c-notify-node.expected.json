@@ -1,0 +1,11 @@
+{
+  "source": "Nick's item 7, third example (Features.md features 16 and 41). node.userid is only valid as USER= on the NOTIFY statement.",
+  "diagnostics": [
+    {
+      "code": "JCLS009",
+      "severity": "warning",
+      "line": 1,
+      "column": 19
+    }
+  ]
+}

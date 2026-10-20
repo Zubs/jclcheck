@@ -1,0 +1,17 @@
+{
+  "source": "Nick's item 17 (Features.md feature 11). JCLR001 stays because the catalogued PROC MYPROC2 can't be seen. JCLO005 points at the JCLLIB operation (column 12).",
+  "diagnostics": [
+    {
+      "code": "JCLR001",
+      "severity": "warning",
+      "line": 2,
+      "column": 1
+    },
+    {
+      "code": "JCLO005",
+      "severity": "error",
+      "line": 4,
+      "column": 12
+    }
+  ]
+}

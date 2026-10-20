@@ -6,6 +6,7 @@
         class="pfkey"
         :class="{ 'is-primary': k.primary, 'is-disabled': k.disabled }"
         :disabled="k.disabled"
+        :title="k.shortcut ? `${k.key} · ${k.shortcut}` : k.key"
         @click="$emit(k.event)"
     >
       <span class="pfkey__f">{{ k.key }}</span>
@@ -24,6 +25,8 @@ defineEmits([
   'sample',
   'clear',
   'help',
+  'share',
+  'format',
   'download'
 ]);
 </script>

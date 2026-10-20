@@ -18,6 +18,9 @@
           <li><strong>Structure</strong> — statement ordering (JOB → EXEC → DD), matching IF/ENDIF and PROC/PEND blocks,
             continuation lines, parenthesis balance.
           </li>
+          <li><strong>IF conditions</strong> — RC, ABEND, ABENDCC and RUN tests, operators and brackets, THEN, and that
+            each step named in a condition comes earlier in the job.
+          </li>
           <li><strong>DD statements</strong> — duplicate ddnames within a step, missing or conflicting data sources (DSN
             vs DUMMY vs SYSOUT vs instream data).
           </li>
@@ -29,48 +32,95 @@
           <li><strong>Procedures</strong> — in-stream PROC/PEND resolution, symbolic parameters (&amp;SYM), and
             DD-override matching.
           </li>
+          <li><strong>JES2 statements</strong> — <code>/*ROUTE</code>, <code>/*JOBPARM</code> and the other JES2
+            control statements: known names, the ROUTE operand, and placement around the JOB statement.
+          </li>
+          <li><strong>JES3 statements</strong> — when JES3 is chosen (z/OS 2.5 or earlier): <code>//*MAIN</code>,
+            <code>//*FORMAT</code> and the other JES3 statements, their keywords and placement.
+          </li>
         </ul>
 
-        <h3>Error codes</h3>
+        <h3>Keys</h3>
         <table>
-          <tr>
-            <td>JCLLxxx</td>
-            <td>Lexer — raw line/record issues</td>
-          </tr>
-          <tr>
-            <td>JCLPxxx</td>
-            <td>Parser — statement structure</td>
-          </tr>
-          <tr>
-            <td>JCLOxxx</td>
-            <td>Ordering — JOB/EXEC/DD sequence</td>
-          </tr>
-          <tr>
-            <td>JCLDxxx</td>
-            <td>DD statement rules</td>
-          </tr>
-          <tr>
-            <td>JCLKxxx</td>
-            <td>Keyword / required parameter rules</td>
-          </tr>
-          <tr>
-            <td>JCLSxxx</td>
-            <td>Parameter value syntax</td>
-          </tr>
-          <tr>
-            <td>JCLNxxx</td>
-            <td>Name field syntax</td>
-          </tr>
-          <tr>
-            <td>JCLRxxx</td>
-            <td>PROC resolution / symbolics</td>
-          </tr>
+          <tbody>
+            <tr><td>F1 · Alt+H</td><td>Open this help (Escape or F1 closes it)</td></tr>
+            <tr><td>F4 · Alt+R</td><td>Format: lay the JCL out in the usual columns, with a preview first</td></tr>
+            <tr><td>F5 · Ctrl/⌘+Enter</td><td>Check the JCL now</td></tr>
+            <tr><td>Alt+K</td><td>Explain the keyword at the cursor, as hovering over it does</td></tr>
+            <tr><td>F6 · Alt+L</td><td>Share the job as a link (nothing is stored on a server)</td></tr>
+            <tr><td>F9 · Alt+S</td><td>Load the next sample</td></tr>
+            <tr><td>F12 · Alt+C</td><td>Clear the editor</td></tr>
+          </tbody>
         </table>
+        <p>
+          Some browsers keep F keys for themselves, and Macs need Fn, so each key has a fallback.
+          If F9 or F12 replaces text you typed, an Undo button brings it back for a few seconds.
+        </p>
+
+        <h3>Library</h3>
+        <p>
+          Open <strong>LIBRARY</strong> at the top to paste the catalogued procedures and INCLUDE
+          members your job uses, each with the library it lives in. They are found in the order of
+          the job's JCLLIB, then members with no library, and checked along with the job. A problem
+          inside a member is shown with the member's name, such as <code>MYPROC2 L3:5</code>; click
+          it to jump there.
+        </p>
+
+        <h3>Suppressions and site profile</h3>
+        <p>
+          To hide a diagnostic you know is wrong for your shop, add a JCL comment naming its code:
+          <code>//* JCLCHECK OFF-NEXT JCLK001</code> hides it on the next statement, and
+          <code>//* JCLCHECK OFF JCLK001</code> hides it until <code>//* JCLCHECK ON JCLK001</code>
+          or the end of the job. The job still runs unchanged. Hidden diagnostics don't count;
+          click <strong>SUPPRESSED</strong> in the panel to list them.
+        </p>
+        <p>
+          Open <strong>PROFILE</strong> to add your shop's rules with a form (or as JSON): name patterns
+          (<code>*</code> and <code>%</code>), allowed values, prefixes for new datasets, extra
+          keywords, and a different severity, or <code>off</code>, for any code. It is saved with
+          your draft and included in shared links.
+        </p>
+
+        <h3>Columns</h3>
+        <p>
+          Each line is read like an 80-column card, as z/OS reads it. Columns 1–71 hold the
+          statement. A non-blank column 72 continues the comment onto the next line, which
+          starts with <code>//</code> and a blank in column 3. Columns 73–80 are sequence
+          numbers and are ignored. In-stream data lines are kept whole.
+        </p>
+
+        <h3>z/OS level and JES</h3>
+        <p>
+          Choose the z/OS release at the top of the workbench: z/OS 2.3, 2.4, 2.5, 3.1 or 3.2.
+          The default is <strong>z/OS 3.2</strong>, and JES2. JES3 can only be chosen at z/OS 2.5
+          and earlier, because IBM removed it in z/OS 3.1. A keyword your release doesn't have gets
+          <code>JCLK005</code>.
+        </p>
+
+        <h3>Diagnostic codes</h3>
+        <p>
+          Each code is shown with its usual severity. A job is valid when it has no
+          errors; warnings and information notes don't stop it.
+        </p>
+        <div v-for="group in CODE_GROUPS" :key="group.prefix" class="help-codes">
+          <h4>{{ group.prefix }} — {{ group.name }}</h4>
+          <table>
+            <tbody>
+              <tr v-for="(text, code) in group.codes" :key="code">
+                <td>{{ code }}</td>
+                <td :class="`help-sev sev-${severityOf(code)}`">{{ severityOf(code) }}</td>
+                <td>{{ text }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
 
         <h3>Privacy</h3>
         <p>
           Your JCL is sent to the JCLcheck API to be checked, and is never stored or
-          counted. The site counts anonymous usage with GoatCounter, with no cookies
+          counted there. Your draft and library stay in your own browser, and a shared
+          link carries the JCL inside the link itself, after the #, which never reaches a
+          server. The site counts anonymous usage with GoatCounter, with no cookies
           and no personal data: pages visited, where visits come from, browser, device
           size and country, which features are used, and which error codes appear. If
           your browser sends Do Not Track or Global Privacy Control, nothing is counted
@@ -79,10 +129,10 @@
 
         <h3>Limitations</h3>
         <p>
-          This tool validates syntax and structure only. It cannot see cataloged
-          procedures or datasets on an actual system, so a call to an unresolved
-          PROC is flagged as a warning (it may be a valid cataloged procedure this
-          tool simply can't see), not a hard error.
+          This tool validates syntax and structure only. It cannot see datasets on
+          an actual system, or catalogued procedures you haven't added to the
+          Library, so a call to an unresolved PROC is flagged as a warning (it may be
+          a valid catalogued procedure this tool simply can't see), not a hard error.
         </p>
       </div>
     </div>
@@ -90,6 +140,8 @@
 </template>
 
 <script setup>
+import { CODE_GROUPS, severityOf } from '../diagnosticCodes';
+
 defineEmits(['close']);
 </script>
 
@@ -195,5 +247,22 @@ defineEmits(['close']);
 .help-body td:first-child {
   color: var(--field-blue);
   white-space: nowrap;
+}
+
+.help-body .help-sev {
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.help-body .sev-error {
+  color: var(--error);
+}
+
+.help-body .sev-warning {
+  color: var(--warning);
+}
+
+.help-body .sev-info {
+  color: var(--info);
 }
 </style>

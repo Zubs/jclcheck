@@ -25,45 +25,45 @@ Every JCL example in Nick's notes becomes a test fixture (feature 1). A feature 
 ## Progress
 
 - [x] 1. Regression test suite
-- [ ] 2. Analytics
-- [ ] 3. z/OS level support
-- [ ] 4. Columns 72–80 and comments on continued statements
-- [ ] 5. Quoted strings continued onto the next line
-- [ ] 6. In-stream data delimiters
-- [ ] 7. JCL inside `DD DATA`
-- [ ] 8. JES2 control statements
-- [ ] 9. JES3 control statements
-- [ ] 10. Several jobs in one job stream
-- [ ] 11. JCLLIB placement
-- [ ] 12. Positional parameter limits
-- [ ] 13. IF/THEN/ELSE conditions
-- [ ] 14. Keyword value rules
-- [ ] 15. MSGLEVEL values
-- [ ] 16. NOTIFY= on the JOB statement
-- [ ] 17. NOTIFY statement and EMAIL
-- [ ] 18. Keywords qualified with a procedure step
-- [ ] 19. Member names and other dataset name forms
-- [ ] 20. Duplicate DD names
-- [ ] 21. DD data sources, including PATH
-- [ ] 22. Job groups (JOBGROUP)
-- [ ] 23. Catalogued PROCs and INCLUDE members
-- [ ] 24. Cursor line and column
-- [ ] 25. Syntax highlighting
-- [ ] 26. Keyboard shortcuts
-- [ ] 27. z/OS level and JES picker
-- [ ] 28. Remembering JCL between visits
-- [ ] 29. Shareable links
-- [ ] 30. Accurate copy, help and docs
-- [ ] 31. DSN with LIKE
-- [ ] 32. Symbols in in-stream PROCs
-- [ ] 33. Positions on continued statements
-- [ ] 34. Severity of real JCL errors
-- [ ] 35. Stale results in the workbench
-- [ ] 36. Dataset flow checks
-- [ ] 37. Inline suppressions and site profile
-- [ ] 38. Command-line tool and CI output
-- [ ] 39. Formatter
-- [ ] 40. Keyword explanations on hover
+- [x] 2. Analytics
+- [x] 3. z/OS level support
+- [x] 4. Columns 72–80 and comments on continued statements
+- [x] 5. Quoted strings continued onto the next line
+- [x] 6. In-stream data delimiters
+- [x] 7. JCL inside `DD DATA`
+- [x] 8. JES2 control statements
+- [x] 9. JES3 control statements
+- [x] 10. Several jobs in one job stream
+- [x] 11. JCLLIB placement
+- [x] 12. Positional parameter limits
+- [x] 13. IF/THEN/ELSE conditions
+- [x] 14. Keyword value rules
+- [x] 15. MSGLEVEL values
+- [x] 16. NOTIFY= on the JOB statement
+- [x] 17. NOTIFY statement and EMAIL
+- [x] 18. Keywords qualified with a procedure step
+- [x] 19. Member names and other dataset name forms
+- [x] 20. Duplicate DD names
+- [x] 21. DD data sources, including PATH
+- [x] 22. Job groups (JOBGROUP)
+- [x] 23. Catalogued PROCs and INCLUDE members
+- [x] 24. Cursor line and column
+- [x] 25. Syntax highlighting
+- [x] 26. Keyboard shortcuts
+- [x] 27. z/OS level and JES picker
+- [x] 28. Remembering JCL between visits
+- [x] 29. Shareable links
+- [x] 30. Accurate copy, help and docs
+- [x] 31. DSN with LIKE
+- [x] 32. Symbols in in-stream PROCs
+- [x] 33. Positions on continued statements
+- [x] 34. Severity of real JCL errors
+- [x] 35. Stale results in the workbench
+- [x] 36. Dataset flow checks
+- [x] 37. Inline suppressions and site profile
+- [x] 38. Command-line tool and CI output
+- [x] 39. Formatter
+- [x] 40. Keyword explanations on hover
 - [ ] 41. Questions and final checks
 
 ---
@@ -291,21 +291,21 @@ Today this gives `JCLL003` (unterminated quoted string) and `JCLP003` (unmatched
 - When a line ends inside an open quote, the lexer treats the string as running through column 71. A line that stops short of column 71 is padded with blanks, as it would be on a real 80-column record.
 - The next line must start with `//`, have blanks in columns 3–15 and continue the string in column 16. Its text from column 16 onwards is joined directly to the string.
 - Quote and parenthesis tracking runs over the whole joined operand, never over a single continuation line in isolation.
-- If the continued text starts in any column other than 16, a new diagnostic, `JCLL004`, is raised: "A continued quoted string must resume in column 16 (found column N)."
+- If the continued text starts in any column other than 16, a new diagnostic, `JCLL005`, is raised: "A continued quoted string must resume in column 16 (found column N)."
 - Feature 4's column rules still apply: columns 72–80 of the first line are not part of the string.
 
 **Tests**
 - **Z** — A quoted value that opens and closes on one line is read exactly as today.
 - **O** — Nick's item 3 example gives no diagnostics, and the PARM value contains the full sentence.
 - **M** — A string continued over three lines is joined in order into one value.
-- **B** — The continuation text starts in column 16 and is accepted. Starting in column 15 or 17 gives `JCLL004` with the column it found.
+- **B** — The continuation text starts in column 16 and is accepted. Starting in column 15 or 17 gives `JCLL005` with the column it found.
 - **B** — A string whose first line ends exactly at column 71 joins with no extra blanks. One that ends at column 60 includes the blanks up to column 71.
-- **I** — `JCLL004` points to the continuation line and the column where the text actually starts.
+- **I** — `JCLL005` points to the continuation line and the column where the text actually starts.
 - **E** — A doubled quote (`''`) split across the line break is still read as one literal quote.
 - **E** — A string that is never closed, even after continuing, still gets `JCLL003` on the last line, and no `JCLP003` appears just because of it.
 - **S** — A user writes a long PARM, breaks it at column 71 and continues in column 16, and the job checks clean.
 
-**Done when:** Nick's item 3 example checks clean, and a continuation that starts in the wrong column gets `JCLL004`.
+**Done when:** Nick's item 3 example checks clean, and a continuation that starts in the wrong column gets `JCLL005`. (`JCLL004` is feature 4's column-72 diagnostic.)
 
 ### 6. In-stream data delimiters
 
@@ -332,8 +332,9 @@ Today `DLM` gets `JCLK001` (unknown keyword). Only delimiters made of two letter
   - `/* comment` therefore ends the data, as it does on z/OS.
 - The unused `isDelimiterLine` helper in `lexer.js` is either used for this or removed.
 - New diagnostics:
-  - A `DLM=` value that isn't two valid characters gets a `JCLS` warning.
-  - Data that reaches the end of the file without its delimiter gets a warning naming the delimiter it was waiting for.
+  - A `DLM=` value that isn't two valid characters gets the warning `JCLS011`.
+  - Data that needs an explicit delimiter (`DD DATA`, or any `DLM=`) and reaches the end of the file without it gets the warning `JCLL006`, naming the delimiter it was waiting for. `DD *` without `DLM=` can end with the input.
+  - `DLM=` on a DD with no in-stream data gets the warning `JCLK006`.
 
 **Tests**
 - **Z** — `DD *` followed directly by `/*` gives an empty in-stream data block and no diagnostics.
@@ -506,8 +507,9 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
 - New ordering errors:
   - `JCLO005`: "JCLLIB must come after the JOB statement and before the first EXEC statement."
   - `JCLO006`: "Only one JCLLIB statement is allowed per job."
+  - `JCLO008`: "JCLLIB is not allowed inside a procedure."
 - `ORDER=` is required, and each library in it is checked with the DSN rules from feature 19.
-- A JCLLIB inside an in-stream PROC is an error.
+- A JCLLIB inside an in-stream PROC is an error (`JCLO008`).
 - A PROC call that can't be resolved in-stream (`JCLR001`) mentions the JCLLIB libraries in its message when the job has them, for example "…may be found in CAMPBEL.PROCS.JCL or 3 other libraries". The call stays a warning.
 
 **Tests**
@@ -539,8 +541,8 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - EXEC: 1 (procedure name)
   - DD: 1 (`*`, `DATA`, `DUMMY` or `DYNAM`)
 - The tokeniser keeps empty positional parameters (`,,`) as empty entries, so they can be counted.
-- New error, `JCLK004`: "The JOB statement allows at most 2 positional parameters (accounting information and programmer's name); found 16."
-- Size limits from the reference: accounting information is at most 143 characters, and the programmer's name at most 20 characters. A name containing special characters must be quoted.
+- New error, `JCLK004`: "The JOB statement allows at most 2 positional parameters (accounting information and programmer's name); found 15." (Nick's example has 15 commas, so 15 positionals.) It points at the first positional over the limit.
+- Size limits from the reference: accounting information is at most 143 characters, and the programmer's name at most 20 characters (warning `JCLS012`). A name containing special characters must be quoted (warning `JCLS013`).
 - A positional parameter after a keyword parameter still gets `JCLK003` as today.
 
 **Tests**
@@ -613,10 +615,12 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - `quoted` (a length)
   - `list` (rules for each position and a count)
   - `oneOf` (any of several rules)
-- One function, `checkValue(rule, value)`, applies a rule and returns what went wrong. The existing hand-written checks (DISP, SPACE, DCB, REGION, TIME, DSN) keep working and are moved onto it where that is simple.
+- One function, `checkValue(rule, value)`, applies a rule and returns what went wrong. The existing hand-written checks (DISP, SPACE, DCB, REGION, TIME, DSN, RECFM, DSORG) keep working with their own codes (`JCLS001`–`JCLS008`). Moving them onto the rules would have changed those codes in existing results for no gain, so they were left as they are.
 - A new warning, `JCLS009`, covers any value that breaks its rule. The message is built from the rule, for example "TYPE must be one of MSG, EMAIL; found 'EMAILAASDASD'." A "did you mean" suggestion is added for `enum` values.
 - Values that are symbolic (`&SYM`) or that come from a referback are skipped, as the DSN check already does.
 - A first set of rules: `CLASS` and `MSGCLASS` (one character A–Z or 0–9), `TYPRUN` (SCAN, HOLD, JCLHOLD, COPY), `PRTY` (0–15), `ADDRSPC` (VIRT, REAL), `RD` (R, RNC, NR, NC), `FREE` (END, CLOSE), `AVGREC` (U, K, M) and `RETPD` (0–93000). Features 15–17 add MSGLEVEL and NOTIFY.
+
+- *Added by feature 9:* JES3 statement keywords (`//*MAIN`, `//*FORMAT`, `//*NET`, `//*NETACCT`, `//*DATASET`) are checked by name only so far. Their values should get rules here too, for example `MAIN HOLD=YES|NO`.
 
 **Tests**
 - **Z** — A keyword with no value rule is accepted with any value, as today.
@@ -704,7 +708,7 @@ Today the `//NESTED JOB` line ends the data, which gives `JCLO004` (a second JOB
   - One of `EMAIL` or `USER` is required.
 - The exact `TYPE` values are confirmed against the reference in feature 41, because Nick's item 14 uses `TYPE=TSO` and the item 12 example is invalid.
 - `EMAIL=` is added to the JOB keyword table (`since: '2.3'`), using the same address rule.
-- NOTIFY placement: after the JOB statement and before the first EXEC, with the limit on how many are allowed taken from the reference. A misplaced NOTIFY gets an ordering error.
+- NOTIFY placement: after the JOB statement and before the first EXEC, with the limit on how many are allowed taken from the reference. A misplaced NOTIFY gets an ordering error (`JCLO009`); more than 8 in a job gets `JCLO010`. Both EMAIL and USER on one statement gets `JCLK007`.
 
 **Tests**
 - **Z** — A NOTIFY statement with no parameters gets `JCLK002`, asking for EMAIL or USER.
@@ -765,7 +769,7 @@ The member name in brackets is counted as part of the last qualifier (`BECKER(MY
   - `(+n)`, `(-n)` and `(0)` are generation references, which are already handled.
 - The 44-character limit applies to the name without the member or generation part.
 - Temporary datasets (`&&TEMP`, `&&TEMP(MEM)`) follow the temporary name rules (1–8 characters after `&&`) instead of being skipped as symbolic parameters.
-- A quoted name (`DSN='ODD.NAME'`) skips the qualifier checks, as the reference allows, with an `info` note.
+- A quoted name (`DSN='ODD.NAME'`) skips the qualifier checks, as the reference allows, with an `info` note (`JCLS014`).
 - A new warning, `JCLS010`, covers an invalid member name.
 
 **Tests**
@@ -1129,7 +1133,7 @@ Today the PF keys are only buttons. Nothing listens for the keys in any browser.
   - the column rules (feature 4)
   - the keyboard shortcuts and fallbacks (feature 26), including F6 SHARE (feature 29)
   - how to use the Library panel (feature 23)
-  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLK004`, `JCLK005`, `JCLL004`, `JCLO005`–`JCLO007`, `JCLS009`, `JCLS010`)
+  - every new code group (`JCLJ`, `JCLG`, `JCLC`) and code (`JCLD004`–`JCLD007`, `JCLK004`–`JCLK009`, `JCLR004`–`JCLR008`, `JCLL004`–`JCLL006`, `JCLO005`–`JCLO010`, `JCLS009`–`JCLS014`)
 - The "Limitations" sections in help, the README and `Spec.md` drop anything features 4–23 have fixed, such as the loose handling of continuation columns and catalogued procedures that can't be checked.
 - The README documents the API changes: `zosLevel`, `jes`, `library`, the `member` field on diagnostics, `ast.jobs`, `jobCount` and `GET /api/levels`.
 - A short "Thanks" line on the About page credits the review that shaped these features, if Nick agrees.
@@ -1530,33 +1534,33 @@ after:
 **How it works**
 - Each item says what is unsure, which feature it affects and what to do. Remove an item once it is settled.
 
-**Questions to confirm**
-- **NOTIFY= user ID length (feature 16).** Nick says 1–8 characters. Some editions of the JCL reference describe TSO/E user IDs as 1–7. Check the current reference and use whatever it says.
-- **NOTIFY=node.userid (feature 16).** Is `NOTIFY=N1.IBMUSER` valid on the JOB statement, or only as `USER=` on the NOTIFY statement? Nick lists it without saying.
-- **NOTIFY statement TYPE values (feature 17).** Nick's item 14 uses `TYPE=TSO`. Confirm the allowed values, so his example isn't wrongly flagged or wrongly accepted.
-- **NOTIFY statement placement and limit (feature 17).** Confirm where NOTIFY statements can go and how many a job can have.
-- **Which duplicate DD is used (feature 20).** Nick says the last. The reference says both are allocated and references go to the first. Ask Nick, or test on a real system, before writing the message.
-- **In-stream PROC before the first JOB (feature 10).** The bundled "PROC + SYMBOLICS" sample defines `MYPROC` before the JOB statement. Confirm whether z/OS accepts this. If not, fix the sample and add a placement rule.
-- **JES3 statement list (feature 9).** Confirm the JES3 statements, their keywords and the placement rules against the z/OS 2.5 JES3 reference.
-- **JES3plus (feature 9).** Phoenix Software's JES3plus keeps JES3 running on z/OS 3.1 and later. JES3 support here follows IBM and stops at 2.5. Decide whether JES3plus shops should be able to choose JES3 at 3.x.
-- **Supported z/OS levels (feature 3).** The proposed list is 2.3, 2.4, 2.5, 3.1 and 3.2, with 3.2 as the default. Decide whether to keep releases that are out of support.
-- **Checking JCL sent to the internal reader (feature 7).** It is left unchecked for now. Checking it as a separate job stream could be added later.
-- **IF nesting limit (feature 13).** Confirm the maximum IF/THEN/ELSE nesting depth (15 is assumed).
-- **INCLUDE rules (feature 23).** Confirm the INCLUDE nesting limit and which statements an INCLUDE group can't contain.
-- **LIKE with SYSOUT and in-stream data (feature 31).** Confirm that z/OS rejects `LIKE` on these DDs rather than ignoring it.
-- **System symbols in JCL (feature 32).** Confirm which system symbols JCL can use at each z/OS level besides `&SYSUID`, and whether that depends on the job class allowing system symbols.
-- **Severities (feature 34).** Confirm, on a real system or in the messages manual, that each code made an error fails the job with a JCL error.
-- **Formatter layout (feature 39).** Columns 12 and 16 are the common convention. Decide whether shops need other layouts, which could become part of the site profile (feature 37).
-- **Package name (feature 38).** Check that `jclcheck` is free on npm, or choose another name.
+**Built from the answers** (20 October 2026, on the `add-keyword-hover` branch)
+- NOTIFY: 1–8 character user IDs, citing the [JCL Reference](https://www.ibm.com/docs/en/zos/3.1.0?topic=jcl-notify); `node.userid` only on the NOTIFY statement's `USER=`; NOTIFY statements anywhere after the JOB statement, at most 8.
+- `JCLD001` says the first DD with the name is used.
+- An in-stream PROC before the JOB statement is `JCLO011`, an error; the "PROC + SYMBOLICS" sample puts it after the JOB statement.
+- Level marks, from IBM's summaries of changes: `ABDISPCC` on EXEC since z/OS 2.5 (APAR OA63081), `EMAIL` on JOBGROUP since 2.4. `REGIONX` (JOB and EXEC) was missing and is now known; it dates from 2.2, so it needs no mark. The 3.2 JCL Reference lists no new JCL.
+- JCL sent to the internal reader is checked as its own job, with its diagnostics on its own lines.
+- `^` and `!` are read as NOT in IF conditions with `JCLC009`; in job group conditions `!` is documented and gets no warning.
+- Job group tables corrected against IBM's pages: JOBGROUP's accounting and programmer's name are positional, it has `TYPE=SCAN`, `HOLD=YES|NO` and `ONERROR=STOP|SUSPEND|FLUSH`; GJOB and JOBSET take only `FLUSHTYP=ALLFLUSH|ANYFLUSH`; SJOB takes nothing; `ACTION`/`OTHERWISE` are `SATISFY|FLUSH|FAIL`; `NAME=` takes a list; `ERROR=` is checked as a condition.
+- Diagnostics underline the whole parameter or value; `WHEN=` over several lines is reported at each character's own place.
+- Dataset flow applies DD overrides without a procedure step name to the PROC's first step, and checks `DCB=*.STEP.DD`.
+- The PROFILE panel has a form, with the JSON as a second view.
+- 102 keywords link to their exact page in the JCL Reference; 27 with no page in its table of contents (for example `EMAIL`, `REGIONX`, `ABDISPCC`, JCLLIB `ORDER`, the NOTIFY statement and SCHEDULE keywords) still link to a search.
+- The validator and the `jclcheck` command are their own dependency-free package in `validator/`, used by the API by relative path; the command expands `*`, `**` and `?` itself.
+
+**Left for later** (20 October 2026): the keyword descriptions are accepted as written and will be adjusted when needed; JES2/JES3 statements, the Library panel's member editors and values whose keyword is on an earlier line aren't explained on hover yet.
+
+**Settled, no change** (19 October 2026): NOTIFY `TYPE` stays `MSG` and `EMAIL` (`nick/14b-notify-email` is final); the JES3 tables are accepted as written; JES3 stops at z/OS 2.5 (no JES3plus); a quote closing in column 71 with a quote in column 16 stays a doubled quote; levels stay 2.3–3.2; the IF nesting limit stays 15; INCLUDE keeps 15 levels and its refused statements; `LIKE` with SYSOUT or in-stream data stays an error; the system symbol list stays always defined; the severity list in `test/severities.test.js` is accepted; no thanks line on the About page; a NEW dataset with no disposition counts as deleted; a profile's `off` removes a code while a suppression keeps it; the formatter keeps columns 12 and 16 and its breaking rules; the SARIF output is checked once by hand (upload a sample to GitHub code scanning or the SARIF validator).
 
 **Final checks**
 - Every fixture from Nick's notes passes `npm test`, and none is still `todo`.
 - The three workbench samples still give the same results they gave before, or the change is explained.
-- The cross-browser behaviour of features 23–29 and of the workbench parts of features 2, 35–37, 39 and 40 is tried by hand in current Firefox, Chrome, Safari and Edge. Everything else is covered by the frontend tests.
+- After merging into `main`, the cross-browser behaviour of features 23–29 and of the workbench parts of features 2, 35–37, 39 and 40 is tried by hand in current Firefox, Chrome, Safari and Edge. Everything else is covered by the frontend tests.
 - Help and the README cover what features 2 and 31–40 added, following feature 30: the `JCLF` and `JCLX` groups, `JCLN002`, `profile`, `datasets`, `POST /api/format`, `GET /api/keywords`, the CLI, `POST /api/usage`, the `VITE_GOATCOUNTER_URL` and `GOATCOUNTER_TOKEN` settings, and the CLI's `JCLCHECK_TELEMETRY` and `DO_NOT_TRACK` settings.
 - After deploy, the GoatCounter dashboard shows page views and events from the production site, and none from previews or localhost.
 - `npx jclcheck` gives the same results as the API on every fixture.
+- `npm publish` in `validator/` has been run, then `npm install` in `backend/` (to record `jclcheck` in its lockfile), and Render deploys the API with `npm install` and `npm run start`.
 - The production site is checked after deploy: the workbench reaches the API, the level picker loads, a draft survives a reload, and a shared link opens correctly in another browser.
-- Nick is sent a short reply listing each of his items and what changed.
+- Nick is asked to test the site again.
 
 **Done when:** Every question above has been answered and its feature updated, and every final check has passed.

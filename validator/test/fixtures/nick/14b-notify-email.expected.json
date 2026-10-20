@@ -1,0 +1,12 @@
+{
+  "source": "Nick's item 14, NOTIFY and EMAIL example (Features.md features 17 and 41). Provisional: feature 17 follows the reference as remembered (TYPE is MSG or EMAIL), so TYPE=TSO gets a warning until feature 41 confirms the allowed values.",
+  "provisional": true,
+  "diagnostics": [
+    {
+      "code": "JCLS009",
+      "severity": "warning",
+      "line": 2,
+      "column": 62
+    }
+  ]
+}

@@ -74,7 +74,7 @@ test('counting direct API use', async (t) => {
         const request = await serve(t, { analytics });
         await request('/api/validate', { body: { source: '' }, headers: { 'User-Agent': 'curl/8.4.0' } });
         await settle();
-        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok']);
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/3.2', 'api/jes/JES2']);
         assert.ok(analytics.hits.every(h => h.userAgent === 'curl/8.4.0' && h.ip === '127.0.0.1' && h.title));
     });
 
@@ -95,7 +95,7 @@ test('counting direct API use', async (t) => {
 
     await t.test('E: a validator crash records api/result/error', async (t) => {
         t.mock.method(console, 'error', () => {});
-        t.mock.method(require('../src/validator'), 'validate', () => {
+        t.mock.method(require('jclcheck'), 'validate', () => {
             throw new Error('boom');
         });
         const analytics = fakeAnalytics();
@@ -122,6 +122,130 @@ test('counting direct API use', async (t) => {
         const res = await request('/api/validate', { body: { source: '//J1 JOB\n' } });
         assert.equal(res.status, 200);
         assert.ok(performance.now() - started < 200, 'responded within 200 ms');
+    });
+});
+
+test('z/OS level in /api/validate', async (t) => {
+    const analytics = fakeAnalytics();
+    const request = await serve(t, { analytics });
+
+    await t.test('Z: with no level the response says 3.2, next to diagnostics, ast and stats', async () => {
+        const res = await request('/api/validate', { body: { source: '//J1 JOB\n//S1 EXEC PGM=IEFBR14\n' } });
+        const result = await res.json();
+        assert.equal(res.status, 200);
+        assert.equal(result.zosLevel, '3.2');
+        assert.ok(result.diagnostics && result.ast && result.stats);
+    });
+
+    await t.test('O: the level asked for is used', async () => {
+        const res = await request('/api/validate', { body: { source: '', zosLevel: '2.3' } });
+        assert.equal((await res.json()).zosLevel, '2.3');
+    });
+
+    for (const zosLevel of ['9.9', 'abc', 3.1, null]) {
+        await t.test(`E: zosLevel ${JSON.stringify(zosLevel)} gets 400 listing the supported levels`, async () => {
+            const res = await request('/api/validate', { body: { source: '//J1 JOB\n', zosLevel } });
+            const body = await res.json();
+            assert.equal(res.status, 400);
+            assert.match(body.message, /2\.3, 2\.4, 2\.5, 3\.1, 3\.2/);
+            assert.equal(body.diagnostics, undefined);
+        });
+    }
+
+    await t.test('O: a direct request at 2.5 records api/level/2.5', async () => {
+        analytics.hits.length = 0;
+        await request('/api/validate', { body: { source: '', zosLevel: '2.5' } });
+        await settle();
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/ok', 'api/level/2.5', 'api/jes/JES2']);
+    });
+
+    await t.test('E: a rejected level records bad-request and no level', async () => {
+        analytics.hits.length = 0;
+        await request('/api/validate', { body: { source: '', zosLevel: '9.9' } });
+        await settle();
+        assert.deepEqual(analytics.hits.map(h => h.path), ['api/validate/direct', 'api/result/bad-request']);
+    });
+});
+
+test('JES in /api/validate', async (t) => {
+    const analytics = fakeAnalytics();
+    const request = await serve(t, { analytics });
+
+    await t.test('Z: with no jes the response says JES2', async () => {
+        const res = await request('/api/validate', { body: { source: '' } });
+        assert.equal((await res.json()).jes, 'JES2');
+    });
+
+    await t.test('O: JES3 at z/OS 2.5 is used and counted', async () => {
+        analytics.hits.length = 0;
+        const res = await request('/api/validate', { body: { source: '', jes: 'JES3', zosLevel: '2.5' } });
+        assert.equal((await res.json()).jes, 'JES3');
+        await settle();
+        assert.ok(analytics.hits.some(h => h.path === 'api/jes/JES3'));
+    });
+
+    for (const body of [{ jes: 'JES3', zosLevel: '3.1' }, { jes: 'JES3' }]) {
+        await t.test(`B: JES3 at ${body.zosLevel || 'the default level'} gets 400 saying it was removed`, async () => {
+            const res = await request('/api/validate', { body: { source: '', ...body } });
+            assert.equal(res.status, 400);
+            assert.match((await res.json()).message, /JES3 was removed in z\/OS 3\.1/);
+        });
+    }
+
+    await t.test('E: an unknown JES gets 400 listing JES2 and JES3', async () => {
+        const res = await request('/api/validate', { body: { source: '', jes: 'JES4' } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /JES2, JES3/);
+    });
+});
+
+test('library in /api/validate', async (t) => {
+    const request = await serve(t, { analytics: fakeAnalytics() });
+    const entries = n => Array.from({ length: n }, (_, i) => ({ dsn: 'MY.PROCS', member: `P${i}`, source: '//S EXEC PGM=X\n' }));
+
+    await t.test('B: 50 members are accepted and 51 get 400', async () => {
+        assert.equal((await request('/api/validate', { body: { source: '', library: entries(50) } })).status, 200);
+        const res = await request('/api/validate', { body: { source: '', library: entries(51) } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /at most 50/);
+    });
+
+    await t.test('E: an entry with an invalid member name gets 400 naming it', async () => {
+        const res = await request('/api/validate', { body: { source: '', library: [{ member: '1BAD', source: '' }] } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /library entry 1 \(1BAD\)/);
+    });
+
+    await t.test('E: an entry with an invalid library name gets 400 naming it', async () => {
+        const res = await request('/api/validate', { body: { source: '', library: [{ dsn: 'BAD..NAME', member: 'OK', source: '' }] } });
+        assert.equal(res.status, 400);
+        assert.match((await res.json()).message, /library entry 1 \(OK\) has an invalid library name/);
+    });
+
+    await t.test('O: a member diagnostic comes back with its member field', async () => {
+        const library = [{ member: 'MYPROC2', source: '//MYPROC2 PROC\n//PS EXEC PGM=X,REGON=4M\n' }];
+        const res = await request('/api/validate', { body: { source: '//J JOB\n//S EXEC MYPROC2\n', library } });
+        const [d] = (await res.json()).diagnostics;
+        assert.deepEqual([d.code, d.line, d.member], ['JCLK001', 2, 'MYPROC2']);
+    });
+});
+
+test('GET /api/levels', async (t) => {
+    const request = await serve(t, { analytics: fakeAnalytics() });
+
+    await t.test('O: lists the levels, where JES3 is offered, and the defaults', async () => {
+        const body = await (await request('/api/levels')).json();
+        assert.deepEqual(body, {
+            levels: [
+                { level: '2.3', jes3: true },
+                { level: '2.4', jes3: true },
+                { level: '2.5', jes3: true },
+                { level: '3.1', jes3: false },
+                { level: '3.2', jes3: false }
+            ],
+            defaultLevel: '3.2',
+            defaultJes: 'JES2'
+        });
     });
 });
 

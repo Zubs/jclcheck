@@ -3,10 +3,10 @@ import { mount } from '@vue/test-utils';
 import PfBar from '../../src/components/PfBar.vue';
 
 const KEYS = [
-    { key: 'F1', label: 'HELP', event: 'help' },
-    { key: 'F5', label: 'VALIDATE', event: 'validate', primary: true },
-    { key: 'F9', label: 'SAMPLE', event: 'sample' },
-    { key: 'F12', label: 'CLEAR', event: 'clear' }
+    { key: 'F1', label: 'HELP', event: 'help', shortcut: 'Alt+H' },
+    { key: 'F5', label: 'VALIDATE', event: 'validate', primary: true, shortcut: 'Ctrl/⌘+Enter' },
+    { key: 'F9', label: 'SAMPLE', event: 'sample', shortcut: 'Alt+S' },
+    { key: 'F12', label: 'CLEAR', event: 'clear', shortcut: 'Alt+C' }
 ];
 
 describe('PfBar', () => {
@@ -33,5 +33,10 @@ describe('PfBar', () => {
         for (const event of ['help', 'validate', 'sample', 'clear']) {
             expect(w.emitted(event)).toHaveLength(1);
         }
+    });
+
+    test('each button\'s tooltip shows its F key and fallback shortcut', () => {
+        const w = mount(PfBar, { props: { keys: KEYS } });
+        expect(w.findAll('.pfkey').map(b => b.attributes('title'))).toEqual(['F1 · Alt+H', 'F5 · Ctrl/⌘+Enter', 'F9 · Alt+S', 'F12 · Alt+C']);
     });
 });

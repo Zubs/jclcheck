@@ -1,7 +1,7 @@
 export const LANDING_FAQ = [
     {
         q: 'Is there a free JCL checker online?',
-        a: 'Yes — JCLcheck is free to use. Paste your JCL into the workbench and it runs through the same lexer, parser and rule-engine pipeline described on this page, right in your browser.'
+        a: 'Yes — JCLcheck is free to use. Paste your JCL into the workbench and it is sent to the JCLcheck API, which runs it through the lexer, parser and rule engine described on this page and sends back every problem it finds. Nothing is stored on the server.'
     },
     {
         q: 'How do I validate JCL without a mainframe?',
@@ -9,7 +9,7 @@ export const LANDING_FAQ = [
     },
     {
         q: 'What does an online JCL check actually validate?',
-        a: 'Statement order (JOB/EXEC/DD), duplicate DD names, missing or conflicting data sources, unrecognized keywords, DISP/SPACE/DCB/REGION/TIME/DSN syntax, and in-stream PROC resolution with symbolic parameters.'
+        a: 'Columns and continuations as z/OS reads them, statement order, several jobs per stream, JCLLIB and NOTIFY placement, IF/THEN/ELSE conditions, DD data sources (including PATH and in-stream data with DLM=), keywords and their values against your chosen z/OS level, JES2 and JES3 control statements, job groups, and PROCs and INCLUDE members, including catalogued ones you paste into the Library panel.'
     },
     {
         q: 'Is this suitable for beginners learning JCL?',
@@ -17,6 +17,6 @@ export const LANDING_FAQ = [
     },
     {
         q: 'Does JCLcheck track me or keep my JCL?',
-        a: 'Your JCL is sent to the JCLcheck API to be checked, and is never stored or counted. The site counts anonymous usage with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. If your browser sends Do Not Track or Global Privacy Control, nothing is counted at all.'
+        a: 'Your JCL is sent to the JCLcheck API to be checked, and is never stored or counted there. Your draft stays in your own browser, and a shared link carries the JCL inside the link itself. The site counts anonymous usage with GoatCounter, with no cookies and no personal data: pages visited, where visits come from, browser, device size and country, which features are used, and which error codes appear. If your browser sends Do Not Track or Global Privacy Control, nothing is counted at all.'
     }
 ];

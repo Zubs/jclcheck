@@ -9,7 +9,12 @@ import router from '../src/router.js';
 import { initAnalytics } from '../src/analytics.js';
 import { validateJcl } from '../src/api.js';
 
-vi.mock('../src/api.js', () => ({ validateJcl: vi.fn() }));
+vi.mock('../src/api.js', () => ({
+    validateJcl: vi.fn(),
+    getLevels: vi.fn(async () => ({ levels: [{ level: '3.1', jes3: false }, { level: '3.2', jes3: false }], defaultLevel: '3.2', defaultJes: 'JES2' })),
+    getKeywords: vi.fn(async () => ({ zosLevel: '3.1', statements: { DD: { DSN: { text: 'The dataset name.', since: null } } } })),
+    formatJcl: vi.fn()
+}));
 vi.stubGlobal('scrollTo', vi.fn());
 
 const MARKER = 'ZQXMARK9';
@@ -29,7 +34,7 @@ function resultFor(source) {
 test('no page view or event contains anything from the JCL or the address hash', async () => {
     vi.useFakeTimers();
     validateJcl.mockImplementation(async source => resultFor(source));
-    const storageBefore = Object.keys(localStorage).length;
+    const storageBefore = new Set(Object.keys(localStorage));
 
     const fakeDocument = document.implementation.createHTMLDocument('fake');
     const win = {};
@@ -57,6 +62,16 @@ test('no page view or event contains anything from the JCL or the address hash',
     Object.defineProperty(paste, 'clipboardData', { value: { getData: () => `//${MARKER} DD *\n${MARKER}` } });
     textarea.element.dispatchEvent(paste);
 
+    // A library member holding the marker goes to the API, never to analytics.
+    await wrapper.find('.header-library').trigger('click');
+    await wrapper.find('.library-add').trigger('click');
+    await wrapper.find('.library-dsn').setValue(`${MARKER}.PROCS`);
+    await wrapper.find('.library-member').setValue('MEMBER1');
+    await wrapper.findAll('textarea')[1].setValue(`//${MARKER} PROC\n//S EXEC PGM=${MARKER}`);
+    await vi.advanceTimersByTimeAsync(450);
+    await flushPromises();
+    expect(JSON.stringify(validateJcl.mock.calls.at(-1)[1])).toContain(MARKER);
+
     for (const entry of wrapper.findAll('.diag')) {
         await entry.trigger('click');
     }
@@ -79,8 +94,12 @@ test('no page view or event contains anything from the JCL or the address hash',
         'diag/click/JCLS006',
         'editor/paste/1-10',
         'check/button',
+        'library/add',
         'visit/end/errors'
     ]));
     expect(document.cookie).toBe('');
-    expect(Object.keys(localStorage).length).toBe(storageBefore);
+    // The draft (feature 28) and the level choice (feature 27) stay in this
+    // browser by design; nothing else may be stored.
+    const added = Object.keys(localStorage).filter(k => !storageBefore.has(k));
+    expect(added.every(k => ['jclcheck.draft', 'jclcheck.picker'].includes(k))).toBe(true);
 });

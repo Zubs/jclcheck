@@ -1,22 +1,22 @@
 {
   "name": "jcl-checker-backend",
   "version": "1.0.0",
-  "description": "SaaS-grade JCL validation engine (lexer, parser, AST, rules) with an HTTP API.",
+  "description": "The JCLcheck HTTP API (Express), around the jclcheck validator package.",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
     "dev": "node --watch src/index.js",
     "test": "node --test \"test/**/*.test.js\"",
     "lint": "eslint .",
-    "lint:fix": "eslint . --fix",
-    "inspect": "node test/inspect.js"
+    "lint:fix": "eslint . --fix"
   },
   "engines": {
     "node": ">=22"
   },
   "dependencies": {
     "cors": "^2.8.5",
-    "express": "^4.19.2"
+    "express": "^4.19.2",
+    "jclcheck": "^1.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.5",

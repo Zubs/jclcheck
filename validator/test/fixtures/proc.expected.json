@@ -1,0 +1,24 @@
+{
+  "source": "Bundled in-stream PROC with symbolic parameters",
+  "valid": false,
+  "diagnostics": [
+    {
+      "code": "JCLO011",
+      "severity": "error",
+      "line": 1,
+      "column": 1
+    },
+    {
+      "code": "JCLR003",
+      "severity": "warning",
+      "line": 10,
+      "column": 1
+    },
+    {
+      "code": "JCLK001",
+      "severity": "warning",
+      "line": 11,
+      "column": 29
+    }
+  ]
+}

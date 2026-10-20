@@ -1,0 +1,11 @@
+{
+  "source": "Nick's item 16 (Features.md feature 12). JCLK004 points at the first positional over the limit, column 15.",
+  "diagnostics": [
+    {
+      "code": "JCLK004",
+      "severity": "error",
+      "line": 1,
+      "column": 15
+    }
+  ]
+}

@@ -72,6 +72,19 @@
     --field-yellow: #f0c64d;
     --field-pink: #e37fd8;
 
+    /* Syntax colours in the editor (each at least 4.5:1 on --surface-inset) */
+    --syn-name: #4fd8d0;
+    --syn-op: #b8ffce;
+    --syn-kw: #6fa8e8;
+    --syn-val: #7fe89a;
+    --syn-str: #f0c64d;
+    --syn-cmt: #86a68e;
+    --syn-data: #e37fd8;
+    --syn-jes: #e8a87c;
+    --syn-cont: #f0c64d;
+    --syn-seq: #6f8f77;
+    --syn-ruler: rgba(127, 232, 154, 0.12);
+
     --error: var(--field-red);
     --warning: var(--field-yellow);
     --info: var(--field-blue);

@@ -1,0 +1,11 @@
+{
+  "source": "Nick's item 12 (Features.md features 14 and 17), wrapped in a JOB statement. JCLS009 points at the TYPE value (column 33).",
+  "diagnostics": [
+    {
+      "code": "JCLS009",
+      "severity": "warning",
+      "line": 2,
+      "column": 33
+    }
+  ]
+}

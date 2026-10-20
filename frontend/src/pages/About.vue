@@ -31,8 +31,8 @@
         </p>
         <p>
           JCLcheck is my attempt to close that gap: a real lexer, parser and
-          rule engine — modeled on the IBM JCL Reference — that runs entirely
-          in a browser and a small Node API, and explains every mistake the
+          rule engine — modeled on the IBM JCL Reference — that runs on a small
+          Node API behind a browser workbench, and explains every mistake the
           way a patient senior developer would, not the way a mainframe does.
         </p>
       </div>

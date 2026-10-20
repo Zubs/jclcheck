@@ -92,12 +92,125 @@ describe('Editor', () => {
         expect(w.emitted('paste')).toEqual([[3], [1], [2]]);
     });
 
-    test.fails('shows the cursor column (feature 24)', async () => {
+    // Was an expected failure until feature 24. Offset 24 is the end of
+    // "//S1 EXEC PGM=X" on line 2, which is column 16.
+    test('shows the cursor column (feature 24)', async () => {
         const w = mountEditor({}, { attachTo: document.body });
         const textarea = w.find('textarea');
-        textarea.element.setSelectionRange(15, 15);
+        textarea.element.setSelectionRange(24, 24);
         await textarea.trigger('keyup');
         await textarea.trigger('click');
-        expect(w.find('.editor-topline__meta').text()).toContain('COL 16');
+        expect(w.find('.editor-topline__meta').text()).toContain('LN 2 · COL 16');
+    });
+});
+
+describe('Editor cursor position', () => {
+    const meta = w => w.find('.editor-cursor').text().replace(/\s+/g, ' ');
+
+    async function placeCursor(w, start, end = start, event = 'keyup') {
+        const textarea = w.find('textarea');
+        textarea.element.setSelectionRange(start, end);
+        await textarea.trigger(event);
+    }
+
+    test('Z: an empty editor shows LN 1 · COL 1 · 1 LINES', () => {
+        const w = mountEditor({ modelValue: '' });
+        expect(meta(w)).toBe('LN 1 · COL 1 · 1 LINES');
+    });
+
+    test('O: just after // on line 1 is column 3', async () => {
+        const w = mountEditor({}, { attachTo: document.body });
+        await placeCursor(w, 2, 2, 'click');
+        expect(meta(w)).toContain('LN 1 · COL 3');
+    });
+
+    test('M: key moves, clicks and selection all update the position', async () => {
+        const w = mountEditor({}, { attachTo: document.body });
+        await placeCursor(w, 0, 0, 'keyup');
+        expect(meta(w)).toContain('LN 1 · COL 1');
+        await placeCursor(w, 8, 8, 'click');
+        expect(meta(w)).toContain('LN 1 · COL 9');
+        await placeCursor(w, 25, 25, 'select');
+        expect(meta(w)).toContain('LN 3 · COL 1');
+    });
+
+    test('B: the end of an 80-character line is column 81, before its last character 80', async () => {
+        const w = mountEditor({ modelValue: 'X'.repeat(80) }, { attachTo: document.body });
+        await placeCursor(w, 80);
+        expect(meta(w)).toContain('COL 81');
+        await placeCursor(w, 79);
+        expect(meta(w)).toContain('COL 80');
+    });
+
+    test('B: column 72 is highlighted and column 71 is not', async () => {
+        const w = mountEditor({ modelValue: 'X'.repeat(80) }, { attachTo: document.body });
+        await placeCursor(w, 70);
+        expect(w.find('.editor-cursor__col').classes()).not.toContain('is-past-71');
+        await placeCursor(w, 71);
+        expect(w.find('.editor-cursor__col').classes()).toContain('is-past-71');
+    });
+
+    test('I: selecting 24 characters shows SEL 24, and clearing it hides it', async () => {
+        const w = mountEditor({ modelValue: 'X'.repeat(40) }, { attachTo: document.body });
+        await placeCursor(w, 2, 26, 'select');
+        expect(meta(w)).toContain('SEL 24');
+        await placeCursor(w, 5, 5, 'click');
+        expect(meta(w)).not.toContain('SEL');
+    });
+
+    test('E: Windows line endings still give the right line and column', async () => {
+        const w = mountEditor({ modelValue: '//A JOB\r\n//B EXEC PGM=X' }, { attachTo: document.body });
+        const textarea = w.find('textarea').element;
+        textarea.setSelectionRange(textarea.value.length, textarea.value.length);
+        await w.find('textarea').trigger('keyup');
+        expect(meta(w)).toContain('LN 2 · COL 15');
+    });
+
+    test('I: the position is read out only when asked for', async () => {
+        const w = mountEditor({}, { attachTo: document.body });
+        await placeCursor(w, 2, 2, 'click');
+        const live = w.find('[aria-live="polite"]');
+        expect(live.text()).toBe('');
+        await w.find('.editor-cursor').trigger('click');
+        expect(live.text()).toBe('Line 1, column 3');
+    });
+});
+
+describe('Editor highlighting', () => {
+    test('O: the highlight layer shows the coloured text, even without diagnostics', () => {
+        const w = mountEditor({ modelValue: '//STEP1 EXEC PGM=IEFBR14' });
+        const layer = w.find('.editor-highlight');
+        expect(layer.find('.t-name').text()).toBe('STEP1');
+        expect(layer.find('.t-op').text()).toBe('EXEC');
+        expect(layer.find('.t-kw').text()).toBe('PGM');
+        expect(layer.find('.t-val').text()).toBe('IEFBR14');
+    });
+
+    test('I: a diagnostic underlines its text in the layer', () => {
+        const w = mountEditor({ modelValue: '//A JOB\n//B EXEC PGM=X', diagnostics: [{ line: 2, column: 5, length: 4, severity: 'warning', code: 'JCLK001', message: 'm' }] });
+        expect(w.find('.editor-highlight .u-warning').text()).toBe('EXEC');
+    });
+
+    test('I: scrolling the textarea scrolls the layer the same way', async () => {
+        const w = mountEditor({}, { attachTo: document.body });
+        const textarea = w.find('textarea');
+        textarea.element.scrollTop = 40;
+        textarea.element.scrollLeft = 25;
+        await textarea.trigger('scroll');
+        const layer = w.find('.editor-highlight').element;
+        expect([layer.scrollTop, layer.scrollLeft]).toEqual([40, 25]);
+    });
+
+    test('I: resting the pointer on an underlined column shows its message', async () => {
+        const diagnostics = [{ line: 2, column: 5, length: 4, severity: 'error', code: 'JCLK001', message: 'Unknown keyword.' }];
+        const w = mountEditor({ modelValue: '//A JOB\n//B EXEC PGM=X', diagnostics }, { attachTo: document.body });
+        const textarea = w.find('textarea');
+        // jsdom has no layout: the box is at 0,0 and a character is 7.8px wide.
+        const x = 16 + 7.8 * 5.5; // column 6
+        const y = 12 + 21 * 1.5; // line 2
+        await textarea.trigger('mousemove', { clientX: x, clientY: y });
+        expect(textarea.attributes('title')).toBe('JCLK001: Unknown keyword.');
+        await textarea.trigger('mousemove', { clientX: 16 + 7.8 * 12.5, clientY: y });
+        expect(textarea.attributes('title') || '').toBe('');
     });
 });
