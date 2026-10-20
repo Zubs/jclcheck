@@ -1534,25 +1534,22 @@ after:
 **How it works**
 - Each item says what is unsure, which feature it affects and what to do. Remove an item once it is settled.
 
-**Decided, still to build** (answers from 19 October 2026)
-- **NOTIFY= user ID length (feature 16).** 1–8 characters, as the [JCL Reference](https://www.ibm.com/docs/en/zos/3.1.0?topic=jcl-notify) says. Already the rule; cite the page in `keywords.js`.
-- **NOTIFY=node.userid (feature 16).** Valid only as `USER=` on the NOTIFY statement. Remove the `node.userid` form from JOB `NOTIFY=` and update `nick/07c-notify-node` to expect the warning.
-- **NOTIFY statement placement (feature 17).** Anywhere after the JOB statement, at most 8 per job. Drop the "before the first EXEC" rule (`JCLO009`).
-- **Which duplicate DD is used (feature 20).** The first. Say so in `JCLD001`'s message.
-- **In-stream PROC before the first JOB (feature 10).** Not allowed. Move `MYPROC` after the JOB statement in the "PROC + SYMBOLICS" sample and report a PROC before the first JOB as an error.
-- **Level marks (feature 3).** Fill in `since`/`until` for keywords from each release's "Summary of changes" in the MVS JCL Reference, citing the source in a comment.
-- **Checking JCL sent to the internal reader (feature 7).** Check the in-stream JCL as its own job stream, with its diagnostics on the right lines.
-- **NOT sign in IF conditions (feature 13).** Accept `^` and `!` as NOT, with a warning that z/OS may not read them as `¬` in every code page.
-- **Job group value rules (feature 22).** Keep the keyword tables; add value rules for `ACTION`, `OTHERWISE`, `FLUSHTYP`, `ONERROR` and the like.
-- **Underline lengths (feature 33).** Underline the whole parameter or value: give parameters and values a length and use it in the diagnostics.
-- **WHEN conditions over several lines (feature 33).** Map each character of a continued `WHEN=` condition to its own line and column, as IF conditions are.
-- **Dataset flow (feature 36).** Apply DD overrides without a procedure step name (to the PROC's first step, as z/OS does), and check `DCB=*.STEP.DD` referbacks with `JCLF005`.
-- **Site profile form (feature 37).** A form for name patterns, allowed values, prefixes, extra keywords and severities, keeping the JSON as an advanced view.
-- **Exact reference links (feature 40).** Store the real IBM JCL Reference page for each keyword instead of a search link.
-- **Validator package (feature 38).** Move the validator into its own dependency-free package in the repository, used by the API and the CLI. Don't publish it yet; the npm name is decided when publishing.
-- **Globs (feature 38).** Replace `fs.globSync` with a small matcher for `*`, `**` and `?`, so Node 22 prints no warning.
+**Built from the answers** (20 October 2026, on the `add-keyword-hover` branch)
+- NOTIFY: 1–8 character user IDs, citing the [JCL Reference](https://www.ibm.com/docs/en/zos/3.1.0?topic=jcl-notify); `node.userid` only on the NOTIFY statement's `USER=`; NOTIFY statements anywhere after the JOB statement, at most 8.
+- `JCLD001` says the first DD with the name is used.
+- An in-stream PROC before the JOB statement is `JCLO011`, an error; the "PROC + SYMBOLICS" sample puts it after the JOB statement.
+- Level marks, from IBM's summaries of changes: `ABDISPCC` on EXEC since z/OS 2.5 (APAR OA63081), `EMAIL` on JOBGROUP since 2.4. `REGIONX` (JOB and EXEC) was missing and is now known; it dates from 2.2, so it needs no mark. The 3.2 JCL Reference lists no new JCL.
+- JCL sent to the internal reader is checked as its own job, with its diagnostics on its own lines.
+- `^` and `!` are read as NOT in IF conditions with `JCLC009`; in job group conditions `!` is documented and gets no warning.
+- Job group tables corrected against IBM's pages: JOBGROUP's accounting and programmer's name are positional, it has `TYPE=SCAN`, `HOLD=YES|NO` and `ONERROR=STOP|SUSPEND|FLUSH`; GJOB and JOBSET take only `FLUSHTYP=ALLFLUSH|ANYFLUSH`; SJOB takes nothing; `ACTION`/`OTHERWISE` are `SATISFY|FLUSH|FAIL`; `NAME=` takes a list; `ERROR=` is checked as a condition.
+- Diagnostics underline the whole parameter or value; `WHEN=` over several lines is reported at each character's own place.
+- Dataset flow applies DD overrides without a procedure step name to the PROC's first step, and checks `DCB=*.STEP.DD`.
+- The PROFILE panel has a form, with the JSON as a second view.
+- 102 keywords link to their exact page in the JCL Reference; 27 with no page in its table of contents (for example `EMAIL`, `REGIONX`, `ABDISPCC`, JCLLIB `ORDER`, the NOTIFY statement and SCHEDULE keywords) still link to a search.
+- The validator and the `jclcheck` command are their own dependency-free package in `validator/`, used by the API by relative path; the command expands `*`, `**` and `?` itself.
 
 **Still open**
+- **ABDISPCC description (feature 40).** Its description was written from IBM's summary of changes, not its own page; check it when reading the descriptions through.
 - **Keyword descriptions (feature 40).** The descriptions in `backend/src/descriptions.js` were written from memory of the JCL Reference and should be read through, especially the rarer DD keywords (`ACCODE`, `QNAME`, `MODIFY`, `RLS`) and the job group keywords. JES2/JES3 statements, the Library panel's member editors and values whose keyword is on an earlier line aren't explained; these were left for later.
 
 **Settled, no change** (19 October 2026): NOTIFY `TYPE` stays `MSG` and `EMAIL` (`nick/14b-notify-email` is final); the JES3 tables are accepted as written; JES3 stops at z/OS 2.5 (no JES3plus); a quote closing in column 71 with a quote in column 16 stays a doubled quote; levels stay 2.3–3.2; the IF nesting limit stays 15; INCLUDE keeps 15 levels and its refused statements; `LIKE` with SYSOUT or in-stream data stays an error; the system symbol list stays always defined; the severity list in `test/severities.test.js` is accepted; no thanks line on the About page; a NEW dataset with no disposition counts as deleted; a profile's `off` removes a code while a suppression keeps it; the formatter keeps columns 12 and 16 and its breaking rules; the SARIF output is checked once by hand (upload a sample to GitHub code scanning or the SARIF validator).
@@ -1564,6 +1561,7 @@ after:
 - Help and the README cover what features 2 and 31–40 added, following feature 30: the `JCLF` and `JCLX` groups, `JCLN002`, `profile`, `datasets`, `POST /api/format`, `GET /api/keywords`, the CLI, `POST /api/usage`, the `VITE_GOATCOUNTER_URL` and `GOATCOUNTER_TOKEN` settings, and the CLI's `JCLCHECK_TELEMETRY` and `DO_NOT_TRACK` settings.
 - After deploy, the GoatCounter dashboard shows page views and events from the production site, and none from previews or localhost.
 - `npx jclcheck` gives the same results as the API on every fixture.
+- Render still deploys the API now that it requires `../validator`: the service must check out the whole repository, not only `backend/`.
 - The production site is checked after deploy: the workbench reaches the API, the level picker loads, a draft survives a reload, and a shared link opens correctly in another browser.
 - Nick is sent a short reply listing each of his items and what changed.
 

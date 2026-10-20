@@ -90,7 +90,7 @@ A quoted DSN SHALL skip the qualifier checks and get one `JCLS014` info note say
 - **THEN** only a `JCLS014` info note is reported
 
 ### Requirement: Duplicate DD names are a warning
-A DD name repeated within one step SHALL get one `JCLD001` warning for each repeat, compared without regard to case, whose message explains that both DDs are allocated but only one is reachable by that name. A job whose only problem is a duplicate DD SHALL count as valid. The same name in different steps SHALL NOT be reported.
+A DD name repeated within one step SHALL get one `JCLD001` warning for each repeat, compared without regard to case, whose message explains that both DDs are allocated but the program reaches only the first by that name. A job whose only problem is a duplicate DD SHALL count as valid. The same name in different steps SHALL NOT be reported.
 
 #### Scenario: No DDs
 - **WHEN** a step has no DD statements
@@ -98,7 +98,7 @@ A DD name repeated within one step SHALL get one `JCLD001` warning for each repe
 
 #### Scenario: Nick's item 18
 - **WHEN** Nick's item 18 example is checked
-- **THEN** one `JCLD001` warning is reported on line 4, and the result is valid
+- **THEN** one `JCLD001` warning is reported on line 4, saying the first DD is used, and the result is valid
 
 #### Scenario: Three with the same name
 - **WHEN** a step has three DDs named SYSUT2

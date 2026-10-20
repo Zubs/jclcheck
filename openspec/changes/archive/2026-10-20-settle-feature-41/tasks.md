@@ -21,7 +21,7 @@
 
 ## 4. Checks and docs
 
-- [ ] 4.1 Update README, Spec.md and feature 41; run lint, tests and the build in all packages; verify all pass
+- [x] 4.1 Update README, Spec.md and feature 41; run lint, tests and the build in all packages; verify all pass
 
 ## Workflow follow-up
 
