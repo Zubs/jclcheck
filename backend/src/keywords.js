@@ -94,7 +94,8 @@ const JOB_KEYWORDS = table([
     'JOBRC',
     'RD',
     'SECLABEL',
-    'EMAIL'
+    'EMAIL',
+    'REGIONX'
 ], {
     // z/OS 2.3 MVS JCL Reference, "Summary of changes": EMAIL on the JOB statement.
     EMAIL: { since: '2.3', value: EMAIL_ADDRESS },
@@ -130,10 +131,15 @@ const EXEC_KEYWORDS = table([
     'RLS',
     'SYSAFF',
     'RESTART',
-    'RUNRC'
+    'RUNRC',
+    'REGIONX',
+    'ABDISPCC'
 ], {
     ADDRSPC: { value: ADDRSPC_VALUES },
-    RD: { value: RD_VALUES }
+    RD: { value: RD_VALUES },
+    // APAR OA63081 added ABDISPCC for HBB77C0 (z/OS 2.5) and later; the z/OS
+    // 3.1 MVS JCL Reference documents it (October 2023 "Summary of changes").
+    ABDISPCC: { since: '2.5' }
 });
 
 const DD_KEYWORDS = table([
@@ -243,7 +249,9 @@ const DEPENDENCY_KEYWORDS = table(['NAME', 'WHEN', 'ACTION', 'OTHERWISE'], {
 const FLUSHTYP = table(['FLUSHTYP'], { FLUSHTYP: { value: oneOfValues('ALLFLUSH', 'ANYFLUSH') } });
 const GROUP_KEYWORDS = {
     JOBGROUP: table(['OWNER', 'GROUP', 'PASSWORD', 'SECLABEL', 'TYPE', 'HOLD', 'ERROR', 'ONERROR',
-        'SYSAFF', 'SYSTEM', 'SCHENV'], {
+        'SYSAFF', 'SYSTEM', 'SCHENV', 'EMAIL'], {
+        // z/OS 2.4 MVS JCL Reference (SA23-1385-40), December 2020 "Summary of changes".
+        EMAIL: { since: '2.4', value: EMAIL_ADDRESS },
         TYPE: { value: oneOfValues('SCAN') },
         HOLD: { value: oneOfValues('YES', 'NO') },
         ONERROR: { value: oneOfValues('STOP', 'SUSPEND', 'FLUSH') }

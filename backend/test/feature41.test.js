@@ -154,3 +154,23 @@ test('JCL sent to the internal reader is checked as its own job', async (t) => {
         assert.doesNotThrow(() => validate(nest(8)));
     });
 });
+
+test('level marks from the JCL Reference', async (t) => {
+    const codes = (source, zosLevel) => validate(source, { zosLevel }).diagnostics.map(d => d.code);
+
+    await t.test('ABDISPCC on EXEC exists from z/OS 2.5', () => {
+        const jcl = '//J JOB\n//S EXEC PGM=X,ABDISPCC=4\n';
+        assert.deepEqual(codes(jcl, '2.4'), ['JCLK005']);
+        assert.deepEqual(codes(jcl, '2.5'), []);
+    });
+
+    await t.test('EMAIL on JOBGROUP exists from z/OS 2.4', () => {
+        const jcl = "//G JOBGROUP EMAIL='a@b.com'\n//A GJOB\n//G ENDGROUP\n";
+        assert.deepEqual(codes(jcl, '2.3'), ['JCLK005']);
+        assert.deepEqual(codes(jcl, '2.4'), []);
+    });
+
+    await t.test('REGIONX is a JOB and EXEC keyword at every supported level', () => {
+        assert.deepEqual(codes('//J JOB REGIONX=(0M,2G)\n//S EXEC PGM=X,REGIONX=(0M,1G)\n', '2.3'), []);
+    });
+});

@@ -8,7 +8,7 @@
 - [x] 1.4 Whole-parameter lengths on diagnostics; WHEN positions over several lines; verify tests
 - [x] 1.5 Dataset flow: unqualified overrides and DCB referbacks; verify tests
 - [x] 1.6 Check internal reader JCL as its own job stream; verify tests
-- [ ] 1.7 Level marks from the JCL Reference; verify tests
+- [x] 1.7 Level marks from the JCL Reference; verify tests
 
 ## 2. Workbench and links
 

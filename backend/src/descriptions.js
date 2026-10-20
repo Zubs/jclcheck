@@ -115,7 +115,8 @@ const KEYWORDS = {
         JOBRC: { text: 'Which return code becomes the job\'s return code.' },
         RD: { text: 'Whether the job can be restarted automatically, and use checkpoints.', values: RD_VALUES },
         SECLABEL: { text: 'The security label the job runs with.' },
-        EMAIL: { text: 'The email address told when the job ends.' }
+        EMAIL: { text: 'The email address told when the job ends.' },
+        REGIONX: { text: 'The most memory each step may use, given separately below and above the 16 MB line.' }
     },
     EXEC: {
         PGM: { text: 'The program this step runs.' },
@@ -132,7 +133,9 @@ const KEYWORDS = {
         RLS: { text: 'How VSAM record-level sharing reads records in this step.' },
         SYSAFF: { text: 'The JES2 systems this step may run on.' },
         RESTART: { text: 'The step to restart from.' },
-        RUNRC: { text: 'Whether this step runs after an earlier step\'s return code.' }
+        RUNRC: { text: 'Whether this step runs after an earlier step\'s return code.' },
+        REGIONX: { text: 'The most memory this step may use, given separately below and above the 16 MB line.' },
+        ABDISPCC: { text: 'Completion codes that make this step\'s datasets take their abnormal disposition (the third part of DISP).' }
     },
     DD: {
         DSN: { text: 'The name of the dataset this DD uses.' },
@@ -264,7 +267,8 @@ const KEYWORDS = {
         },
         SYSAFF: { text: 'The JES2 systems the group\'s jobs may run on.' },
         SYSTEM: { text: 'The systems the group\'s jobs may run on.' },
-        SCHENV: { text: 'The scheduling environment the group\'s jobs need.' }
+        SCHENV: { text: 'The scheduling environment the group\'s jobs need.' },
+        EMAIL: { text: 'The email address told about the job group.' }
     },
     GJOB: {
         FLUSHTYP: { text: 'When this job is flushed because of the jobs it depends on.', values: FLUSHTYP_VALUES }
