@@ -149,6 +149,11 @@ const CATALOG = {
         message: () => `A NOTIFY statement must be in a job, after its JOB statement, and not inside a procedure.`,
         suggestion: () => `Move the NOTIFY statement after the JOB statement it belongs to.`
     },
+    JCLO011: {
+        severity: 'error',
+        message: (d) => `In-stream procedure '${d.name}' comes before the JOB statement.`,
+        suggestion: () => `Move the PROC ... PEND after the JOB statement and before the step that calls it.`
+    },
     JCLO010: {
         severity: 'error',
         message: (d) => `A job can have at most ${d.max} NOTIFY statements.`,

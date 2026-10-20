@@ -72,7 +72,9 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
     let group = null; // the open JOBGROUP
     let set = null; // the open JOBSET in it
     let groupJob = null; // the last GJOB/SJOB, which AFTER/BEFORE/CONCURRENT belong to
-    const preJobProcs = []; // PROCs written before the first JOB belong to it
+    // PROCs written before the first JOB: z/OS rejects them (JCLO011), but they
+    // still belong to that job so its calls resolve.
+    const preJobProcs = [];
     let procStack = null; // currently-open in-stream PROC
     let container = { steps: [] }; // root container before JOB or when JOB missing
     let currentStep = null;
@@ -488,6 +490,13 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
             {},
             { line: procStack.line, column: 1 }
         ));
+    }
+
+    // Only when a JOB follows: a PROC on its own (or a library member) is fine.
+    if (jobs.length) {
+        for (const proc of preJobProcs) {
+            diagnostics.push(makeDiagnostic('JCLO011', { name: proc.name }, { line: proc.line, column: 1 }));
+        }
     }
 
     return {

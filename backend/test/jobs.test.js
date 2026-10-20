@@ -64,8 +64,13 @@ test('jobs in a stream', async (t) => {
         assert.deepEqual(diags(source), [['JCLR001', 7]]);
     });
 
-    await t.test('O: a PROC before the first JOB belongs to it', () => {
-        assert.deepEqual(diags('//P PROC\n//PS EXEC PGM=X\n//  PEND\n//J1 JOB\n//S EXEC P\n'), []);
+    // z/OS rejects it (feature 41), but the call still resolves.
+    await t.test('E: a PROC before the first JOB gets JCLO011 and still belongs to it', () => {
+        assert.deepEqual(diags('//P PROC\n//PS EXEC PGM=X\n//  PEND\n//J1 JOB\n//S EXEC P\n'), [['JCLO011', 1]]);
+    });
+
+    await t.test('a PROC with no JOB at all is not JCLO011', () => {
+        assert.ok(!diags('//P PROC\n//PS EXEC PGM=X\n//  PEND\n').some(d => d[0] === 'JCLO011'));
     });
 
     await t.test('S: three jobs report each mistake on its own line', () => {

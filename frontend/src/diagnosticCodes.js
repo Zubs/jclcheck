@@ -60,7 +60,8 @@ export const CODE_GROUPS = [
             JCLO007: 'A statement after the end of the job (//).',
             JCLO008: 'JCLLIB inside a procedure.',
             JCLO009: 'NOTIFY outside a job, or inside a procedure.',
-            JCLO010: 'Too many NOTIFY statements in a job.'
+            JCLO010: 'Too many NOTIFY statements in a job.',
+            JCLO011: 'An in-stream PROC before the JOB statement.'
         }
     },
     {
