@@ -974,6 +974,7 @@ describe('Workbench sharing', () => {
     test('a shared link carries the site profile (feature 37)', async () => {
         let w = await mountWorkbench();
         await w.find('.header-profile').trigger('click');
+        await w.find('.profile-view--json').trigger('click');
         await w.find('.profile-text').setValue('{"names":{"job":"AR*"}}');
         const link = await shareAndCapture(w);
         w.unmount();
@@ -982,6 +983,7 @@ describe('Workbench sharing', () => {
         expect(validateJcl.mock.calls[0][1].profile).toEqual({ names: { job: 'AR*' } });
         await w.find('.back-to-draft').trigger('click');
         await w.find('.header-profile').trigger('click');
+        await w.find('.profile-view--json').trigger('click');
         expect(w.find('.profile-text').element.value).toBe('');
     });
 });
@@ -997,6 +999,7 @@ describe('Workbench site profile and suppressions (feature 37)', () => {
 
     async function openProfile(w, text) {
         await w.find('.header-profile').trigger('click');
+        await w.find('.profile-view--json').trigger('click');
         await w.find('.profile-text').setValue(text);
         await vi.advanceTimersByTimeAsync(450);
         await flushPromises();

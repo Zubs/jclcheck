@@ -75,7 +75,7 @@
           click <strong>SUPPRESSED</strong> in the panel to list them.
         </p>
         <p>
-          Open <strong>PROFILE</strong> to add your shop's rules as JSON: name patterns
+          Open <strong>PROFILE</strong> to add your shop's rules with a form (or as JSON): name patterns
           (<code>*</code> and <code>%</code>), allowed values, prefixes for new datasets, extra
           keywords, and a different severity, or <code>off</code>, for any code. It is saved with
           your draft and included in shared links.

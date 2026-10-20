@@ -55,7 +55,7 @@ There is no admin role. Content changes, such as samples, FAQ entries and rule t
 - **PF-key action bar and keys:** F1 Help (Alt+H), F4 Format (Alt+R, with a before-and-after preview and Undo), F5 Validate (Ctrl/⌘+Enter), F6 Share (Alt+L), F9 Sample (Alt+S), F12 Clear (Alt+C). Escape closes help. When F9 or F12 replaces typed text, an Undo notice brings it back for 5 seconds.
 - **Drafts:** The JCL and library are saved in the user's browser and come back on the next visit. If storage is blocked, a one-line notice says so.
 - **Sharing:** Share puts the JCL, library, level and JES in a link (compressed, after `#jcl=`), copied to the clipboard. Opening it shows the job without replacing the user's draft until they edit it, with "Back to my draft".
-- **Profile panel:** PROFILE in the header edits the site profile as JSON. It is saved with the draft and included in shared links; JSON that doesn't parse isn't used, and the panel says why. The diagnostics panel shows how many diagnostics JCLCHECK comments hid and lists them on request.
+- **Profile panel:** PROFILE in the header edits the site profile with a form, or as JSON in a second view. It is saved with the draft and included in shared links; JSON that doesn't parse isn't used, and the panel says why. The diagnostics panel shows how many diagnostics JCLCHECK comments hid and lists them on request.
 - **Datasets tab:** The diagnostics panel's DATASETS tab shows a grid with a row per dataset and a column per step, each cell showing how that step uses it (N new, R read, M mod, P pass, D delete). Clicking a cell goes to that DD.
 - **Samples:** A clean job, a broken job with many typical mistakes, and a job with an in-stream PROC, symbolic parameters and DD overrides.
 
