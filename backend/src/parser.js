@@ -270,9 +270,13 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
             case 'IF': {
                 const chars = ifConditionChars(stmt);
                 const node = IfNode(chars.map(c => c.ch).join('').trim(), stmt.line);
-                const { refs, errors } = parseCondition(chars, { line: stmt.line, col: stmt.opCol });
+                const { refs, errors, aliases } = parseCondition(chars, { line: stmt.line, col: stmt.opCol });
                 for (const e of errors) {
                     diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
+                }
+
+                for (const a of aliases) {
+                    diagnostics.push(makeDiagnostic('JCLC009', { ch: a.ch }, { line: a.line, column: a.col }));
                 }
 
                 if (ifStack.length >= MAX_IF_DEPTH) {

@@ -3,7 +3,7 @@
 
 const { makeDiagnostic } = require('../errors');
 const { GROUP_KEYWORDS } = require('../keywords');
-const { checkKeywords, checkWhen, checkName } = require('./paramRules');
+const { checkKeywords, checkWhen, checkName, checkRuleValue } = require('./paramRules');
 
 // The first dependency loop, as a list of job names ending where it started.
 // Edges run from the job that must finish first to the job that waits.
@@ -12,13 +12,13 @@ function findCycle(jobs) {
     for (const job of jobs) {
         for (const dep of job.deps) {
             const target = dep.params.find(p => p.kind === 'keyword' && p.key === 'NAME');
-            const other = target && target.value.toUpperCase();
-            if (!other || !edges.has(other) || dep.type === 'CONCURRENT') {
-                continue;
+            for (const name of target && dep.type !== 'CONCURRENT' ? target.subvalues || [target.value] : []) {
+                const other = name.toUpperCase();
+                if (edges.has(other)) {
+                    const [from, to] = dep.type === 'AFTER' ? [other, job.name.toUpperCase()] : [job.name.toUpperCase(), other];
+                    edges.get(from).push(to);
+                }
             }
-
-            const [from, to] = dep.type === 'AFTER' ? [other, job.name.toUpperCase()] : [job.name.toUpperCase(), other];
-            edges.get(from).push(to);
         }
     }
 
@@ -55,10 +55,24 @@ function findCycle(jobs) {
     return null;
 }
 
+// Keywords and the values of those with a fixed set of them.
+function checkStatement(node, type, diagnostics, zosLevel) {
+    checkKeywords(node.params, GROUP_KEYWORDS[type], type, node.line, diagnostics, zosLevel);
+    for (const p of node.params.filter(q => q.kind === 'keyword')) {
+        checkRuleValue(p, GROUP_KEYWORDS[type], node.line, diagnostics);
+    }
+}
+
+// A job group's conditions document ! as NOT, as well as ¬ and NOT.
+function checkCondition(node, key, diagnostics) {
+    checkWhen(node.params.find(p => p.kind === 'keyword' && p.key === key), node.line, diagnostics, { bangIsNot: true });
+}
+
 function checkGroup(group, diagnostics, zosLevel) {
-    checkKeywords(group.params, GROUP_KEYWORDS.JOBGROUP, 'JOBGROUP', group.line, diagnostics, zosLevel);
+    checkStatement(group, 'JOBGROUP', diagnostics, zosLevel);
+    checkCondition(group, 'ERROR', diagnostics);
     for (const set of group.sets) {
-        checkKeywords(set.params, GROUP_KEYWORDS.JOBSET, 'JOBSET', set.line, diagnostics, zosLevel);
+        checkStatement(set, 'JOBSET', diagnostics, zosLevel);
     }
 
     const named = group.jobs.filter(j => j.name);
@@ -66,7 +80,7 @@ function checkGroup(group, diagnostics, zosLevel) {
     const seen = new Set();
     for (const job of group.jobs) {
         checkName(job.name, job.type, job.line, diagnostics);
-        checkKeywords(job.params, GROUP_KEYWORDS[job.type], job.type, job.line, diagnostics, zosLevel);
+        checkStatement(job, job.type, diagnostics, zosLevel);
         const key = (job.name || '').toUpperCase();
         if (key && seen.has(key)) {
             diagnostics.push(makeDiagnostic('JCLG004', { name: job.name, group: group.name }, { line: job.line, column: 3 }));
@@ -74,17 +88,20 @@ function checkGroup(group, diagnostics, zosLevel) {
 
         seen.add(key);
         for (const dep of job.deps) {
-            checkKeywords(dep.params, GROUP_KEYWORDS[dep.type], dep.type, dep.line, diagnostics, zosLevel);
+            checkStatement(dep, dep.type, diagnostics, zosLevel);
+            // NAME= takes one name or a list of up to 10.
             const target = dep.params.find(p => p.kind === 'keyword' && p.key === 'NAME');
-            if (target && !names.includes(target.value.toUpperCase())) {
-                diagnostics.push(makeDiagnostic(
-                    'JCLG008',
-                    { name: target.value, group: group.name, jobs: named.map(j => j.name) },
-                    { line: target.valueLine ?? dep.line, column: target.valueCol }
-                ));
+            for (const name of target ? target.subvalues || [target.value] : []) {
+                if (!names.includes(name.toUpperCase())) {
+                    diagnostics.push(makeDiagnostic(
+                        'JCLG008',
+                        { name, group: group.name, jobs: named.map(j => j.name) },
+                        { line: target.valueLine ?? dep.line, column: target.valueCol }
+                    ));
+                }
             }
 
-            checkWhen(dep.params.find(p => p.kind === 'keyword' && p.key === 'WHEN'), dep.line, diagnostics);
+            checkCondition(dep, 'WHEN', diagnostics);
         }
     }
 
@@ -100,7 +117,7 @@ function checkJobGroups(jobGroups, jobs, diagnostics, { zosLevel } = {}) {
     }
 
     for (const job of jobs.filter(j => j.schedule)) {
-        checkKeywords(job.schedule.params, GROUP_KEYWORDS.SCHEDULE, 'SCHEDULE', job.schedule.line, diagnostics, zosLevel);
+        checkStatement(job.schedule, 'SCHEDULE', diagnostics, zosLevel);
     }
 }
 

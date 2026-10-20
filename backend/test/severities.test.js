@@ -22,6 +22,7 @@ const SEVERITIES = {
         'JCLS001', 'JCLS006', 'JCLS007', 'JCLS008'
     ],
     warning: [
+        'JCLC009',
         'JCLD001', 'JCLD007',
         'JCLF002', 'JCLF003', 'JCLF004',
         'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',

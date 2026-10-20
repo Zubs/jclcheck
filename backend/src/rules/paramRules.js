@@ -18,6 +18,7 @@ const { closest, checkValue } = require('../valueRules');
 const { parseCondition, conditionChars } = require('../conditions');
 const { symbolUses } = require('./procRules');
 const { asList } = require('../profile');
+const { valuePosition } = require('../paramTokenizer');
 
 const NAME_RE = /^[A-Za-z$#@][A-Za-z0-9$#@]{0,7}$/;
 
@@ -748,8 +749,10 @@ function checkNotify(notify, diagnostics, zosLevel) {
     checkWhen(findParam(notify.params, 'WHEN'), notify.line, diagnostics);
 }
 
-// WHEN=(condition) or WHEN='condition': the IF condition syntax, without THEN.
-function checkWhen(when, stmtLine, diagnostics) {
+// WHEN=(condition) or WHEN='condition' (and a job group's ERROR=): the IF
+// condition syntax, without THEN. Job group conditions document ! as NOT, so
+// only ^ is warned about there.
+function checkWhen(when, stmtLine, diagnostics, { bangIsNot = false } = {}) {
     if (!when) {
         return;
     }
@@ -758,13 +761,23 @@ function checkWhen(when, stmtLine, diagnostics) {
 
     const inner = when.value.match(/^(\(|')(.*)(\)|')$/);
     if (!inner) {
-        diagnostics.push(makeDiagnostic('JCLC001', { detail: 'WHEN must be a condition in brackets or quotes, for example WHEN=(RC>4).' }, { line, column: when.valueCol }));
+        diagnostics.push(makeDiagnostic('JCLC001', { detail: `${when.key} must be a condition in brackets or quotes, for example ${when.key}=(RC>4).` }, { line, column: when.valueCol }));
         return;
     }
 
-    const chars = conditionChars(inner[2], line, when.valueCol + 1);
-    for (const e of parseCondition(chars, { line, col: when.valueCol }, { requireThen: false }).errors) {
+    // Each character at its own line and column, even when the condition
+    // runs onto another line.
+    const chars = conditionChars(inner[2], line, when.valueCol + 1).map((c, i) => {
+        const at = valuePosition(when, i + 1);
+        return { ...c, line: at.line ?? line, col: at.col };
+    });
+    const { errors, aliases } = parseCondition(chars, { line, col: when.valueCol }, { requireThen: false });
+    for (const e of errors) {
         diagnostics.push(makeDiagnostic(e.code, e.data, { line: e.line, column: e.col }));
+    }
+
+    for (const a of aliases.filter(x => !(bangIsNot && x.ch === '!'))) {
+        diagnostics.push(makeDiagnostic('JCLC009', { ch: a.ch }, { line: a.line, column: a.col }));
     }
 }
 

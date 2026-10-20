@@ -258,6 +258,11 @@ const CATALOG = {
         message: () => `This IF already has an ELSE.`,
         suggestion: () => `An IF can have only one ELSE. Remove this one, or close the IF with ENDIF and start a new IF.`
     },
+    JCLC009: {
+        severity: 'warning',
+        message: (d) => `'${d.ch}' is read here as the NOT sign (¬).`,
+        suggestion: () => `Use ¬ or the word NOT. z/OS only reads this character as NOT in code pages where it is the ¬ character.`
+    },
     JCLC008: {
         severity: 'error',
         message: (d) => `IF statements are nested more than ${d.max} levels deep.`,

@@ -4,6 +4,7 @@
 // and keeps each code's default severity the same as the catalog's.
 
 const WARNINGS = new Set([
+    'JCLC009',
     'JCLD001', 'JCLD007',
     'JCLF002', 'JCLF003', 'JCLF004',
     'JCLJ001', 'JCLJ002', 'JCLJ003', 'JCLJ301', 'JCLJ302', 'JCLJ303', 'JCLJ304', 'JCLJ305',
@@ -179,7 +180,8 @@ export const CODE_GROUPS = [
             JCLC005: "A condition naming a procedure step the procedure doesn't have.",
             JCLC006: 'IF without THEN.',
             JCLC007: 'A second ELSE in one IF.',
-            JCLC008: 'IF statements nested too deep.'
+            JCLC008: 'IF statements nested too deep.',
+            JCLC009: '^ or ! read as the NOT sign (¬), which z/OS may not do in every code page.'
         }
     },
     {

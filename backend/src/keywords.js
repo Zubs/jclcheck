@@ -229,17 +229,29 @@ const NOTIFY_KEYWORDS = table(['EMAIL', 'USER', 'TYPE', 'WHEN'], {
     TYPE: { value: oneOfValues('MSG', 'EMAIL') }
 });
 
-// JES2 job group statements and their keywords, from the job group section
-// of the MVS JCL Reference (as remembered; feature 41 asks to confirm them).
-// SCHEDULE is the ordinary-job statement that joins a group with JOBGROUP=.
-const DEPENDENCY_KEYWORDS = table(['NAME', 'WHEN', 'ACTION', 'OTHERWISE']);
+// JES2 job group statements and their keywords, from the JES2 execution
+// control statements in the MVS JCL Reference (z/OS 2.2,
+// https://www.ibm.com/support/knowledgecenter/SSLTBW_2.2.0/com.ibm.zos.v2r2.ieab600/jes2zone.htm).
+// JOBGROUP's accounting information and programmer's name are positional, and
+// SJOB takes no parameters. SCHEDULE is the ordinary-job statement that joins
+// a group with JOBGROUP=.
+const DEPENDENCY_ACTION = oneOfValues('SATISFY', 'FLUSH', 'FAIL');
+const DEPENDENCY_KEYWORDS = table(['NAME', 'WHEN', 'ACTION', 'OTHERWISE'], {
+    ACTION: { value: DEPENDENCY_ACTION },
+    OTHERWISE: { value: DEPENDENCY_ACTION }
+});
+const FLUSHTYP = table(['FLUSHTYP'], { FLUSHTYP: { value: oneOfValues('ALLFLUSH', 'ANYFLUSH') } });
 const GROUP_KEYWORDS = {
-    JOBGROUP: table(['ACCT', 'PGMR', 'OWNER', 'GROUP', 'PASSWORD', 'SECLABEL', 'HOLD', 'ERROR', 'ONERROR',
-        'SYSAFF', 'SYSTEM', 'SCHENV']),
+    JOBGROUP: table(['OWNER', 'GROUP', 'PASSWORD', 'SECLABEL', 'TYPE', 'HOLD', 'ERROR', 'ONERROR',
+        'SYSAFF', 'SYSTEM', 'SCHENV'], {
+        TYPE: { value: oneOfValues('SCAN') },
+        HOLD: { value: oneOfValues('YES', 'NO') },
+        ONERROR: { value: oneOfValues('STOP', 'SUSPEND', 'FLUSH') }
+    }),
     ENDGROUP: table([]),
-    GJOB: table(['FLUSHTYP', 'ONERROR']),
-    JOBSET: table(['FLUSHTYP', 'ONERROR']),
-    SJOB: table(['FLUSHTYP', 'ONERROR']),
+    GJOB: FLUSHTYP,
+    JOBSET: FLUSHTYP,
+    SJOB: table([]),
     ENDSET: table([]),
     AFTER: DEPENDENCY_KEYWORDS,
     BEFORE: DEPENDENCY_KEYWORDS,

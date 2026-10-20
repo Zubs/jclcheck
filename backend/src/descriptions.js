@@ -62,6 +62,17 @@ const ADDRSPC_VALUES = {
     REAL: 'Run in real storage, which can\'t be paged.'
 };
 
+const FLUSHTYP_VALUES = {
+    ALLFLUSH: 'Flush it only when every job it depends on is flushed.',
+    ANYFLUSH: 'Flush it when any job it depends on is flushed.'
+};
+
+const DEPENDENCY_ACTIONS = {
+    SATISFY: 'The dependency is met.',
+    FLUSH: 'The dependency is flushed, which may flush the waiting job (see its FLUSHTYP).',
+    FAIL: 'The job group is in error, and its ONERROR action is taken.'
+};
+
 const KEYWORDS = {
     JOB: {
         CLASS: { text: 'The job class, which decides where and when the job runs.' },
@@ -236,42 +247,43 @@ const KEYWORDS = {
         WHEN: { text: 'A condition: the user is only told when it is true.' }
     },
     JOBGROUP: {
-        ACCT: { text: 'Accounting information for the job group.' },
-        PGMR: { text: 'The programmer responsible for the job group.' },
         OWNER: { text: 'The user ID that owns the job group.' },
         GROUP: { text: 'The RACF group the job group belongs to.' },
-        PASSWORD: { text: 'The password for the owner.' },
+        PASSWORD: { text: 'The password for the owner, and optionally a new one.' },
         SECLABEL: { text: 'The security label of the job group.' },
-        HOLD: { text: 'Whether the job group is held until released.' },
-        ERROR: { text: 'The condition that puts the job group in error.' },
-        ONERROR: { text: 'What happens when the job group is in error.' },
+        TYPE: { text: 'Checks the job group without running it.', values: { SCAN: 'Check the group for errors; its jobs won\'t run.' } },
+        HOLD: { text: 'Whether the job group is held when it is submitted.', values: { YES: 'Hold the group until it is released.', NO: 'Don\'t hold the group.' } },
+        ERROR: { text: 'A condition checked after each job ends; when it is true, the group is in error.' },
+        ONERROR: {
+            text: 'What happens when the job group is in error.',
+            values: {
+                STOP: 'Start no new jobs; running jobs finish.',
+                SUSPEND: 'Go on starting jobs whose dependencies are met.',
+                FLUSH: 'Cancel every job that hasn\'t run, and start no new ones.'
+            }
+        },
         SYSAFF: { text: 'The JES2 systems the group\'s jobs may run on.' },
         SYSTEM: { text: 'The systems the group\'s jobs may run on.' },
         SCHENV: { text: 'The scheduling environment the group\'s jobs need.' }
     },
     GJOB: {
-        FLUSHTYP: { text: 'What happens to this job when it is flushed because of a dependency.' },
-        ONERROR: { text: 'What happens when this job ends in error.' }
+        FLUSHTYP: { text: 'When this job is flushed because of the jobs it depends on.', values: FLUSHTYP_VALUES }
     },
     JOBSET: {
-        FLUSHTYP: { text: 'What happens to the set\'s jobs when they are flushed.' },
-        ONERROR: { text: 'What happens when a job in the set ends in error.' }
+        FLUSHTYP: { text: 'When a job in the set is flushed because of the jobs it depends on.', values: FLUSHTYP_VALUES }
     },
-    SJOB: {
-        FLUSHTYP: { text: 'What happens to this job when it is flushed.' },
-        ONERROR: { text: 'What happens when this job ends in error.' }
-    },
+    SJOB: {},
     AFTER: {
         NAME: { text: 'The job this one runs after.' },
         WHEN: { text: 'The condition on that job for this one to run.' },
-        ACTION: { text: 'What happens when the condition is true.' },
-        OTHERWISE: { text: 'What happens when the condition is false.' }
+        ACTION: { text: 'What happens when the condition is true.', values: DEPENDENCY_ACTIONS },
+        OTHERWISE: { text: 'What happens when the condition is false.', values: DEPENDENCY_ACTIONS }
     },
     BEFORE: {
         NAME: { text: 'The job this one runs before.' },
         WHEN: { text: 'The condition on this job for that one to run.' },
-        ACTION: { text: 'What happens when the condition is true.' },
-        OTHERWISE: { text: 'What happens when the condition is false.' }
+        ACTION: { text: 'What happens when the condition is true.', values: DEPENDENCY_ACTIONS },
+        OTHERWISE: { text: 'What happens when the condition is false.', values: DEPENDENCY_ACTIONS }
     },
     CONCURRENT: {
         NAME: { text: 'The job this one runs at the same time as.' }

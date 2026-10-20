@@ -17,7 +17,10 @@ class ConditionError extends Error {
     }
 }
 
-function tokenize(chars) {
+// ^ and ! often stand in for ¬ when JCL passes through a PC keyboard or
+// another code page. They are read as ¬ and listed in `aliases`, so the
+// caller can warn where z/OS might not read them that way.
+function tokenize(chars, aliases) {
     const tokens = [];
     let i = 0;
     while (i < chars.length) {
@@ -33,10 +36,15 @@ function tokenize(chars) {
             continue;
         }
 
-        if ('<>=¬'.includes(ch)) {
+        if ('<>=¬^!'.includes(ch)) {
             let text = '';
-            while (i < chars.length && '<>=¬'.includes(chars[i].ch)) {
-                text += chars[i++].ch;
+            while (i < chars.length && '<>=¬^!'.includes(chars[i].ch)) {
+                if ('^!'.includes(chars[i].ch)) {
+                    aliases.push({ ch: chars[i].ch, line: chars[i].line, col: chars[i].col });
+                }
+
+                text += '^!'.includes(chars[i].ch) ? '¬' : chars[i].ch;
+                i++;
             }
 
             if (text === '¬') {
@@ -73,11 +81,12 @@ function tokenize(chars) {
 function parseCondition(chars, start, { requireThen = true } = {}) {
     const refs = [];
     const errors = [];
+    const aliases = [];
     let tokens;
     try {
-        tokens = tokenize(chars);
+        tokens = tokenize(chars, aliases);
     } catch (err) {
-        return { refs, errors: [err.diagnostic] };
+        return { refs, errors: [err.diagnostic], aliases };
     }
 
     let pos = 0;
@@ -166,7 +175,7 @@ function parseCondition(chars, start, { requireThen = true } = {}) {
         parseExpr();
         const next = peek();
         if (!next && !requireThen) {
-            return { refs, errors };
+            return { refs, errors, aliases };
         }
 
         if (!next) {
@@ -184,7 +193,7 @@ function parseCondition(chars, start, { requireThen = true } = {}) {
         errors.push(err.diagnostic);
     }
 
-    return { refs, errors };
+    return { refs, errors, aliases };
 }
 
 // Splits the condition text as written, keeping each character's position.
