@@ -45,8 +45,18 @@ test('NOTIFY statement', async (t) => {
         assert.deepEqual(diags(source), [['JCLO010', 10, 5]]);
     });
 
-    await t.test('E: a NOTIFY after the first EXEC gets JCLO009', () => {
-        assert.deepEqual(diags(JOB + STEP + '//N1 NOTIFY USER=IBMUSER\n'), [['JCLO009', 3, 6]]);
+    // Anywhere after the JOB statement (feature 41).
+    await t.test('O: a NOTIFY after the first EXEC is accepted', () => {
+        assert.deepEqual(diags(JOB + STEP + '//N1 NOTIFY USER=IBMUSER\n'), []);
+    });
+
+    await t.test('E: a NOTIFY inside a PROC or before any JOB gets JCLO009', () => {
+        assert.deepEqual(diags(JOB + '//P PROC\n//N1 NOTIFY USER=IBMUSER\n//S1 EXEC PGM=X\n// PEND\n' + STEP), [['JCLO009', 3, 6]]);
+        assert.deepEqual(diags('//N1 NOTIFY USER=IBMUSER\n' + JOB + STEP).filter(d => d[0] === 'JCLO009'), [['JCLO009', 1, 6]]);
+    });
+
+    await t.test('USER=node.userid is accepted on the NOTIFY statement', () => {
+        assert.deepEqual(diags(JOB + '//N1 NOTIFY USER=N1.IBMUSER\n' + STEP), []);
     });
 
     await t.test('E: EMAIL and USER together get JCLK007', () => {

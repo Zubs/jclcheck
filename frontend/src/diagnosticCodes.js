@@ -59,7 +59,7 @@ export const CODE_GROUPS = [
             JCLO006: 'More than one JCLLIB in a job.',
             JCLO007: 'A statement after the end of the job (//).',
             JCLO008: 'JCLLIB inside a procedure.',
-            JCLO009: 'NOTIFY not between the JOB statement and the first EXEC.',
+            JCLO009: 'NOTIFY outside a job, or inside a procedure.',
             JCLO010: 'Too many NOTIFY statements in a job.'
         }
     },
@@ -67,7 +67,7 @@ export const CODE_GROUPS = [
         prefix: 'JCLD',
         name: 'DD statements',
         codes: {
-            JCLD001: 'The same DD name twice in a step (a warning: both are allocated).',
+            JCLD001: 'The same DD name twice in a step (a warning: both are allocated, the first is used).',
             JCLD002: 'A DD with no data source.',
             JCLD003: 'A DD with two data sources that can\'t go together.',
             JCLD004: 'In-stream JCL sent to the internal reader isn\'t checked here (information).',

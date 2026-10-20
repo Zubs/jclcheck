@@ -12,13 +12,14 @@ test('NOTIFY= on the JOB statement', async (t) => {
         assert.deepEqual(validate('//J JOB\n' + STEP).diagnostics, []);
     });
 
-    for (const value of ['&SYSUID', 'IBMUSER', 'ibmuser', 'N1.IBMUSER', 'ABCDEFGH']) {
+    for (const value of ['&SYSUID', 'IBMUSER', 'ibmuser', 'ABCDEFGH']) {
         await t.test(`O/B: NOTIFY=${value} is accepted`, () => {
             assert.deepEqual(check(value), []);
         });
     }
 
-    for (const value of ['IBMUSERRRRRRRR', 'laskdjasd1.&SYSUID', 'ABCDEFGHI', '1BMUSER', '']) {
+    // node.userid is only for USER= on the NOTIFY statement (feature 41).
+    for (const value of ['IBMUSERRRRRRRR', 'laskdjasd1.&SYSUID', 'ABCDEFGHI', '1BMUSER', '', 'N1.IBMUSER']) {
         await t.test(`B/M/E: NOTIFY=${value} gets JCLS009 at the value`, () => {
             assert.deepEqual(check(value), [['JCLS009', 19]]);
         });

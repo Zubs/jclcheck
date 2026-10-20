@@ -146,8 +146,8 @@ const CATALOG = {
     },
     JCLO009: {
         severity: 'error',
-        message: () => `A NOTIFY statement must come after the JOB statement and before the first EXEC statement.`,
-        suggestion: () => `Move the NOTIFY statement so it sits between the JOB statement and the first EXEC statement.`
+        message: () => `A NOTIFY statement must be in a job, after its JOB statement, and not inside a procedure.`,
+        suggestion: () => `Move the NOTIFY statement after the JOB statement it belongs to.`
     },
     JCLO010: {
         severity: 'error',
@@ -361,7 +361,7 @@ const CATALOG = {
     JCLD001: {
         // Valid JCL: both DDs are allocated.
         severity: 'warning',
-        message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'. z/OS allocates both DD statements, but a program can reach only one of them by this name.`,
+        message: (d) => `Duplicate DD name '${d.name}' in step '${d.step}'. z/OS allocates both DD statements, but a program using this name reaches only the first one.`,
         suggestion: () => `Rename or remove one of the DD statements. To concatenate datasets, leave the name off the later DD statements.`
     },
     JCLD002: {

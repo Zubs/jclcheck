@@ -344,7 +344,7 @@ function parse(statements, { zosLevel = DEFAULT_ZOS_LEVEL } = {}) {
                 break;
             }
             case 'NOTIFY': {
-                if (!job || job.steps.length > 0 || procStack) {
+                if (!job || procStack) {
                     diagnostics.push(makeDiagnostic('JCLO009', {}, { line: stmt.line, column: stmt.opCol }));
                 } else if (job.notifies.length >= MAX_NOTIFY) {
                     diagnostics.push(makeDiagnostic('JCLO010', { max: MAX_NOTIFY }, { line: stmt.line, column: stmt.opCol }));

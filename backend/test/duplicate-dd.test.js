@@ -18,6 +18,7 @@ test('duplicate DD names', async (t) => {
         assert.equal(result.stats.valid, true);
         assert.deepEqual([result.stats.errors, result.stats.warnings], [0, 1]);
         assert.match(result.diagnostics[0].message, /allocates both/);
+        assert.match(result.diagnostics[0].message, /reaches only the first one/);
     });
 
     await t.test('M: three DDs with the same name give two warnings', () => {
